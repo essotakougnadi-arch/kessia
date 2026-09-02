@@ -1,0 +1,120 @@
+/* ============================================================
+   KESSIA — Bottom Navigation (Mobile)
+   Palette officielle : Terracotta · Gold · Green
+   ============================================================ */
+
+.nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  align-items: center;
+  z-index: var(--z-sticky);
+  box-shadow: 0 -4px 24px rgba(182, 90, 58, 0.08), 0 -1px 0 rgba(0,0,0,0.04);
+  gap: 2px;
+}
+
+/* ——— Regular nav item ——— */
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.item:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-hover);
+}
+
+.itemActive {
+  color: var(--color-primary) !important;
+}
+
+/* Icon wrapper with dot indicator */
+.itemIconWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemIcon {
+  font-size: 22px;
+  line-height: 1;
+  transition: transform var(--transition-spring);
+}
+.itemActive .itemIcon {
+  transform: scale(1.12);
+}
+
+/* Active dot indicator */
+.itemDot {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.itemLabel {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.1px;
+}
+
+/* ——— Bouton flottant KESSIA AI (§10 : disponible globalement) ——— */
+.aiFab {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  text-decoration: none !important;
+  box-shadow: 0 6px 20px rgba(182, 90, 58, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: var(--z-sticky);
+  transition: transform var(--transition-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aiFab:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+.aiFab:active {
+  transform: scale(0.94);
+}
+
+/* ——— Show on mobile only ——— */
+@media (max-width: 768px) {
+  .nav {
+    display: flex;
+  }
+  .aiFab {
+    display: flex;
+  }
+}

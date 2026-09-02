@@ -1,0 +1,24 @@
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 80px; }
+.header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 10; }
+.back { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; text-decoration: none; }
+.title { font-size: 17px; font-weight: 800; color: var(--color-text); margin: 0; }
+
+.section { margin: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow-card); }
+.sectionTitle { font-size: 15px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; }
+.sectionDesc { font-size: 12px; color: var(--color-text-tertiary); margin: 0 0 14px; line-height: 1.5; }
+.form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.err { background: var(--color-danger-light); border: 1px solid rgba(239,68,68,0.3); color: var(--color-danger); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.note { background: var(--color-warning-light, var(--color-background)); border: 1px solid var(--color-border); color: var(--color-text-secondary); border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.5; }
+
+.list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.list li { font-size: 12px; color: var(--color-text-secondary); padding-left: 16px; position: relative; }
+.list li::before { content: '•'; position: absolute; left: 4px; color: var(--color-primary); }
+
+.consentRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border); }
+.consentRow:last-child { border-bottom: none; }
+.consentLabel { font-size: 13px; color: var(--color-text); }
+.consentDate { font-size: 11px; color: var(--color-text-tertiary); }
+.granted { font-size: 11px; font-weight: 700; color: var(--color-success); background: var(--color-success-light); padding: 2px 8px; border-radius: 100px; white-space: nowrap; }
+
+.pending { font-size: 12px; font-weight: 700; color: var(--color-warning, #b45309); background: var(--color-warning-light, rgba(180,83,9,0.1)); padding: 6px 10px; border-radius: 10px; display: inline-block; margin-bottom: 10px; }
+.danger { border-color: rgba(239,68,68,0.35) !important; }

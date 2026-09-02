@@ -1,0 +1,32 @@
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 90px; }
+.header { padding: 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 12px; }
+.back { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; text-decoration: none; flex-shrink: 0; }
+.title { font-size: 18px; font-weight: 900; color: var(--color-text); margin: 0; }
+.sub { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.body { padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+.section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; }
+.sectionTitle { font-size: 13px; font-weight: 800; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: .5px; margin: 0 0 12px; }
+
+.row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--color-border); }
+.row:first-of-type { border-top: none; }
+.rowLabel { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.rowDetail { font-size: 11.5px; color: var(--color-text-tertiary); margin-top: 2px; }
+.rowValue { font-size: 13px; font-weight: 800; white-space: nowrap; color: var(--color-primary); }
+
+.bar { height: 8px; border-radius: 4px; background: var(--color-border); overflow: hidden; margin: 8px 0 4px; }
+.barFill { height: 100%; background: var(--color-primary); border-radius: 4px; }
+.meta { font-size: 11.5px; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
+
+.tierGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.tier { border: 1px solid var(--color-border); border-radius: 12px; padding: 10px; font-size: 11px; }
+.tierActive { border-color: var(--color-primary); background: var(--color-primary-light); }
+.tierName { font-weight: 800; font-size: 12px; color: var(--color-text); }
+
+.pill { display: inline-flex; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 100px; }
+.pillOk { background: var(--color-success-light); color: var(--color-success); }
+.pillWarn { background: var(--color-warning-light); color: var(--color-warning); }
+
+.link { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--color-primary); text-decoration: none; }
+.disclaimer { font-size: 12px; line-height: 1.55; color: var(--color-text-secondary); padding: 8px 0; border-top: 1px solid var(--color-border); }
+.disclaimer:first-of-type { border-top: none; }

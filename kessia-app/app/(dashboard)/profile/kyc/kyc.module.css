@@ -1,0 +1,147 @@
+/* KESSIA — KYC Onboarding Page */
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 40px; }
+
+/* HEADER */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.backBtn { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--color-primary); text-decoration: none; }
+.headerTitle { font-size: 17px; font-weight: 800; color: var(--color-text); letter-spacing: -0.3px; }
+.headerPct { font-size: 16px; font-weight: 900; color: var(--color-primary); }
+
+/* PROGRESS */
+.progressSection { padding: 16px 20px 0; }
+.progressTrack { height: 8px; background: var(--color-border); border-radius: 100px; overflow: hidden; margin-bottom: 8px; }
+.progressFill { height: 100%; background: linear-gradient(90deg, #B65A3A, #D6A84F); border-radius: 100px; transition: width 1s ease; }
+.progressLabel { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; }
+
+/* UNLOCK BANNER */
+.unlockBanner { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; background: linear-gradient(135deg, #1F5D4A, #2D7A63); border-radius: 16px; padding: 14px; }
+.unlockIcon { font-size: 26px; flex-shrink: 0; }
+.unlockTitle { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 3px; }
+.unlockSub { font-size: 11px; color: rgba(255,255,255,0.7); }
+
+/* STEPS */
+.stepsSection { padding: 20px 16px 0; display: flex; flex-direction: column; gap: 0; }
+.stepWrapper { position: relative; padding-left: 20px; }
+
+.connector {
+  position: absolute;
+  left: 36px;
+  top: 64px;
+  width: 2px;
+  height: 24px;
+  background: var(--color-border);
+  z-index: 0;
+}
+.connectorDone { background: var(--color-primary); }
+
+.stepCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 14px 14px;
+  margin-bottom: 8px;
+  border: 1.5px solid var(--color-border);
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s;
+}
+
+.stepCard_done    { border-color: rgba(182,90,58,0.2); background: rgba(182,90,58,0.02); }
+.stepCard_current { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-light); }
+.stepCard_pending { opacity: 0.55; }
+
+/* Step indicator circle */
+.stepIndicator {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.stepIndicator_done    { background: var(--color-primary); color: #fff; }
+.stepIndicator_current { background: var(--color-primary); color: #fff; position: relative; }
+.stepIndicator_pending { background: var(--color-border); color: var(--color-text-tertiary); }
+
+.pulseDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.6; } }
+
+/* Step content */
+.stepContent { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.stepIcon { font-size: 22px; flex-shrink: 0; }
+.stepText { flex: 1; min-width: 0; }
+.stepTitle { font-size: 14px; font-weight: 700; color: var(--color-text); }
+.stepDesc  { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.doneBadge    { font-size: 11px; font-weight: 700; color: var(--color-success); background: var(--color-success-light); padding: 3px 10px; border-radius: 100px; flex-shrink: 0; }
+.currentBadge { font-size: 11px; font-weight: 700; color: var(--color-primary); background: var(--color-primary-light); padding: 3px 10px; border-radius: 100px; flex-shrink: 0; animation: pulse-glow 2s ease infinite; }
+@keyframes pulse-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+/* ACTION SECTION */
+.actionSection { padding: 20px 16px 0; }
+
+.uploadCard { background: var(--color-surface); border-radius: 20px; padding: 20px; border: 1px solid var(--color-border); box-shadow: var(--shadow-card); }
+.uploadTitle { font-size: 15px; font-weight: 800; color: var(--color-text); margin-bottom: 6px; }
+.uploadSub   { font-size: 13px; color: var(--color-text-tertiary); line-height: 1.5; margin-bottom: 16px; }
+
+.uploadZones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.uploadZone {
+  aspect-ratio: 4/3;
+  border: 2px dashed var(--color-primary);
+  border-radius: 16px;
+  background: var(--color-primary-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.uploadZone:hover { background: var(--color-primary-light); }
+.uploadZoneIcon  { font-size: 28px; }
+.uploadZoneLabel { font-size: 13px; font-weight: 700; color: var(--color-primary); }
+.uploadZoneSub   { font-size: 11px; color: var(--color-text-tertiary); text-align: center; padding: 0 8px; }
+
+.uploadTips { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 20px; }
+.uploadTip { font-size: 12px; color: var(--color-text-secondary); }
+
+.secureNote { text-align: center; font-size: 12px; color: var(--color-text-tertiary); margin-top: 14px; line-height: 1.5; }
+
+/* ═══ ÉTATS KYC (§30) ═══ */
+.stateCard { margin: 20px 16px 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 20px; padding: 24px 20px; box-shadow: var(--shadow-card); text-align: center; }
+.stateIcon { font-size: 44px; }
+.stateTitle { font-size: 18px; font-weight: 800; color: var(--color-text); margin-top: 10px; }
+.stateDesc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; margin-top: 8px; }
+.statusPill { display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
+.pill_review { background: var(--color-warning-light); color: var(--color-warning); }
+.pill_verified { background: var(--color-success-light); color: var(--color-success); }
+.pill_rejected { background: var(--color-danger-light); color: var(--color-danger); }
+.rejectBox { margin-top: 14px; background: var(--color-danger-light); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--color-danger); text-align: left; }
+
+.docTypeRow { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.docTypeBtn { padding: 8px 12px; border-radius: 100px; border: 1.5px solid var(--color-border-medium); background: var(--color-surface); font-size: 12px; font-weight: 600; color: var(--color-text-secondary); cursor: pointer; }
+.docTypeBtnActive { border-color: var(--color-primary); background: var(--color-primary-subtle); color: var(--color-primary); }
+
+.zoneDone { border-style: solid; border-color: var(--color-success); background: var(--color-success-light); }
+.zonePreview { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.zoneBusy { opacity: 0.6; pointer-events: none; }
+
+.docList { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.docRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--color-background); border-radius: 12px; font-size: 13px; }
+.docRowStatus { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px; background: var(--color-warning-light); color: var(--color-warning); }
+
+.aiHelpLink { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--color-primary); text-decoration: none; }
+.modalError { background: var(--color-danger-light); border: 1px solid rgba(239,68,68,0.3); color: var(--color-danger); border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-top: 12px; }
+.primaryBtn { margin-top: 16px; }

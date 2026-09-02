@@ -1,0 +1,27 @@
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 80px; }
+.header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 10; }
+.back { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; text-decoration: none; }
+.title { font-size: 17px; font-weight: 800; color: var(--color-text); margin: 0; }
+
+.section { margin: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 6px 18px; box-shadow: var(--shadow-card); }
+.sectionTitle { font-size: 13px; font-weight: 800; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 4px; }
+
+.row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--color-border); }
+.row:last-child { border-bottom: none; }
+.rowIcon { font-size: 20px; }
+.rowText { flex: 1; }
+.rowLabel { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.rowDesc { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+.locked { font-size: 11px; font-weight: 700; color: var(--color-text-tertiary); }
+
+.feedLink { margin: 16px; display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; text-decoration: none; color: var(--color-text); box-shadow: var(--shadow-card); }
+.feedLink span:last-child { color: var(--color-primary); font-weight: 800; }
+
+/* Interrupteur */
+.switch { position: relative; width: 46px; height: 27px; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; inset: 0; background: var(--color-border-medium); border-radius: 100px; transition: .2s; cursor: pointer; }
+.slider::before { content: ''; position: absolute; height: 21px; width: 21px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+.switch input:checked + .slider { background: var(--color-primary); }
+.switch input:checked + .slider::before { transform: translateX(19px); }
+.switch input:disabled + .slider { opacity: .5; cursor: not-allowed; }

@@ -1,0 +1,57 @@
+# ============================================================
+# KESSIA — CI (cahier des charges §50)
+#   Push → Lint → Type Check → Unit Tests → Build
+# Tests d'intégration : workflow dédié `integration.yml` (Postgres éphémère).
+# Étapes suivantes : Security Checks → Staging → Smoke Tests → Prod
+# ============================================================
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Valeurs factices : suffisent pour `prisma generate` + `next build`.
+      DATABASE_URL: postgresql://user:pass@localhost:5432/kessia_ci
+      JWT_SECRET: ci-jwt-secret-not-used-at-runtime
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-used-at-runtime
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kessia-app/package-lock.json
+
+      - name: Install
+        working-directory: kessia-app
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Lint
+        working-directory: kessia-app
+        run: npm run lint
+
+      - name: Type check
+        working-directory: kessia-app
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: kessia-app
+        run: npm test
+
+      - name: Build
+        working-directory: kessia-app
+        run: npm run build

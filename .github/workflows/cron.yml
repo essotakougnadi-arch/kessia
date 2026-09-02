@@ -1,0 +1,46 @@
+# ============================================================
+# KESSIA — Ordonnanceur (cahier des charges §7, §12, §33)
+#
+# Appelle POST /api/v1/cron/tontine-tick toutes les heures :
+#   • marque les cotisations en retard (LATE), envoie les relances,
+#     rattrape les versements des tours complets
+#   • notifie les relances clients échues (une fois par échéance)
+#
+# Secrets GitHub requis :
+#   CRON_TICK_URL   ex. https://kessia.app/api/v1/cron/tontine-tick
+#   CRON_SECRET     même valeur que la variable d'env de l'app
+#
+# Tant que ces secrets ne sont pas définis, le job se termine sans erreur.
+# ============================================================
+name: Cron — tontine tick
+
+on:
+  schedule:
+    - cron: '7 * * * *' # toutes les heures à hh:07
+  workflow_dispatch:
+
+concurrency:
+  group: cron-tontine-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CRON_TICK_URL: ${{ secrets.CRON_TICK_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Appeler le tick
+        if: env.CRON_TICK_URL != '' && env.CRON_SECRET != ''
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/out.json -w '%{http_code}' \
+            -X POST "$CRON_TICK_URL" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "HTTP $code"; cat /tmp/out.json || true
+          test "$code" -ge 200 -a "$code" -lt 300
+
+      - name: Secrets absents
+        if: env.CRON_TICK_URL == '' || env.CRON_SECRET == ''
+        run: echo "CRON_TICK_URL / CRON_SECRET non configurés — rien à faire."

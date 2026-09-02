@@ -1,0 +1,270 @@
+/* ============================================================
+   KESSIA — Sidebar (Desktop)
+   Palette officielle : Terracotta · Gold · Green
+   ============================================================ */
+
+.sidebar {
+  width: 260px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+/* ——— Logo ——— */
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logoLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.logoTag {
+  padding: 2px 8px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ——— User Quick ——— */
+.userQuick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 12px 10px 4px;
+  background: var(--color-primary-subtle);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-primary-light);
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-primary-sm);
+}
+
+.userInfo { flex: 1; min-width: 0; }
+
+.userName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userKyc {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
+}
+
+.kycDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  flex-shrink: 0;
+  animation: blink 2s ease infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.notifBtn {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  background: rgba(182,90,58,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.notifBtn:hover { background: var(--color-primary-light); }
+
+.notifBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-surface);
+}
+
+/* ——— Navigation ——— */
+.nav {
+  flex: 1;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.navSection {}
+
+.navSectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-tertiary);
+  padding: 8px 10px 6px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  text-decoration: none !important;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.navItem:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.navItemActive {
+  background: var(--color-primary-light) !important;
+  color: var(--color-primary) !important;
+  font-weight: var(--font-semibold) !important;
+}
+
+.navIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.navItemActive .navIcon {
+  background: var(--color-primary);
+}
+
+.navLabel { font-size: 14px; flex: 1; }
+
+.navActivePip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* ——— AI Section ——— */
+.aiSection { margin-top: auto; }
+
+.aiBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(182,90,58,0.07), rgba(214,168,79,0.07));
+  border: 1.5px solid rgba(182,90,58,0.18);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none !important;
+}
+.aiBtn:hover {
+  background: linear-gradient(135deg, rgba(182,90,58,0.12), rgba(214,168,79,0.10));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.aiBtnIconWrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.aiBtnLabel {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.aiBtnSub {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
+}
+
+/* ——— Bottom Nav ——— */
+.bottomNav {
+  padding: 10px 10px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logoutBtn { color: var(--color-danger); }
+.logoutBtn:hover { background: var(--color-danger-light) !important; color: var(--color-danger); }
+
+/* ——— Responsive ——— */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+}

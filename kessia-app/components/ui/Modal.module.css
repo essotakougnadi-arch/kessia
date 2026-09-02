@@ -1,0 +1,98 @@
+/* ============================================================
+   KESSIA — Modal
+   ============================================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 300);
+  background: rgba(26, 18, 9, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  animation: modal-fade 0.15s ease-out;
+}
+
+@media (min-width: 640px) {
+  .overlay {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+.panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface, #fff);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow-xl, 0 16px 40px rgba(0, 0, 0, 0.16));
+  animation: modal-slide 0.22s ease-out;
+}
+
+@media (min-width: 640px) {
+  .panel {
+    border-radius: 18px;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--color-border, rgba(26, 18, 9, 0.08));
+  position: sticky;
+  top: 0;
+  background: var(--color-surface, #fff);
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text, #1a1209);
+  margin: 0;
+}
+
+.close {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-tertiary, #9c8e7e);
+  padding: 0 4px;
+}
+
+.close:hover:not(:disabled) {
+  color: var(--color-text, #1a1209);
+}
+
+.close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.body {
+  padding: 18px 20px 22px;
+}
+
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-slide {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}

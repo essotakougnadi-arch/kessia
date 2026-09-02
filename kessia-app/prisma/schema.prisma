@@ -1,0 +1,1229 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  USER
+  BUSINESS_OWNER
+  TONTINE_MANAGER
+  ADMIN
+  SUPER_ADMIN
+  COMPLIANCE
+  FINANCE
+  SUPPORT
+  MODERATOR
+  CONTENT_MANAGER
+  OPERATIONS
+  ANALYST
+}
+
+// Profil utilisateur déclaratif (cahier des charges §4). Distinct du
+// rôle RBAC : oriente l'onboarding, les suggestions de l'IA et les KPI.
+// Les 5 premiers sont sélectionnables dans le MVP ; les suivants sont
+// réservés aux parcours Phase 8 (Community / Academy / Market / Assurance).
+enum UserType {
+  INDIVIDUAL
+  BEGINNER_ENTREPRENEUR
+  MICRO_ENTERPRISE
+  SME
+  COOPERATIVE
+  MENTOR
+  TRAINER
+  SUPPLIER
+  INSTITUTION
+  FINANCIAL_PARTNER
+  INSURANCE_PARTNER
+}
+
+// Cahier des charges §30
+enum KycStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  UNDER_REVIEW
+  ACTION_REQUIRED
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum KycDocumentType {
+  NATIONAL_ID
+  PASSPORT
+  DRIVER_LICENSE
+  RESIDENCE_PERMIT
+  SELFIE
+  PROOF_OF_ADDRESS
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER_IN
+  TRANSFER_OUT
+  TONTINE_CONTRIBUTION
+  TONTINE_PAYOUT
+  SALE_PAYMENT
+  FEE
+  REVERSAL
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REVERSED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  MOBILE_MONEY
+  BANK_TRANSFER
+  CASH
+  QR
+  CARD
+}
+
+enum PaymentDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum Direction {
+  CREDIT
+  DEBIT
+}
+
+// Nature d'un wallet (cahier des charges §6.5).
+//  - USER           : porte-monnaie d'un membre
+//  - TONTINE_ESCROW  : compte séquestre d'une tontine — détient les
+//                      cotisations d'un cycle entre l'encaissement et le
+//                      versement au bénéficiaire. Jamais rattaché à un
+//                      utilisateur ; une seule instance par tontine.
+enum WalletKind {
+  USER
+  TONTINE_ESCROW
+}
+
+enum TontineType {
+  CLASSIC_ROTATING
+  PROJECT
+  GROWTH
+  PURCHASE
+}
+
+// Sous-mode de la tontine Achat (§6.4) :
+//  GROUP → achat groupé, cagnotte tournante (chacun son tour)
+//  SOLO  → achat individuel : une personne épargne seule pour son
+//          propre article, séquestre bloqué jusqu'au dernier versement
+enum PurchaseMode {
+  GROUP
+  SOLO
+}
+
+enum TontineFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum TontineStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  SUSPENDED
+  CANCELLED
+}
+
+enum MemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum ContributionStatus {
+  PENDING
+  PAID
+  LATE
+  WAIVED
+}
+
+enum BusinessStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum SaleStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Devis ou facture (cahier des charges §7)
+enum InvoiceKind {
+  QUOTE
+  INVOICE
+}
+
+// CRM (cahier des charges §7)
+enum CustomerType {
+  PROSPECT
+  CLIENT
+}
+
+// Objectifs d'entreprise (cahier des charges §7)
+enum GoalMetric {
+  REVENUE
+  MARGIN_RATE
+  SALES_COUNT
+  NEW_CUSTOMERS
+}
+
+enum GoalPeriod {
+  MONTH
+  QUARTER
+  YEAR
+}
+
+// Plan de croissance (cahier des charges §23)
+enum GrowthStepStatus {
+  TODO
+  DOING
+  DONE
+  SKIPPED
+}
+
+enum NotificationCategory {
+  SECURITY
+  PAYMENT
+  TONTINE
+  BUSINESS
+  SUPPORT
+  SYSTEM
+  PROMOTION
+}
+
+enum NotificationPriority {
+  CRITICAL
+  HIGH
+  NORMAL
+  LOW
+}
+
+// Canaux de distribution des notifications (cahier des charges §33)
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  SMS
+  EMAIL
+}
+
+enum NotificationDeliveryStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+// Anti-fraude (cahier des charges §32)
+enum FraudRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FraudAlertStatus {
+  OPEN
+  REVIEWING
+  CONFIRMED
+  DISMISSED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  ACCOUNT
+  KYC
+  WALLET
+  TONTINE
+  BUSINESS
+  PAYMENT
+  SECURITY
+  OTHER
+}
+
+enum AiContext {
+  ONBOARDING
+  KYC
+  WALLET
+  TONTINE
+  BUSINESS
+  SUPPORT
+  GENERAL
+}
+
+// Journal d'événements d'une tontine (cahier des charges §6.4, §42)
+enum TontineEventType {
+  CREATED
+  MEMBER_JOINED
+  MEMBER_LEFT
+  ACTIVATED
+  AGREEMENT_ACCEPTED
+  CONTRIBUTION_PAID
+  CONTRIBUTION_LATE
+  PAYOUT
+  ROUND_ADVANCED
+  COMPLETED
+  GUARANTEE_CLAIM
+  // Séquestre : versement bloqué car fonds détenus < requis (§6.5)
+  ESCROW_SHORTFALL
+}
+
+// Fonds de Garantie Solidaire (cahier des charges §6.5).
+// MODE DÉMONSTRATION : aucun mouvement de fonds réel. Voir ADR 0010.
+enum GuaranteeClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SETTLED
+  CANCELLED
+}
+
+enum GuaranteeEventType {
+  CLAIM_OPENED
+  CLAIM_APPROVED
+  CLAIM_REJECTED
+  CLAIM_SETTLED
+  CLAIM_CANCELLED
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+model User {
+  id                String    @id @default(cuid())
+  phone             String    @unique
+  email             String?   @unique
+  passwordHash      String?
+  firstName         String
+  lastName          String
+  role              UserRole  @default(USER)
+  isActive          Boolean   @default(true)
+  isPhoneVerified   Boolean   @default(false)
+  isEmailVerified   Boolean   @default(false)
+  kycStatus         KycStatus @default(NOT_STARTED)
+  kycLevel          Int       @default(0)
+  loginAttempts     Int       @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  // MFA / 2FA (cahier des charges §31)
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  twoFactorBackup   String[]  @default([])
+  // Confidentialité (privacy by design §4.5)
+  dataExportRequestedAt  DateTime?
+  deletionRequestedAt    DateTime?
+  // Acceptation des documents juridiques (§8) — version + horodatage
+  termsAcceptedVersion   String?
+  termsAcceptedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  profile           UserProfile?
+  wallet            Wallet?
+  kycCases          KycCase[]
+  tontinesCreated   Tontine[]          @relation("TontineCreator")
+  tontineMembers    TontineMember[]
+  businesses        Business[]
+  notifications     Notification[]
+  supportTickets    SupportTicket[]    @relation("TicketUser")
+  assignedTickets   SupportTicket[]    @relation("TicketAssignee")
+  auditLogs         AuditLog[]
+  aiConversations   AiConversation[]
+  sessions          Session[]
+  otps              OtpCode[]
+  paymentTransactions PaymentTransaction[]
+  guaranteeClaims   GuaranteeClaim[]   @relation("GuaranteeClaimant")
+  guaranteeReviews  GuaranteeClaim[]   @relation("GuaranteeReviewer")
+  moduleInterests   ModuleInterest[]
+  growthStepStates  GrowthStepState[]
+  devices           Device[]
+  fraudAlerts       FraudAlert[]       @relation("FraudSubject")
+  fraudReviews      FraudAlert[]       @relation("FraudReviewer")
+
+  @@index([phone])
+  @@index([email])
+  @@map("users")
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  avatar      String?
+  profession  String?
+  city        String?
+  country     String   @default("TG")
+  language    String   @default("fr")
+  bio         String?
+  kessiaScore Int      @default(0)
+  // Profil déclaratif (§4)
+  userType      UserType  @default(INDIVIDUAL)
+  userTypeSetAt DateTime?
+  // Préférences de notification (§33). SECURITY est toujours actif, non configurable.
+  notifyPayment   Boolean @default(true)
+  notifyTontine   Boolean @default(true)
+  notifyBusiness  Boolean @default(true)
+  notifySupport   Boolean @default(true)
+  notifySystem    Boolean @default(true)
+  notifyPromotion Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  deviceInfo   String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([refreshToken])
+  @@map("sessions")
+}
+
+model OtpCode {
+  id         String   @id @default(cuid())
+  userId     String?
+  phone      String
+  code       String
+  purpose    String   // "REGISTER" | "LOGIN" | "RESET" | "VERIFY"
+  isUsed     Boolean  @default(false)
+  attempts   Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone])
+  @@index([code])
+  @@map("otp_codes")
+}
+
+// ============================================================
+// KYC
+// ============================================================
+
+model KycCase {
+  id              String      @id @default(cuid())
+  userId          String
+  status          KycStatus   @default(IN_PROGRESS)
+  level           Int         @default(1)
+  rejectionReason String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  submittedAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents       KycDocument[]
+
+  @@map("kyc_cases")
+}
+
+model KycDocument {
+  id          String          @id @default(cuid())
+  kycCaseId   String
+  type        KycDocumentType
+  // `fileUrl` : data-URI de repli quand Supabase Storage n'est pas configuré.
+  // Sinon vide, et `storageKey` pointe vers le bucket privé (§30, ADR 0014).
+  fileUrl     String
+  storageKey  String?
+  mimeType    String?
+  status      String          @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  notes       String?
+  uploadedAt  DateTime        @default(now())
+
+  kycCase     KycCase         @relation(fields: [kycCaseId], references: [id], onDelete: Cascade)
+
+  @@map("kyc_documents")
+}
+
+// ============================================================
+// WALLET & LEDGER
+// ============================================================
+
+model Wallet {
+  id         String     @id @default(cuid())
+  // userId : renseigné pour un wallet USER, null pour un compte système
+  //          (séquestre). L'unicité tolère plusieurs null sous Postgres.
+  userId     String?    @unique
+  // tontineId : renseigné pour un TONTINE_ESCROW, un par tontine.
+  tontineId  String?    @unique
+  kind       WalletKind @default(USER)
+  balance    Decimal    @default(0) @db.Decimal(18, 2)
+  currency   String     @default("XOF")
+  isLocked   Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tontine    Tontine?   @relation("TontineEscrow", fields: [tontineId], references: [id], onDelete: Cascade)
+  entries    LedgerEntry[]
+
+  @@index([kind])
+  @@map("wallets")
+}
+
+model LedgerEntry {
+  id                String            @id @default(cuid())
+  walletId          String
+  type              TransactionType
+  direction         Direction
+  amount            Decimal           @db.Decimal(18, 2)
+  currency          String            @default("XOF")
+  balanceBefore     Decimal           @db.Decimal(18, 2)
+  balanceAfter      Decimal           @db.Decimal(18, 2)
+  status            TransactionStatus @default(PENDING)
+  description       String?
+  referenceId       String?
+  externalReference String?
+  idempotencyKey    String            @unique
+  metadata          Json?
+  createdAt         DateTime          @default(now())
+  processedAt       DateTime?
+
+  wallet            Wallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([walletId])
+  @@index([status])
+  @@index([idempotencyKey])
+  @@map("ledger_entries")
+}
+
+// Transactions de paiement externe (cahier des charges §6.3, §42)
+// Journalise les échanges avec un PaymentProvider avant/après
+// l'écriture ledger. Aucun faux paiement présenté comme réel :
+// les providers "simulated-*" sont explicitement marqués.
+model PaymentTransaction {
+  id            String            @id @default(cuid())
+  userId        String
+  walletId      String
+  provider      String
+  method        PaymentMethod
+  direction     PaymentDirection
+  amount        Decimal           @db.Decimal(18, 2)
+  currency      String            @default("XOF")
+  status        TransactionStatus @default(PENDING)
+  externalRef   String?
+  failureReason String?
+  ledgerEntryId String?
+  simulated     Boolean           @default(false)
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("payment_transactions")
+}
+
+// ============================================================
+// TONTINE
+// ============================================================
+
+model Tontine {
+  id                  String           @id @default(cuid())
+  name                String
+  description         String?
+  type                TontineType      @default(CLASSIC_ROTATING)
+  // Achat : GROUP (cagnotte tournante) ou SOLO (achat individuel).
+  // Ignoré pour les autres types (toujours GROUP de fait).
+  purchaseMode        PurchaseMode     @default(GROUP)
+  // Achat SOLO : libellé de l'article visé + prix cible. `amount` reste
+  // le montant par versement (dérivé de targetAmount / totalRounds).
+  purchaseItem        String?
+  targetAmount        Decimal?         @db.Decimal(18, 2)
+  amount              Decimal          @db.Decimal(18, 2)
+  currency            String           @default("XOF")
+  frequency           TontineFrequency @default(MONTHLY)
+  startDate           DateTime
+  maxMembers          Int
+  rules               String?
+  isPublic            Boolean          @default(false)
+  inviteCode          String           @unique
+  status              TontineStatus    @default(PENDING)
+  createdById         String
+  currentRound        Int              @default(0)
+  totalRounds         Int
+  nextContributionDate DateTime?
+  completedAt         DateTime?
+  // Contrat numérique de la tontine — « Smart Agreement » (§6.4).
+  // Snapshot immuable des termes, figé à l'activation. Pas de blockchain.
+  agreementJson        Json?
+  agreementGeneratedAt DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  createdBy           User             @relation("TontineCreator", fields: [createdById], references: [id])
+  members             TontineMember[]
+  contributions       TontineContribution[]
+  schedules           TontineSchedule[]
+  events              TontineEvent[]
+  // Compte séquestre — détient les cotisations d'un cycle jusqu'au
+  // versement au bénéficiaire (§6.5). Créé à l'activation.
+  escrowWallet        Wallet?          @relation("TontineEscrow")
+
+  @@index([status])
+  @@index([inviteCode])
+  @@map("tontines")
+}
+
+model TontineEvent {
+  id        String           @id @default(cuid())
+  tontineId String
+  type      TontineEventType
+  actorId   String?
+  round     Int?
+  amount    Decimal?         @db.Decimal(18, 2)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  tontine   Tontine          @relation(fields: [tontineId], references: [id], onDelete: Cascade)
+
+  @@index([tontineId])
+  @@map("tontine_events")
+}
+
+model TontineMember {
+  id               String       @id @default(cuid())
+  tontineId        String
+  userId           String
+  status           MemberStatus @default(ACTIVE)
+  orderPosition    Int?
+  totalContributed Decimal      @default(0) @db.Decimal(18, 2)
+  totalReceived    Decimal      @default(0) @db.Decimal(18, 2)
+  joinedAt         DateTime     @default(now())
+  removedAt        DateTime?
+  // Acceptation du contrat de la tontine (§6.4)
+  agreementAcceptedAt DateTime?
+
+  tontine          Tontine      @relation(fields: [tontineId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id])
+  contributions    TontineContribution[]
+
+  @@unique([tontineId, userId])
+  @@map("tontine_members")
+}
+
+model TontineContribution {
+  id              String             @id @default(cuid())
+  tontineId       String
+  memberId        String
+  round           Int
+  amount          Decimal            @db.Decimal(18, 2)
+  status          ContributionStatus @default(PENDING)
+  dueDate         DateTime
+  paidAt          DateTime?
+  transactionId   String?
+  createdAt       DateTime           @default(now())
+
+  tontine         Tontine            @relation(fields: [tontineId], references: [id])
+  member          TontineMember      @relation(fields: [memberId], references: [id])
+
+  @@index([tontineId])
+  @@index([memberId])
+  @@map("tontine_contributions")
+}
+
+model TontineSchedule {
+  id         String   @id @default(cuid())
+  tontineId  String
+  round      Int
+  dueDate    DateTime
+  recipientId String?
+  isPaid     Boolean  @default(false)
+  paidAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  tontine    Tontine  @relation(fields: [tontineId], references: [id])
+
+  @@map("tontine_schedules")
+}
+
+// ============================================================
+// BUSINESS
+// ============================================================
+
+model Business {
+  id          String         @id @default(cuid())
+  userId      String
+  name        String
+  sector      String
+  description String?
+  phone       String?
+  city        String?
+  logo        String?
+  status      BusinessStatus @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products    Product[]
+  sales       Sale[]
+  expenses    Expense[]
+  invoices    Invoice[]
+  customers   Customer[]
+  suppliers   Supplier[]
+  goals       BusinessGoal[]
+  plan        BusinessPlan?
+
+  @@map("businesses")
+}
+
+model Supplier {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  category   String?
+  phone      String?
+  email      String?
+  address    String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expenses   Expense[]
+
+  @@index([businessId])
+  @@map("suppliers")
+}
+
+model BusinessGoal {
+  id          String     @id @default(cuid())
+  businessId  String
+  metric      GoalMetric
+  targetValue Decimal    @db.Decimal(18, 2)
+  period      GoalPeriod
+  label       String?
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime   @default(now())
+
+  business    Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@map("business_goals")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(18, 2)
+  cost        Decimal? @db.Decimal(18, 2)
+  stock       Int      @default(0)
+  category    String?
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleItems   SaleItem[]
+  inventoryMovements InventoryMovement[]
+
+  @@index([businessId])
+  @@map("products")
+}
+
+model InventoryMovement {
+  id         String   @id @default(cuid())
+  productId  String
+  type       String   // "IN" | "OUT" | "ADJUSTMENT"
+  quantity   Int
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  businessId     String
+  name           String
+  type           CustomerType @default(CLIENT)
+  phone          String?
+  email          String?
+  address        String?
+  notes          String?
+  nextFollowUpAt      DateTime?
+  followUpNote        String?
+  // Dernière relance déjà notifiée à l'exploitant — évite de renotifier
+  // à chaque passage de l'ordonnanceur (cahier des charges §7, ADR 0015).
+  followUpNotifiedAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sales          Sale[]
+  invoices       Invoice[]
+
+  @@index([businessId])
+  @@map("customers")
+}
+
+model Sale {
+  id            String     @id @default(cuid())
+  businessId    String
+  customerId    String?
+  totalAmount   Decimal    @db.Decimal(18, 2)
+  paymentMethod String?
+  status        SaleStatus @default(COMPLETED)
+  notes         String?
+  createdAt     DateTime   @default(now())
+
+  business      Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer      Customer?  @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+
+  @@index([businessId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id         String  @id @default(cuid())
+  saleId     String
+  productId  String
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(18, 2)
+  totalPrice Decimal @db.Decimal(18, 2)
+
+  sale       Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product    Product @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model Expense {
+  id         String    @id @default(cuid())
+  businessId String
+  supplierId String?
+  category   String
+  amount     Decimal   @db.Decimal(18, 2)
+  description String?
+  date       DateTime  @default(now())
+  receiptUrl String?
+  createdAt  DateTime  @default(now())
+
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@map("expenses")
+}
+
+model Invoice {
+  id                 String        @id @default(cuid())
+  businessId         String
+  invoiceNumber      String
+  kind               InvoiceKind   @default(INVOICE)
+  customerId         String?
+  customerName       String?
+  customerEmail      String?
+  items              Json
+  subtotal           Decimal       @db.Decimal(18, 2)
+  tax                Decimal?      @db.Decimal(18, 2)
+  total              Decimal       @db.Decimal(18, 2)
+  status             InvoiceStatus @default(DRAFT)
+  dueDate            DateTime?
+  issuedAt           DateTime      @default(now())
+  paidAt             DateTime?
+  convertedInvoiceId String?       // devis → facture générée
+  createdAt          DateTime      @default(now())
+
+  business           Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer           Customer?     @relation(fields: [customerId], references: [id])
+
+  @@unique([businessId, invoiceNumber])
+  @@map("invoices")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id         String               @id @default(cuid())
+  userId     String
+  category   NotificationCategory
+  priority   NotificationPriority @default(NORMAL)
+  title      String
+  body       String
+  actionUrl  String?
+  isRead     Boolean              @default(false)
+  readAt     DateTime?
+  createdAt  DateTime             @default(now())
+
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ============================================================
+// SUPPORT
+// ============================================================
+
+model SupportTicket {
+  id           String         @id @default(cuid())
+  ticketNumber String         @unique
+  userId       String
+  category     TicketCategory
+  priority     TicketPriority @default(NORMAL)
+  subject      String
+  description  String
+  status       TicketStatus   @default(OPEN)
+  assignedToId String?
+  resolvedAt   DateTime?
+  closedAt     DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user         User           @relation("TicketUser", fields: [userId], references: [id])
+  assignedTo   User?          @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  messages     TicketMessage[]
+  attachments  TicketAttachment[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  authorId   String
+  content    String
+  isInternal Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_messages")
+}
+
+// Pièce jointe à un ticket (§46) — capture d'écran, justificatif…
+// Stockage : bucket privé Supabase (storageKey) si configuré, sinon
+// repli data-URI en base (dataUrl). isInternal → visible des agents seulement.
+model TicketAttachment {
+  id           String        @id @default(cuid())
+  ticketId     String
+  uploadedById String
+  fileName     String
+  mimeType     String
+  size         Int
+  storageKey   String?
+  dataUrl      String?
+  // miniature (data-URI JPEG ~180 px) pour les aperçus de liste — images
+  // uniquement, générée côté client. L'original reste servi par `url`.
+  thumbnail    String?
+  isInternal   Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
+}
+
+// ============================================================
+// AI CONVERSATIONS
+// ============================================================
+
+model AiConversation {
+  id        String    @id @default(cuid())
+  userId    String
+  context   AiContext @default(GENERAL)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AiMessage[]
+
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  role           String         // "USER" | "ASSISTANT"
+  content        String
+  metadata       Json?          // suggestions, actionButtons
+  createdAt      DateTime       @default(now())
+
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_messages")
+}
+
+// ============================================================
+// FONDS DE GARANTIE SOLIDAIRE (cahier des charges §6.5)
+// ⚠️ MODE DÉMONSTRATION — aucun mouvement de fonds réel n'est
+// effectué. Le solde est une projection. L'activation est soumise
+// à une qualification juridique. Voir ADR 0010.
+// ============================================================
+
+model GuaranteeClaim {
+  id              String               @id @default(cuid())
+  userId          String
+  tontineId       String?
+  round           Int?
+  amountRequested Decimal              @db.Decimal(18, 2)
+  reason          String
+  status          GuaranteeClaimStatus @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  decisionNote    String?
+  simulated       Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  user            User                 @relation("GuaranteeClaimant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy      User?                @relation("GuaranteeReviewer", fields: [reviewedById], references: [id])
+  events          GuaranteeEvent[]
+
+  @@index([status])
+  @@index([userId])
+  @@map("guarantee_claims")
+}
+
+model GuaranteeEvent {
+  id        String            @id @default(cuid())
+  type      GuaranteeEventType
+  claimId   String?
+  actorId   String?
+  amount    Decimal?          @db.Decimal(18, 2)
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  claim     GuaranteeClaim?   @relation(fields: [claimId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("guarantee_events")
+}
+
+// ============================================================
+// MODULES D'EXPANSION — captation d'intérêt (cahier des charges §9–§16)
+// Les modules Phase 8 ne sont pas construits ; on mesure la demande.
+// ============================================================
+
+model ModuleInterest {
+  id        String   @id @default(cuid())
+  userId    String
+  module    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module])
+  @@index([module])
+  @@map("module_interests")
+}
+
+// ============================================================
+// PLAN DE CROISSANCE (cahier des charges §23)
+// Le plan est *calculé* à chaque consultation (règles sur le KESSIA
+// Score, l'ADN d'entreprise, les tontines, le KYC…). Seule la
+// progression de l'utilisateur sur chaque étape est persistée ici.
+// ============================================================
+
+model GrowthStepState {
+  id          String           @id @default(cuid())
+  userId      String
+  stepKey     String
+  status      GrowthStepStatus @default(TODO)
+  note        String?
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stepKey])
+  @@index([userId])
+  @@map("growth_step_states")
+}
+
+// ============================================================
+// PLAN D'AFFAIRES (cahier des charges §17 — Business Plan AI)
+// Brouillon structuré généré à partir de l'ADN de l'entreprise,
+// éditable par le propriétaire. Un plan par entreprise.
+// ============================================================
+
+model BusinessPlan {
+  id          String   @id @default(cuid())
+  businessId  String   @unique
+  content     Json
+  generatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("business_plans")
+}
+
+// ============================================================
+// ANTI-FRAUDE (cahier des charges §32)
+// Moteur à base de règles : empreintes d'appareils + signaux
+// comportementaux → alertes revues par un humain. Aucune décision
+// automatique de blocage de fonds ; seul un humain confirme.
+// ============================================================
+
+model Device {
+  id           String   @id @default(cuid())
+  userId       String
+  fingerprint  String
+  userAgent    String?
+  ipHash       String?
+  label        String?
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  seenCount    Int      @default(1)
+  trusted      Boolean  @default(false)
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId])
+  @@map("devices")
+}
+
+model FraudAlert {
+  id           String           @id @default(cuid())
+  userId       String
+  riskLevel    FraudRiskLevel
+  score        Int
+  signals      Json
+  context      String           // "login" | "transfer" | "payment" | …
+  entityId     String?
+  status       FraudAlertStatus @default(OPEN)
+  reviewedById String?
+  reviewedAt   DateTime?
+  decisionNote String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user         User             @relation("FraudSubject", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy   User?            @relation("FraudReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("fraud_alerts")
+}
+
+// ============================================================
+// DISTRIBUTION DES NOTIFICATIONS (cahier des charges §33)
+// Journal de tentative d'envoi par canal. L'abstraction
+// NotificationChannel (lib/notifications/channels.ts) reste en
+// mode simulation tant qu'aucun fournisseur réel n'est branché.
+// ============================================================
+
+model NotificationDelivery {
+  id             String                    @id @default(cuid())
+  notificationId String?
+  userId         String
+  channel        NotificationChannel
+  status         NotificationDeliveryStatus @default(QUEUED)
+  detail         String?
+  simulated      Boolean                   @default(true)
+  createdAt      DateTime                  @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notification_deliveries")
+}
+
+// ============================================================
+// AUDIT LOGS
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

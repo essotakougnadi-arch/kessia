@@ -1,0 +1,21 @@
+# dépendances
+**/node_modules/
+
+# Next.js
+kessia-app/.next/
+kessia-app/out/
+kessia-app/next-env.d.ts
+kessia-app/tsconfig.tsbuildinfo
+
+# env — NE JAMAIS committer
+**/.env
+**/.env.local
+**/.env.*.local
+
+# divers
+.DS_Store
+*.log
+kessia-app/prisma/*.db
+kessia-app/backups/
+.vscode/
+.idea/

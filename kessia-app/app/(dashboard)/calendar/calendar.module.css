@@ -1,0 +1,30 @@
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 90px; }
+.header { padding: 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 12px; }
+.back { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; text-decoration: none; flex-shrink: 0; }
+.title { font-size: 18px; font-weight: 900; color: var(--color-text); margin: 0; }
+.sub { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.body { padding: 16px; }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 12px; text-align: center; }
+.statNum { font-size: 20px; font-weight: 900; color: var(--color-text); }
+.statNum.warn { color: var(--color-danger); }
+.statLabel { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.filterBar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.chip { padding: 6px 12px; border-radius: 100px; border: 1px solid var(--color-border); background: var(--color-surface); font-size: 12px; font-weight: 600; color: var(--color-text-tertiary); cursor: pointer; }
+.chipOn { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+.dayGroup { margin-bottom: 18px; }
+.dayLabel { font-size: 12px; font-weight: 800; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.dayLabel.today { color: var(--color-primary); }
+
+.event { display: flex; gap: 12px; align-items: flex-start; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; text-decoration: none; }
+.eventOverdue { border-color: var(--color-danger); }
+.icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; background: var(--color-background); }
+.eventTitle { font-size: 13.5px; font-weight: 700; color: var(--color-text); }
+.eventDetail { font-size: 11.5px; color: var(--color-text-tertiary); margin-top: 2px; }
+.eventAmount { font-size: 13px; font-weight: 800; color: var(--color-primary); white-space: nowrap; }
+.overdueTag { font-size: 10px; font-weight: 800; color: var(--color-danger); }
+
+.empty { text-align: center; padding: 40px 16px; color: var(--color-text-tertiary); font-size: 13px; }

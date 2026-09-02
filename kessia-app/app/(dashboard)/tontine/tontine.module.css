@@ -1,0 +1,126 @@
+/* KESSIA — Tontine Page */
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 100px; }
+
+.header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.headerTitle { font-size: 18px; font-weight: 900; color: var(--color-text); letter-spacing: -0.4px; margin: 0; }
+.headerSub { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+.createBtn { background: var(--gradient-primary); color: #fff; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 100px; text-decoration: none; box-shadow: var(--shadow-primary-sm); }
+
+/* MY TURN ALERT */
+.myTurnAlert { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; background: linear-gradient(135deg, #1F5D4A, #2D7A63); border-radius: 18px; padding: 14px 16px; box-shadow: var(--shadow-green); }
+.alertIcon { font-size: 28px; flex-shrink: 0; }
+.alertTitle { font-size: 14px; font-weight: 800; color: #fff; }
+.alertDesc { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+.alertBtn { margin-left: auto; background: rgba(255,255,255,0.15); color: #fff; font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 100px; text-decoration: none; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
+
+/* SUMMARY STRIP */
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 16px 0; }
+.summaryCard { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 12px 10px; text-align: center; box-shadow: var(--shadow-card); }
+.summaryValue { font-size: 17px; font-weight: 900; color: var(--color-text); letter-spacing: -0.3px; }
+.summaryValue small { font-size: 11px; font-weight: 700; color: var(--color-text-tertiary); }
+.summaryLabel { font-size: 10px; font-weight: 600; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; }
+
+/* SECTION */
+.section { padding: 20px 16px 0; }
+.sectionTitle { font-size: 16px; font-weight: 800; color: var(--color-text); margin: 0 0 12px; letter-spacing: -0.3px; }
+.sectionHint { font-size: 12px; color: var(--color-text-tertiary); margin: -6px 0 12px; }
+
+/* TYPE BADGE */
+.typeBadge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 100px; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0; }
+
+/* TYPES OVERVIEW */
+.typesGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.typeCard { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 14px; text-align: left; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 6px; font: inherit; }
+.typeCard:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.typeCardIcon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+.typeCardLabel { font-size: 13px; font-weight: 800; color: var(--color-text); }
+.typeCardTagline { font-size: 11px; color: var(--color-text-tertiary); line-height: 1.4; }
+
+/* TYPE DETAIL (modale) */
+.typeDetailHead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.typeDetailIcon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.typeDetailTitle { font-size: 16px; font-weight: 800; color: var(--color-text); }
+.typeDetailTagline { font-size: 12px; color: var(--color-text-tertiary); }
+.typeDetailDesc { font-size: 13px; line-height: 1.6; color: var(--color-text-secondary); margin-bottom: 14px; }
+.typeSteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.typeSteps li { display: flex; gap: 10px; font-size: 13px; color: var(--color-text-secondary); line-height: 1.45; }
+.typeStepNum { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--color-primary-subtle); color: var(--color-primary); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+/* TYPE PICKER (formulaire) */
+.typePicker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.typePick { border: 1.5px solid var(--color-border-medium); background: var(--color-surface); border-radius: 12px; padding: 10px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; flex-direction: column; gap: 3px; font: inherit; }
+.typePickActive { border-color: var(--color-primary); background: var(--color-primary-subtle); }
+.typePickTop { display: flex; align-items: center; gap: 6px; }
+.typePickLabel { font-size: 12px; font-weight: 800; color: var(--color-text); }
+.typePickTagline { font-size: 10px; color: var(--color-text-tertiary); line-height: 1.35; }
+
+/* TONTINE LIST */
+.tontineList { display: flex; flex-direction: column; gap: 12px; }
+.tontineCard { background: var(--color-surface); border-radius: 20px; padding: 16px; text-decoration: none; border: 1px solid var(--color-border); box-shadow: var(--shadow-card); transition: all 0.2s; display: block; }
+.tontineCard:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
+
+.tontineCardHeader { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.tontineIcon { width: 42px; height: 42px; border-radius: 12px; background: var(--color-primary-light); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.tontineInfo { flex: 1; min-width: 0; }
+.tontiName { font-size: 15px; font-weight: 800; color: var(--color-text); }
+.tontiMeta { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+.myTurnBadge { background: #D6A84F; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 100px; flex-shrink: 0; animation: pulse-glow 2s ease infinite; }
+@keyframes pulse-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+.tontineStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; background: var(--color-earth); border-radius: 12px; padding: 10px; }
+.tontineStatItem { display: flex; flex-direction: column; gap: 3px; align-items: center; text-align: center; }
+.statLabel { font-size: 10px; font-weight: 600; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.3px; }
+.statValue { font-size: 13px; font-weight: 700; color: var(--color-text); }
+.statValuePrimary { font-size: 13px; font-weight: 800; color: var(--color-primary); }
+
+.progressWrapper { display: flex; flex-direction: column; gap: 4px; }
+.progressBar { height: 6px; background: var(--color-border); border-radius: 100px; overflow: hidden; }
+.progressFill { height: 100%; background: linear-gradient(90deg, #B65A3A, #D6A84F); border-radius: 100px; transition: width 0.8s ease; }
+.progressMeta { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-text-tertiary); }
+
+/* CREATE / JOIN */
+.createCard { display: flex; align-items: center; gap: 14px; padding: 16px; background: var(--color-primary-subtle); border: 2px dashed var(--color-primary); border-radius: 18px; text-decoration: none; transition: all 0.2s; margin-bottom: 10px; }
+.createCard:hover { background: var(--color-primary-light); }
+.createCardIcon { width: 44px; height: 44px; border-radius: 14px; background: var(--gradient-primary); color: #fff; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: var(--shadow-primary-sm); }
+.createCardTitle { font-size: 14px; font-weight: 800; color: var(--color-primary); }
+.createCardSub { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.joinCard { display: flex; align-items: center; gap: 14px; padding: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 18px; text-decoration: none; transition: all 0.2s; }
+.joinCard:hover { border-color: var(--color-primary); background: var(--color-primary-subtle); }
+.joinCardIcon { width: 44px; height: 44px; border-radius: 14px; background: var(--color-green-light); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.joinCardTitle { font-size: 14px; font-weight: 800; color: var(--color-text); }
+.joinCardSub { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+/* EXPLAINER */
+.explainer { background: var(--color-surface); border-radius: 18px; border: 1px solid var(--color-border); padding: 18px; box-shadow: var(--shadow-card); }
+.explainerTitle { font-size: 15px; font-weight: 800; color: var(--color-text); margin-bottom: 8px; }
+.explainerText { font-size: 13px; color: var(--color-text-secondary); line-height: 1.7; margin-bottom: 12px; }
+.explainerLink { font-size: 13px; font-weight: 700; color: var(--color-primary); text-decoration: none; }
+
+/* BOUTONS (au lieu de liens) */
+.createBtn, .createCard, .joinCard { cursor: pointer; border: none; font: inherit; text-align: left; }
+.createBtn { background: var(--color-primary); color: #fff; }
+
+/* ÉTATS */
+.skeleton {
+  display: inline-block; border-radius: 6px; color: transparent;
+  background: linear-gradient(90deg, var(--color-earth) 25%, var(--color-earth-dark) 37%, var(--color-earth) 63%);
+  background-size: 400% 100%; animation: tontine-shimmer 1.4s ease infinite;
+}
+@keyframes tontine-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+.emptyState { background: var(--color-surface); border: 1px dashed var(--color-border-medium); border-radius: 18px; padding: 32px 20px; text-align: center; }
+.emptyIcon { font-size: 34px; }
+.emptyTitle { font-size: 15px; font-weight: 700; color: var(--color-text); margin-top: 8px; }
+.emptyDesc { font-size: 13px; color: var(--color-text-tertiary); margin-top: 4px; }
+
+/* FORMULAIRE MODALE */
+.modalForm { display: flex; flex-direction: column; gap: 14px; }
+.modalRow { display: flex; gap: 10px; }
+.modalRow > * { flex: 1; }
+.segRow { display: flex; gap: 8px; }
+.segBtn { flex: 1; padding: 9px 6px; border-radius: 10px; border: 1.5px solid var(--color-border-medium); background: var(--color-surface); font-size: 12px; font-weight: 600; color: var(--color-text-secondary); cursor: pointer; transition: all 0.15s; }
+.segBtnActive { border-color: var(--color-primary); background: var(--color-primary-subtle); color: var(--color-primary); }
+.modalError { background: var(--color-danger-light); border: 1px solid rgba(239,68,68,0.3); color: var(--color-danger); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.modalHint { font-size: 12px; color: var(--color-text-tertiary); }
+.codeBox { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--color-primary-subtle); border: 1px dashed var(--color-primary); border-radius: 12px; padding: 12px 14px; font-size: 18px; font-weight: 800; letter-spacing: 2px; color: var(--color-primary); }

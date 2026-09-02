@@ -1,0 +1,44 @@
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 90px; }
+.header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 10; }
+.back { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; text-decoration: none; flex-shrink: 0; }
+.title { font-size: 16px; font-weight: 800; color: var(--color-text); margin: 0; }
+.sub { font-size: 12px; color: var(--color-text-tertiary); }
+
+.section { margin: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow-card); }
+.sectionTitle { font-size: 14px; font-weight: 800; color: var(--color-text); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+.badge { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 100px; background: var(--color-primary-subtle); color: var(--color-primary); }
+.badgeDraft { background: var(--color-warning-light, #f3ebd8); color: var(--color-warning, #b45309); }
+
+.lead { font-size: 13px; line-height: 1.6; color: var(--color-text-secondary); margin: 0 0 12px; }
+
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kvItem { background: var(--color-earth, var(--color-background)); border-radius: 10px; padding: 10px 12px; }
+.kvLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: var(--color-text-tertiary); }
+.kvValue { font-size: 13px; font-weight: 700; color: var(--color-text); margin-top: 2px; }
+
+.rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.ruleItem { }
+.ruleName { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: var(--color-primary); margin-bottom: 3px; }
+.ruleText { font-size: 13px; line-height: 1.55; color: var(--color-text-secondary); }
+
+.calRow, .memberRow, .accRow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+.calRow:last-child, .memberRow:last-child, .accRow:last-child { border-bottom: none; }
+.calRound { font-weight: 800; color: var(--color-primary); width: 54px; flex-shrink: 0; font-size: 12px; }
+.calDate { color: var(--color-text-tertiary); width: 88px; flex-shrink: 0; font-size: 12px; }
+.calWho { color: var(--color-text); flex: 1; min-width: 0; }
+.pos { width: 30px; height: 30px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+.memberName { flex: 1; font-weight: 600; color: var(--color-text); }
+.ok { color: var(--color-success); font-weight: 700; font-size: 12px; }
+.pending { color: var(--color-text-tertiary); font-size: 12px; }
+
+.timeline { position: relative; padding-left: 20px; }
+.timeline::before { content: ''; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--color-border); }
+.evt { position: relative; padding: 8px 0; }
+.evt::before { content: ''; position: absolute; left: -18px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); border: 2px solid var(--color-surface); }
+.evtLabel { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.evtMeta { font-size: 11px; color: var(--color-text-tertiary); margin-top: 1px; }
+
+.acceptBox { margin: 16px; background: var(--color-primary-subtle); border: 1px solid var(--color-primary); border-radius: 16px; padding: 16px; }
+.acceptText { font-size: 13px; color: var(--color-text-secondary); line-height: 1.55; margin: 0 0 12px; }
+.actionsFoot { display: flex; gap: 10px; margin: 16px; }
+.disclaimer { margin: 16px; font-size: 11px; color: var(--color-text-tertiary); line-height: 1.5; }

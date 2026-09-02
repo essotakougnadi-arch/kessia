@@ -1,0 +1,408 @@
+.page {
+  padding: 0 0 100px 0;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* Header */
+.header {
+  padding: 28px 20px 8px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+
+/* Search */
+.searchSection {
+  padding: 8px 16px 16px;
+}
+
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border-medium);
+  border-radius: var(--radius-xl);
+  padding: 12px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.searchWrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.searchIcon { font-size: 16px; }
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--color-text);
+  outline: none;
+  font-family: inherit;
+}
+.searchInput::placeholder { color: var(--color-text-tertiary); }
+
+/* Section */
+.section {
+  padding: 0 16px;
+  margin-bottom: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.ticketCount {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* Channel Grid */
+.channelGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.channelCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  position: relative;
+}
+.channelCard:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.channelDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.channelIcon { font-size: 24px; margin-bottom: 4px; }
+
+.channelLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.channelSub {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.channelTag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  background: var(--color-border);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+}
+
+/* New Ticket Button */
+.newTicketBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+.newTicketBtn:hover {
+  background: var(--color-primary-subtle);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.newTicketIcon { font-size: 24px; }
+
+.newTicketText { flex: 1; }
+
+.newTicketTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.newTicketSub {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.newTicketArrow {
+  font-size: 18px;
+  color: var(--color-primary);
+}
+
+/* Ticket List */
+.ticketList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ticketCard {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+.ticketCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-medium);
+}
+
+.ticketHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ticketId {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  font-family: 'Courier New', monospace;
+}
+
+.ticketStatus {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.ticketStatus_info { background: var(--color-info-light); color: var(--color-info); }
+.ticketStatus_warning { background: var(--color-warning-light); color: var(--color-warning); }
+.ticketStatus_success { background: var(--color-success-light); color: var(--color-success); }
+.ticketStatus_neutral { background: var(--color-border); color: var(--color-text-tertiary); }
+.ticketStatus_gold { background: var(--color-gold-light); color: var(--color-gold); }
+
+.ticketSubject {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.ticketMeta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.ticketCategory {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.ticketDot { font-size: 11px; color: var(--color-text-tertiary); }
+
+.ticketDate {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.ticketPreview {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* FAQ */
+.faqList {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.faqItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+}
+.faqItem:first-child { border-top: none; }
+.faqItem:hover { background: var(--color-surface-hover); }
+
+.faqLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.faqIcon { font-size: 18px; }
+
+.faqQuestion {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.faqCategory {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.faqArrow {
+  font-size: 20px;
+  color: var(--color-text-tertiary);
+  font-weight: 300;
+}
+
+/* AI Help */
+.aiHelpSection {
+  padding: 0 16px;
+}
+
+.aiHelpCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.aiHelpCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2);
+}
+
+.aiHelpIcon {
+  font-size: 28px;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+  flex-shrink: 0;
+}
+
+.aiHelpText { flex: 1; }
+
+.aiHelpTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6366f1;
+}
+
+.aiHelpSub {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.aiHelpArrow {
+  font-size: 18px;
+  color: #6366f1;
+}
+
+/* ═══ ÉTATS ═══ */
+.skeleton {
+  display: inline-block; border-radius: 6px; color: transparent;
+  background: linear-gradient(90deg, var(--color-earth) 25%, var(--color-earth-dark) 37%, var(--color-earth) 63%);
+  background-size: 400% 100%; animation: sup-shimmer 1.4s ease infinite;
+}
+@keyframes sup-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+.emptyRow { padding: 20px 4px; text-align: center; font-size: 13px; color: var(--color-text-tertiary); }
+.cardBtn { cursor: pointer; border: none; background: none; font: inherit; text-align: left; width: 100%; }
+
+/* ═══ FORMULAIRE MODALE ═══ */
+.modalForm { display: flex; flex-direction: column; gap: 14px; }
+.segRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.segBtn { padding: 8px 12px; border-radius: 100px; border: 1.5px solid var(--color-border-medium); background: var(--color-surface); font-size: 12px; font-weight: 600; color: var(--color-text-secondary); cursor: pointer; }
+.segBtnActive { border-color: var(--color-primary); background: var(--color-primary-subtle); color: var(--color-primary); }
+.modalError { background: var(--color-danger-light); border: 1px solid rgba(239,68,68,0.3); color: var(--color-danger); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+textarea.modalTextarea { min-height: 96px; resize: vertical; font-family: inherit; }
+
+/* ═══ FIL DE DISCUSSION TICKET ═══ */
+.thread { display: flex; flex-direction: column; gap: 10px; max-height: 42vh; overflow-y: auto; padding: 4px 2px; }
+.threadMsg { max-width: 82%; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; }
+.threadMine { align-self: flex-end; background: var(--color-primary); color: #fff; border-bottom-right-radius: 4px; }
+.threadOther { align-self: flex-start; background: var(--color-earth); color: var(--color-text); border-bottom-left-radius: 4px; }
+.threadTime { display: block; margin-top: 4px; font-size: 10px; opacity: 0.7; }
+.replyRow { display: flex; gap: 8px; margin-top: 12px; }
+.replyRow input { flex: 1; }

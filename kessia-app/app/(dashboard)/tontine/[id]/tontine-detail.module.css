@@ -1,0 +1,456 @@
+/* ============================================================
+   KESSIA — Tontine Detail Page
+   ============================================================ */
+
+.page {
+  padding: 0 0 100px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  position: sticky;
+  top: 0;
+  background: var(--color-background);
+  z-index: 10;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.backBtn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.backBtn:hover { background: var(--color-earth); }
+
+.headerTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0;
+  flex: 1;
+}
+
+.headerStatus {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.statusDot {
+  width: 7px; height: 7px;
+  background: var(--color-success);
+  border-radius: 50%;
+}
+
+.menuBtn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+/* ─── MAIN CARD ──────────────────────────────────────────── */
+.mainCard {
+  margin: 16px;
+  background: linear-gradient(135deg, #1A0D05 0%, #2D1508 60%, #1F3D2A 100%);
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardGlow {
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(182, 90, 58, 0.25), transparent 65%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.cardLabel {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 4px;
+}
+
+.cardAmount {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.cardCurrency {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+}
+
+.cardStats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cardStatVal {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.cardStatLab {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+}
+
+.cardStatDiv {
+  width: 1px;
+  height: 30px;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Progress */
+.progressSection { margin-bottom: 16px; }
+
+.progressBar {
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #B65A3A, #D6A84F);
+  border-radius: 99px;
+  transition: width 0.5s;
+}
+
+.progressMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+}
+
+/* Info tour */
+.myTurnInfo,
+.myTurnAlert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.myTurnInfo {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.7);
+}
+
+.myTurnAlert {
+  background: rgba(214, 168, 79, 0.15);
+  color: #D6A84F;
+  border: 1px solid rgba(214, 168, 79, 0.25);
+}
+
+.myTurnInfo strong,
+.myTurnAlert strong {
+  color: #fff;
+}
+
+/* ─── ACTIONS ────────────────────────────────────────────── */
+.section { padding: 16px 16px 0; }
+
+.actionsRow {
+  display: flex;
+  gap: 8px;
+}
+
+.actionBtn {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionBtn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.actionBtn span { font-size: 18px; }
+
+.actionBtnPrimary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.actionBtnPrimary:hover {
+  background: var(--color-primary-pressed);
+  border-color: var(--color-primary-pressed);
+  color: #fff !important;
+}
+
+/* ─── SECTION TITLE ──────────────────────────────────────── */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  margin-top: 20px;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* ─── MEMBRES ────────────────────────────────────────────── */
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memberCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  transition: transform 0.15s;
+}
+
+.memberCard:hover { transform: translateX(2px); }
+
+.memberCardMe {
+  border-color: rgba(182, 90, 58, 0.3);
+  background: rgba(182, 90, 58, 0.03);
+}
+
+.memberAvatar {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, rgba(182, 90, 58, 0.2), rgba(214, 168, 79, 0.2));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.memberInfo { flex: 1; min-width: 0; }
+
+.memberName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meBadge {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(182, 90, 58, 0.1);
+  color: var(--color-primary);
+  border-radius: 20px;
+  padding: 1px 6px;
+}
+
+.memberTurn {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.memberStatus {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 3px 8px;
+}
+
+.memberPaid {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+}
+
+.memberPending {
+  background: rgba(156, 142, 126, 0.1);
+  color: var(--color-text-tertiary);
+}
+
+/* ─── HISTORIQUE ─────────────────────────────────────────── */
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.historyCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.historyIcon {
+  width: 40px; height: 40px;
+  background: rgba(31, 93, 74, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.historyInfo { flex: 1; }
+
+.historyTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.historySub {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.historyAmount {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-success);
+}
+
+.fcfa {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* ─── RÈGLES ─────────────────────────────────────────────── */
+.rulesCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.rulesTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 8px;
+}
+
+.rulesText {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.rulesMeta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ═══ ÉTATS ═══ */
+.stateWrap { padding: 60px 24px; text-align: center; }
+.stateIcon { font-size: 40px; }
+.stateTitle { font-size: 16px; font-weight: 700; color: var(--color-text); margin-top: 10px; }
+.stateDesc { font-size: 13px; color: var(--color-text-tertiary); margin-top: 6px; }
+.stateLink { display: inline-block; margin-top: 16px; font-size: 14px; font-weight: 700; color: var(--color-primary); text-decoration: none; }
+
+.skeleton {
+  display: inline-block; border-radius: 6px; color: transparent;
+  background: linear-gradient(90deg, var(--color-earth) 25%, var(--color-earth-dark) 37%, var(--color-earth) 63%);
+  background-size: 400% 100%; animation: td-shimmer 1.4s ease infinite;
+}
+@keyframes td-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+.actionBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ═══ MODALE COTISATION ═══ */
+.confirmBody { display: flex; flex-direction: column; gap: 14px; }
+.confirmAmount { font-size: 30px; font-weight: 900; color: var(--color-primary); text-align: center; letter-spacing: -1px; }
+.confirmRow { display: flex; justify-content: space-between; font-size: 13px; color: var(--color-text-secondary); padding: 8px 0; border-bottom: 1px solid var(--color-border); }
+.confirmRow:last-of-type { border-bottom: none; }
+.modalError { background: var(--color-danger-light); border: 1px solid rgba(239,68,68,0.3); color: var(--color-danger); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+
+/* ═══ CODE D'INVITATION ═══ */
+.inviteBox { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--color-primary-subtle); border: 1px dashed var(--color-primary); border-radius: 12px; padding: 12px 14px; margin: 12px 20px 0; }
+.inviteCode { font-size: 18px; font-weight: 800; letter-spacing: 2px; color: var(--color-primary); }
+.inviteCopy { border: none; background: var(--color-primary); color: #fff; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }

@@ -1,0 +1,40 @@
+.page { background: var(--color-background); min-height: 100dvh; padding-bottom: 90px; }
+.header { padding: 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 12px; }
+.back { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; text-decoration: none; flex-shrink: 0; }
+.title { font-size: 18px; font-weight: 900; color: var(--color-text); margin: 0; }
+.sub { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+
+.body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+.hero { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 18px; padding: 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-card); }
+.ring { width: 72px; height: 72px; flex-shrink: 0; }
+.heroText { min-width: 0; }
+.heroHeadline { font-size: 14px; font-weight: 800; color: var(--color-text); line-height: 1.35; }
+.heroMeta { font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px; }
+
+.scoreLink { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--color-primary-light); border-radius: 14px; padding: 12px 14px; text-decoration: none; }
+.scoreLabel { font-size: 12px; color: var(--color-text-secondary); }
+.scoreVal { font-size: 15px; font-weight: 900; color: var(--color-primary); }
+
+.groupTitle { font-size: 12px; font-weight: 800; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: .5px; margin: 6px 0 0; }
+
+.step { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.stepDone { opacity: .6; }
+.stepOverdue { border-color: var(--color-danger); }
+.stepTop { display: flex; align-items: flex-start; gap: 10px; }
+.stepTitle { font-size: 14px; font-weight: 700; color: var(--color-text); flex: 1; }
+.stepTitleDone { text-decoration: line-through; }
+.stepWhy { font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.5; }
+.stepMeta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
+.pill { padding: 2px 8px; border-radius: 100px; background: var(--color-background); border: 1px solid var(--color-border); }
+.pillDue { background: var(--color-warning-light); color: var(--color-warning); border-color: transparent; }
+.pillOver { background: var(--color-danger-light); color: var(--color-danger); border-color: transparent; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.act { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 100px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); cursor: pointer; }
+.actOn { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.actLink { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 100px; background: var(--color-primary-light); color: var(--color-primary); text-decoration: none; }
+
+.noteInput { width: 100%; font-size: 12px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-background); color: var(--color-text); resize: vertical; }
+.empty { text-align: center; padding: 40px 16px; color: var(--color-text-tertiary); font-size: 13px; }
+.disclaimer { font-size: 11px; color: var(--color-text-tertiary); line-height: 1.5; padding: 0 4px; }
