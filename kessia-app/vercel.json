@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/v1/cron/tontine-tick",
-      "schedule": "7 * * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
