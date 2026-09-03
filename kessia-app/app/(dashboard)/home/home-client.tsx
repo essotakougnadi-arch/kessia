@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import styles from './home.module.css';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
+import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
@@ -380,6 +381,11 @@ export default function HomeClient() {
             {t('home.createTontine')}
           </Link>
         </div>
+      </section>
+
+      {/* ═══ TONTINES OUVERTES — découverte ═══ */}
+      <section className={styles.section}>
+        <DiscoveryRail context="home" limit={10} />
       </section>
 
       {/* ═══ ACTIVITÉS RÉCENTES ═══ */}

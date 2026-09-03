@@ -36,6 +36,8 @@ const createTontineSchema = z
     maxMembers: z.number().int().min(1).max(50),
     rules: z.string().max(1000).optional(),
     isPublic: z.boolean().default(false),
+    // Conditions d'adhésion (tontine publique) affichées au candidat.
+    membershipConditions: z.string().max(1000).optional(),
   })
   .superRefine((v, ctx) => {
     const solo = v.type === 'PURCHASE' && v.purchaseMode === 'SOLO';
@@ -173,6 +175,7 @@ export async function POST(request: NextRequest) {
           maxMembers,
           rules: data.rules,
           isPublic,
+          membershipConditions: isSolo ? null : (data.membershipConditions ?? null),
           inviteCode,
           totalRounds,
           createdById: context.userId,

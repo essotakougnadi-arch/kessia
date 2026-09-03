@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import styles from './page.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
+import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
 import { useT } from '@/lib/i18n';
 
 export default function LandingClient() {
@@ -242,6 +243,13 @@ export default function LandingClient() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ═══ DÉCOUVERTE — tontines ouvertes ═══ */}
+      <section className={styles.discover} id="tontines-ouvertes">
+        <div className={styles.discoverInner}>
+          <DiscoveryRail context="landing" limit={12} />
         </div>
       </section>
 

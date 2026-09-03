@@ -81,11 +81,27 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
 
+  /** Destination post-connexion : ?next / ?from de l'URL, ou une intention stockée
+   *  (ex. clic « rejoindre » sur une carte de découverte en étant déconnecté). */
+  function postAuthTarget(): string {
+    let dest: string | null = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      dest = params.get('next') || params.get('from');
+      if (!dest) dest = sessionStorage.getItem('kessia-after-auth');
+      sessionStorage.removeItem('kessia-after-auth');
+    } catch {
+      /* indisponible */
+    }
+    // uniquement des chemins internes
+    return dest && /^\/(?!\/)/.test(dest) ? dest : '/home';
+  }
+
   function finishSession(data: SessionData) {
     login({ ...data.user, isPhoneVerified: true }, data.accessToken, data.refreshToken);
     setChallengeToken(null);
     addToast({ type: 'success', message: `Bienvenue, ${data.user.firstName} !` });
-    router.push('/home');
+    router.push(postAuthTarget());
   }
 
   // ──── REGISTER ────

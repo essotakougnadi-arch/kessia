@@ -460,6 +460,17 @@
 /* ═══════════════════════════════════════
    HOW IT WORKS
 ═══════════════════════════════════════ */
+.discover {
+  padding: 72px 24px;
+  background: #FAF8F5;
+  border-top: 1px solid rgba(26, 18, 9, 0.06);
+}
+
+.discoverInner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
 .howItWorks {
   padding: 80px 24px;
   background: white;

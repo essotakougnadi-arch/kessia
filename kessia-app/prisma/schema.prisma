@@ -155,6 +155,13 @@ enum MemberStatus {
   REMOVED
 }
 
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum ContributionStatus {
   PENDING
   PAID
@@ -340,56 +347,58 @@ enum GuaranteeEventType {
 // ============================================================
 
 model User {
-  id                String    @id @default(cuid())
-  phone             String    @unique
-  email             String?   @unique
-  passwordHash      String?
-  firstName         String
-  lastName          String
-  role              UserRole  @default(USER)
-  isActive          Boolean   @default(true)
-  isPhoneVerified   Boolean   @default(false)
-  isEmailVerified   Boolean   @default(false)
-  kycStatus         KycStatus @default(NOT_STARTED)
-  kycLevel          Int       @default(0)
-  loginAttempts     Int       @default(0)
-  lockedUntil       DateTime?
-  lastLoginAt       DateTime?
+  id                    String    @id @default(cuid())
+  phone                 String    @unique
+  email                 String?   @unique
+  passwordHash          String?
+  firstName             String
+  lastName              String
+  role                  UserRole  @default(USER)
+  isActive              Boolean   @default(true)
+  isPhoneVerified       Boolean   @default(false)
+  isEmailVerified       Boolean   @default(false)
+  kycStatus             KycStatus @default(NOT_STARTED)
+  kycLevel              Int       @default(0)
+  loginAttempts         Int       @default(0)
+  lockedUntil           DateTime?
+  lastLoginAt           DateTime?
   // MFA / 2FA (cahier des charges §31)
-  twoFactorEnabled  Boolean   @default(false)
-  twoFactorSecret   String?
-  twoFactorBackup   String[]  @default([])
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecret       String?
+  twoFactorBackup       String[]  @default([])
   // Confidentialité (privacy by design §4.5)
-  dataExportRequestedAt  DateTime?
-  deletionRequestedAt    DateTime?
+  dataExportRequestedAt DateTime?
+  deletionRequestedAt   DateTime?
   // Acceptation des documents juridiques (§8) — version + horodatage
-  termsAcceptedVersion   String?
-  termsAcceptedAt        DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  termsAcceptedVersion  String?
+  termsAcceptedAt       DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // Relations
-  profile           UserProfile?
-  wallet            Wallet?
-  kycCases          KycCase[]
-  tontinesCreated   Tontine[]          @relation("TontineCreator")
-  tontineMembers    TontineMember[]
-  businesses        Business[]
-  notifications     Notification[]
-  supportTickets    SupportTicket[]    @relation("TicketUser")
-  assignedTickets   SupportTicket[]    @relation("TicketAssignee")
-  auditLogs         AuditLog[]
-  aiConversations   AiConversation[]
-  sessions          Session[]
-  otps              OtpCode[]
-  paymentTransactions PaymentTransaction[]
-  guaranteeClaims   GuaranteeClaim[]   @relation("GuaranteeClaimant")
-  guaranteeReviews  GuaranteeClaim[]   @relation("GuaranteeReviewer")
-  moduleInterests   ModuleInterest[]
-  growthStepStates  GrowthStepState[]
-  devices           Device[]
-  fraudAlerts       FraudAlert[]       @relation("FraudSubject")
-  fraudReviews      FraudAlert[]       @relation("FraudReviewer")
+  profile              UserProfile?
+  wallet               Wallet?
+  kycCases             KycCase[]
+  tontinesCreated      Tontine[]            @relation("TontineCreator")
+  tontineMembers       TontineMember[]
+  joinRequests         TontineJoinRequest[] @relation("JoinRequestUser")
+  joinRequestDecisions TontineJoinRequest[] @relation("JoinRequestDecider")
+  businesses           Business[]
+  notifications        Notification[]
+  supportTickets       SupportTicket[]      @relation("TicketUser")
+  assignedTickets      SupportTicket[]      @relation("TicketAssignee")
+  auditLogs            AuditLog[]
+  aiConversations      AiConversation[]
+  sessions             Session[]
+  otps                 OtpCode[]
+  paymentTransactions  PaymentTransaction[]
+  guaranteeClaims      GuaranteeClaim[]     @relation("GuaranteeClaimant")
+  guaranteeReviews     GuaranteeClaim[]     @relation("GuaranteeReviewer")
+  moduleInterests      ModuleInterest[]
+  growthStepStates     GrowthStepState[]
+  devices              Device[]
+  fraudAlerts          FraudAlert[]         @relation("FraudSubject")
+  fraudReviews         FraudAlert[]         @relation("FraudReviewer")
 
   @@index([phone])
   @@index([email])
@@ -397,29 +406,29 @@ model User {
 }
 
 model UserProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  avatar      String?
-  profession  String?
-  city        String?
-  country     String   @default("TG")
-  language    String   @default("fr")
-  bio         String?
-  kessiaScore Int      @default(0)
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  avatar          String?
+  profession      String?
+  city            String?
+  country         String    @default("TG")
+  language        String    @default("fr")
+  bio             String?
+  kessiaScore     Int       @default(0)
   // Profil déclaratif (§4)
-  userType      UserType  @default(INDIVIDUAL)
-  userTypeSetAt DateTime?
+  userType        UserType  @default(INDIVIDUAL)
+  userTypeSetAt   DateTime?
   // Préférences de notification (§33). SECURITY est toujours actif, non configurable.
-  notifyPayment   Boolean @default(true)
-  notifyTontine   Boolean @default(true)
-  notifyBusiness  Boolean @default(true)
-  notifySupport   Boolean @default(true)
-  notifySystem    Boolean @default(true)
-  notifyPromotion Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  notifyPayment   Boolean   @default(true)
+  notifyTontine   Boolean   @default(true)
+  notifyBusiness  Boolean   @default(true)
+  notifySupport   Boolean   @default(true)
+  notifySystem    Boolean   @default(true)
+  notifyPromotion Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
 }
@@ -435,7 +444,7 @@ model Session {
   createdAt    DateTime @default(now())
   lastUsedAt   DateTime @default(now())
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([refreshToken])
@@ -443,17 +452,17 @@ model Session {
 }
 
 model OtpCode {
-  id         String   @id @default(cuid())
-  userId     String?
-  phone      String
-  code       String
-  purpose    String   // "REGISTER" | "LOGIN" | "RESET" | "VERIFY"
-  isUsed     Boolean  @default(false)
-  attempts   Int      @default(0)
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  phone     String
+  code      String
+  purpose   String // "REGISTER" | "LOGIN" | "RESET" | "VERIFY"
+  isUsed    Boolean  @default(false)
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([phone])
   @@index([code])
@@ -465,38 +474,38 @@ model OtpCode {
 // ============================================================
 
 model KycCase {
-  id              String      @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
-  status          KycStatus   @default(IN_PROGRESS)
-  level           Int         @default(1)
+  status          KycStatus @default(IN_PROGRESS)
+  level           Int       @default(1)
   rejectionReason String?
   reviewedById    String?
   reviewedAt      DateTime?
   submittedAt     DateTime?
   completedAt     DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents       KycDocument[]
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents KycDocument[]
 
   @@map("kyc_cases")
 }
 
 model KycDocument {
-  id          String          @id @default(cuid())
-  kycCaseId   String
-  type        KycDocumentType
+  id         String          @id @default(cuid())
+  kycCaseId  String
+  type       KycDocumentType
   // `fileUrl` : data-URI de repli quand Supabase Storage n'est pas configuré.
   // Sinon vide, et `storageKey` pointe vers le bucket privé (§30, ADR 0014).
-  fileUrl     String
-  storageKey  String?
-  mimeType    String?
-  status      String          @default("PENDING") // PENDING, ACCEPTED, REJECTED
-  notes       String?
-  uploadedAt  DateTime        @default(now())
+  fileUrl    String
+  storageKey String?
+  mimeType   String?
+  status     String          @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  notes      String?
+  uploadedAt DateTime        @default(now())
 
-  kycCase     KycCase         @relation(fields: [kycCaseId], references: [id], onDelete: Cascade)
+  kycCase KycCase @relation(fields: [kycCaseId], references: [id], onDelete: Cascade)
 
   @@map("kyc_documents")
 }
@@ -506,22 +515,22 @@ model KycDocument {
 // ============================================================
 
 model Wallet {
-  id         String     @id @default(cuid())
+  id        String     @id @default(cuid())
   // userId : renseigné pour un wallet USER, null pour un compte système
   //          (séquestre). L'unicité tolère plusieurs null sous Postgres.
-  userId     String?    @unique
+  userId    String?    @unique
   // tontineId : renseigné pour un TONTINE_ESCROW, un par tontine.
-  tontineId  String?    @unique
-  kind       WalletKind @default(USER)
-  balance    Decimal    @default(0) @db.Decimal(18, 2)
-  currency   String     @default("XOF")
-  isLocked   Boolean    @default(false)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  tontineId String?    @unique
+  kind      WalletKind @default(USER)
+  balance   Decimal    @default(0) @db.Decimal(18, 2)
+  currency  String     @default("XOF")
+  isLocked  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  user       User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tontine    Tontine?   @relation("TontineEscrow", fields: [tontineId], references: [id], onDelete: Cascade)
-  entries    LedgerEntry[]
+  user    User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tontine Tontine?      @relation("TontineEscrow", fields: [tontineId], references: [id], onDelete: Cascade)
+  entries LedgerEntry[]
 
   @@index([kind])
   @@map("wallets")
@@ -545,7 +554,7 @@ model LedgerEntry {
   createdAt         DateTime          @default(now())
   processedAt       DateTime?
 
-  wallet            Wallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
 
   @@index([walletId])
   @@index([status])
@@ -575,7 +584,7 @@ model PaymentTransaction {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -587,46 +596,50 @@ model PaymentTransaction {
 // ============================================================
 
 model Tontine {
-  id                  String           @id @default(cuid())
-  name                String
-  description         String?
-  type                TontineType      @default(CLASSIC_ROTATING)
+  id                   String           @id @default(cuid())
+  name                 String
+  description          String?
+  type                 TontineType      @default(CLASSIC_ROTATING)
   // Achat : GROUP (cagnotte tournante) ou SOLO (achat individuel).
   // Ignoré pour les autres types (toujours GROUP de fait).
-  purchaseMode        PurchaseMode     @default(GROUP)
+  purchaseMode         PurchaseMode     @default(GROUP)
   // Achat SOLO : libellé de l'article visé + prix cible. `amount` reste
   // le montant par versement (dérivé de targetAmount / totalRounds).
-  purchaseItem        String?
-  targetAmount        Decimal?         @db.Decimal(18, 2)
-  amount              Decimal          @db.Decimal(18, 2)
-  currency            String           @default("XOF")
-  frequency           TontineFrequency @default(MONTHLY)
-  startDate           DateTime
-  maxMembers          Int
-  rules               String?
-  isPublic            Boolean          @default(false)
-  inviteCode          String           @unique
-  status              TontineStatus    @default(PENDING)
-  createdById         String
-  currentRound        Int              @default(0)
-  totalRounds         Int
+  purchaseItem         String?
+  targetAmount         Decimal?         @db.Decimal(18, 2)
+  amount               Decimal          @db.Decimal(18, 2)
+  currency             String           @default("XOF")
+  frequency            TontineFrequency @default(MONTHLY)
+  startDate            DateTime
+  maxMembers           Int
+  rules                String?
+  isPublic             Boolean          @default(false)
+  // Conditions d'adhésion affichées au candidat (texte libre du gestionnaire).
+  // Le gestionnaire accepte / refuse chaque demande manuellement (§6, découverte).
+  membershipConditions String?
+  inviteCode           String           @unique
+  status               TontineStatus    @default(PENDING)
+  createdById          String
+  currentRound         Int              @default(0)
+  totalRounds          Int
   nextContributionDate DateTime?
-  completedAt         DateTime?
+  completedAt          DateTime?
   // Contrat numérique de la tontine — « Smart Agreement » (§6.4).
   // Snapshot immuable des termes, figé à l'activation. Pas de blockchain.
   agreementJson        Json?
   agreementGeneratedAt DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
-  createdBy           User             @relation("TontineCreator", fields: [createdById], references: [id])
-  members             TontineMember[]
-  contributions       TontineContribution[]
-  schedules           TontineSchedule[]
-  events              TontineEvent[]
+  createdBy     User                  @relation("TontineCreator", fields: [createdById], references: [id])
+  members       TontineMember[]
+  joinRequests  TontineJoinRequest[]
+  contributions TontineContribution[]
+  schedules     TontineSchedule[]
+  events        TontineEvent[]
   // Compte séquestre — détient les cotisations d'un cycle jusqu'au
   // versement au bénéficiaire (§6.5). Créé à l'activation.
-  escrowWallet        Wallet?          @relation("TontineEscrow")
+  escrowWallet  Wallet?               @relation("TontineEscrow")
 
   @@index([status])
   @@index([inviteCode])
@@ -643,47 +656,71 @@ model TontineEvent {
   metadata  Json?
   createdAt DateTime         @default(now())
 
-  tontine   Tontine          @relation(fields: [tontineId], references: [id], onDelete: Cascade)
+  tontine Tontine @relation(fields: [tontineId], references: [id], onDelete: Cascade)
 
   @@index([tontineId])
   @@map("tontine_events")
 }
 
 model TontineMember {
-  id               String       @id @default(cuid())
-  tontineId        String
-  userId           String
-  status           MemberStatus @default(ACTIVE)
-  orderPosition    Int?
-  totalContributed Decimal      @default(0) @db.Decimal(18, 2)
-  totalReceived    Decimal      @default(0) @db.Decimal(18, 2)
-  joinedAt         DateTime     @default(now())
-  removedAt        DateTime?
+  id                  String       @id @default(cuid())
+  tontineId           String
+  userId              String
+  status              MemberStatus @default(ACTIVE)
+  orderPosition       Int?
+  totalContributed    Decimal      @default(0) @db.Decimal(18, 2)
+  totalReceived       Decimal      @default(0) @db.Decimal(18, 2)
+  joinedAt            DateTime     @default(now())
+  removedAt           DateTime?
   // Acceptation du contrat de la tontine (§6.4)
   agreementAcceptedAt DateTime?
 
-  tontine          Tontine      @relation(fields: [tontineId], references: [id], onDelete: Cascade)
-  user             User         @relation(fields: [userId], references: [id])
-  contributions    TontineContribution[]
+  tontine       Tontine               @relation(fields: [tontineId], references: [id], onDelete: Cascade)
+  user          User                  @relation(fields: [userId], references: [id])
+  contributions TontineContribution[]
 
   @@unique([tontineId, userId])
   @@map("tontine_members")
 }
 
-model TontineContribution {
-  id              String             @id @default(cuid())
-  tontineId       String
-  memberId        String
-  round           Int
-  amount          Decimal            @db.Decimal(18, 2)
-  status          ContributionStatus @default(PENDING)
-  dueDate         DateTime
-  paidAt          DateTime?
-  transactionId   String?
-  createdAt       DateTime           @default(now())
+model TontineJoinRequest {
+  id           String            @id @default(cuid())
+  tontineId    String
+  userId       String
+  status       JoinRequestStatus @default(PENDING)
+  // Mot du candidat au gestionnaire.
+  message      String?
+  // Motif de la décision (surtout en cas de refus).
+  decisionNote String?
+  decidedById  String?
+  decidedAt    DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
-  tontine         Tontine            @relation(fields: [tontineId], references: [id])
-  member          TontineMember      @relation(fields: [memberId], references: [id])
+  tontine   Tontine @relation(fields: [tontineId], references: [id], onDelete: Cascade)
+  user      User    @relation("JoinRequestUser", fields: [userId], references: [id])
+  decidedBy User?   @relation("JoinRequestDecider", fields: [decidedById], references: [id])
+
+  @@unique([tontineId, userId])
+  @@index([tontineId, status])
+  @@index([userId])
+  @@map("tontine_join_requests")
+}
+
+model TontineContribution {
+  id            String             @id @default(cuid())
+  tontineId     String
+  memberId      String
+  round         Int
+  amount        Decimal            @db.Decimal(18, 2)
+  status        ContributionStatus @default(PENDING)
+  dueDate       DateTime
+  paidAt        DateTime?
+  transactionId String?
+  createdAt     DateTime           @default(now())
+
+  tontine Tontine       @relation(fields: [tontineId], references: [id])
+  member  TontineMember @relation(fields: [memberId], references: [id])
 
   @@index([tontineId])
   @@index([memberId])
@@ -691,16 +728,16 @@ model TontineContribution {
 }
 
 model TontineSchedule {
-  id         String   @id @default(cuid())
-  tontineId  String
-  round      Int
-  dueDate    DateTime
+  id          String    @id @default(cuid())
+  tontineId   String
+  round       Int
+  dueDate     DateTime
   recipientId String?
-  isPaid     Boolean  @default(false)
-  paidAt     DateTime?
-  createdAt  DateTime @default(now())
+  isPaid      Boolean   @default(false)
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
 
-  tontine    Tontine  @relation(fields: [tontineId], references: [id])
+  tontine Tontine @relation(fields: [tontineId], references: [id])
 
   @@map("tontine_schedules")
 }
@@ -722,15 +759,15 @@ model Business {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products    Product[]
-  sales       Sale[]
-  expenses    Expense[]
-  invoices    Invoice[]
-  customers   Customer[]
-  suppliers   Supplier[]
-  goals       BusinessGoal[]
-  plan        BusinessPlan?
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products  Product[]
+  sales     Sale[]
+  expenses  Expense[]
+  invoices  Invoice[]
+  customers Customer[]
+  suppliers Supplier[]
+  goals     BusinessGoal[]
+  plan      BusinessPlan?
 
   @@map("businesses")
 }
@@ -747,8 +784,8 @@ model Supplier {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  expenses   Expense[]
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expenses Expense[]
 
   @@index([businessId])
   @@map("suppliers")
@@ -765,7 +802,7 @@ model BusinessGoal {
   endDate     DateTime
   createdAt   DateTime   @default(now())
 
-  business    Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
   @@map("business_goals")
@@ -785,8 +822,8 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  saleItems   SaleItem[]
+  business           Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  saleItems          SaleItem[]
   inventoryMovements InventoryMovement[]
 
   @@index([businessId])
@@ -794,38 +831,38 @@ model Product {
 }
 
 model InventoryMovement {
-  id         String   @id @default(cuid())
-  productId  String
-  type       String   // "IN" | "OUT" | "ADJUSTMENT"
-  quantity   Int
-  reason     String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  productId String
+  type      String // "IN" | "OUT" | "ADJUSTMENT"
+  quantity  Int
+  reason    String?
+  createdAt DateTime @default(now())
 
-  product    Product  @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
   @@map("inventory_movements")
 }
 
 model Customer {
-  id             String       @id @default(cuid())
-  businessId     String
-  name           String
-  type           CustomerType @default(CLIENT)
-  phone          String?
-  email          String?
-  address        String?
-  notes          String?
-  nextFollowUpAt      DateTime?
-  followUpNote        String?
+  id                 String       @id @default(cuid())
+  businessId         String
+  name               String
+  type               CustomerType @default(CLIENT)
+  phone              String?
+  email              String?
+  address            String?
+  notes              String?
+  nextFollowUpAt     DateTime?
+  followUpNote       String?
   // Dernière relance déjà notifiée à l'exploitant — évite de renotifier
   // à chaque passage de l'ordonnanceur (cahier des charges §7, ADR 0015).
   followUpNotifiedAt DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @default(now()) @updatedAt
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @default(now()) @updatedAt
 
-  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  sales          Sale[]
-  invoices       Invoice[]
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sales    Sale[]
+  invoices Invoice[]
 
   @@index([businessId])
   @@map("customers")
@@ -841,9 +878,9 @@ model Sale {
   notes         String?
   createdAt     DateTime   @default(now())
 
-  business      Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  customer      Customer?  @relation(fields: [customerId], references: [id])
-  items         SaleItem[]
+  business Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer?  @relation(fields: [customerId], references: [id])
+  items    SaleItem[]
 
   @@index([businessId])
   @@map("sales")
@@ -857,25 +894,25 @@ model SaleItem {
   unitPrice  Decimal @db.Decimal(18, 2)
   totalPrice Decimal @db.Decimal(18, 2)
 
-  sale       Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product    Product @relation(fields: [productId], references: [id])
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
 
   @@map("sale_items")
 }
 
 model Expense {
-  id         String    @id @default(cuid())
-  businessId String
-  supplierId String?
-  category   String
-  amount     Decimal   @db.Decimal(18, 2)
+  id          String   @id @default(cuid())
+  businessId  String
+  supplierId  String?
+  category    String
+  amount      Decimal  @db.Decimal(18, 2)
   description String?
-  date       DateTime  @default(now())
-  receiptUrl String?
-  createdAt  DateTime  @default(now())
+  date        DateTime @default(now())
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
 
-  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([businessId])
   @@map("expenses")
@@ -897,11 +934,11 @@ model Invoice {
   dueDate            DateTime?
   issuedAt           DateTime      @default(now())
   paidAt             DateTime?
-  convertedInvoiceId String?       // devis → facture générée
+  convertedInvoiceId String? // devis → facture générée
   createdAt          DateTime      @default(now())
 
-  business           Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  customer           Customer?     @relation(fields: [customerId], references: [id])
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
 
   @@unique([businessId, invoiceNumber])
   @@map("invoices")
@@ -912,18 +949,18 @@ model Invoice {
 // ============================================================
 
 model Notification {
-  id         String               @id @default(cuid())
-  userId     String
-  category   NotificationCategory
-  priority   NotificationPriority @default(NORMAL)
-  title      String
-  body       String
-  actionUrl  String?
-  isRead     Boolean              @default(false)
-  readAt     DateTime?
-  createdAt  DateTime             @default(now())
+  id        String               @id @default(cuid())
+  userId    String
+  category  NotificationCategory
+  priority  NotificationPriority @default(NORMAL)
+  title     String
+  body      String
+  actionUrl String?
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
 
-  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@map("notifications")
@@ -948,10 +985,10 @@ model SupportTicket {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  user         User           @relation("TicketUser", fields: [userId], references: [id])
-  assignedTo   User?          @relation("TicketAssignee", fields: [assignedToId], references: [id])
-  messages     TicketMessage[]
-  attachments  TicketAttachment[]
+  user        User               @relation("TicketUser", fields: [userId], references: [id])
+  assignedTo  User?              @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  messages    TicketMessage[]
+  attachments TicketAttachment[]
 
   @@index([userId])
   @@index([status])
@@ -959,14 +996,14 @@ model SupportTicket {
 }
 
 model TicketMessage {
-  id         String        @id @default(cuid())
+  id         String   @id @default(cuid())
   ticketId   String
   authorId   String
   content    String
-  isInternal Boolean       @default(false)
-  createdAt  DateTime      @default(now())
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
-  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("ticket_messages")
 }
@@ -975,7 +1012,7 @@ model TicketMessage {
 // Stockage : bucket privé Supabase (storageKey) si configuré, sinon
 // repli data-URI en base (dataUrl). isInternal → visible des agents seulement.
 model TicketAttachment {
-  id           String        @id @default(cuid())
+  id           String   @id @default(cuid())
   ticketId     String
   uploadedById String
   fileName     String
@@ -986,10 +1023,10 @@ model TicketAttachment {
   // miniature (data-URI JPEG ~180 px) pour les aperçus de liste — images
   // uniquement, générée côté client. L'original reste servi par `url`.
   thumbnail    String?
-  isInternal   Boolean       @default(false)
-  createdAt    DateTime      @default(now())
+  isInternal   Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
-  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@map("ticket_attachments")
@@ -1006,21 +1043,21 @@ model AiConversation {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  AiMessage[]
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
 
   @@map("ai_conversations")
 }
 
 model AiMessage {
-  id             String         @id @default(cuid())
+  id             String   @id @default(cuid())
   conversationId String
-  role           String         // "USER" | "ASSISTANT"
+  role           String // "USER" | "ASSISTANT"
   content        String
-  metadata       Json?          // suggestions, actionButtons
-  createdAt      DateTime       @default(now())
+  metadata       Json? // suggestions, actionButtons
+  createdAt      DateTime @default(now())
 
-  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("ai_messages")
 }
@@ -1047,9 +1084,9 @@ model GuaranteeClaim {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  user            User                 @relation("GuaranteeClaimant", fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy      User?                @relation("GuaranteeReviewer", fields: [reviewedById], references: [id])
-  events          GuaranteeEvent[]
+  user       User             @relation("GuaranteeClaimant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User?            @relation("GuaranteeReviewer", fields: [reviewedById], references: [id])
+  events     GuaranteeEvent[]
 
   @@index([status])
   @@index([userId])
@@ -1057,15 +1094,15 @@ model GuaranteeClaim {
 }
 
 model GuaranteeEvent {
-  id        String            @id @default(cuid())
+  id        String             @id @default(cuid())
   type      GuaranteeEventType
   claimId   String?
   actorId   String?
-  amount    Decimal?          @db.Decimal(18, 2)
+  amount    Decimal?           @db.Decimal(18, 2)
   metadata  Json?
-  createdAt DateTime          @default(now())
+  createdAt DateTime           @default(now())
 
-  claim     GuaranteeClaim?   @relation(fields: [claimId], references: [id], onDelete: SetNull)
+  claim GuaranteeClaim? @relation(fields: [claimId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@map("guarantee_events")
@@ -1082,7 +1119,7 @@ model ModuleInterest {
   module    String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, module])
   @@index([module])
@@ -1106,7 +1143,7 @@ model GrowthStepState {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, stepKey])
   @@index([userId])
@@ -1126,7 +1163,7 @@ model BusinessPlan {
   generatedAt DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@map("business_plans")
 }
@@ -1139,18 +1176,18 @@ model BusinessPlan {
 // ============================================================
 
 model Device {
-  id           String   @id @default(cuid())
-  userId       String
-  fingerprint  String
-  userAgent    String?
-  ipHash       String?
-  label        String?
-  firstSeenAt  DateTime @default(now())
-  lastSeenAt   DateTime @default(now())
-  seenCount    Int      @default(1)
-  trusted      Boolean  @default(false)
+  id          String   @id @default(cuid())
+  userId      String
+  fingerprint String
+  userAgent   String?
+  ipHash      String?
+  label       String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  seenCount   Int      @default(1)
+  trusted     Boolean  @default(false)
 
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, fingerprint])
   @@index([userId])
@@ -1163,7 +1200,7 @@ model FraudAlert {
   riskLevel    FraudRiskLevel
   score        Int
   signals      Json
-  context      String           // "login" | "transfer" | "payment" | …
+  context      String // "login" | "transfer" | "payment" | …
   entityId     String?
   status       FraudAlertStatus @default(OPEN)
   reviewedById String?
@@ -1172,8 +1209,8 @@ model FraudAlert {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  user         User             @relation("FraudSubject", fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy   User?            @relation("FraudReviewer", fields: [reviewedById], references: [id])
+  user       User  @relation("FraudSubject", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("FraudReviewer", fields: [reviewedById], references: [id])
 
   @@index([status])
   @@index([userId])
@@ -1189,14 +1226,14 @@ model FraudAlert {
 // ============================================================
 
 model NotificationDelivery {
-  id             String                    @id @default(cuid())
+  id             String                     @id @default(cuid())
   notificationId String?
   userId         String
   channel        NotificationChannel
   status         NotificationDeliveryStatus @default(QUEUED)
   detail         String?
-  simulated      Boolean                   @default(true)
-  createdAt      DateTime                  @default(now())
+  simulated      Boolean                    @default(true)
+  createdAt      DateTime                   @default(now())
 
   @@index([userId])
   @@index([createdAt])
@@ -1208,19 +1245,19 @@ model NotificationDelivery {
 // ============================================================
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  action     String
-  entity     String
-  entityId   String?
-  before     Json?
-  after      Json?
-  ipAddress  String?
-  userAgent  String?
-  metadata   Json?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
 
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([entity, entityId])

@@ -95,7 +95,7 @@ type TMember = { user: { id: string; firstName: string; lastName: string }; join
 async function seedTontine(o: {
   name: string; description: string; type: TontineType;
   amount: number; frequency: TontineFrequency; maxMembers: number;
-  rules?: string; isPublic?: boolean; createdBy: { id: string };
+  rules?: string; isPublic?: boolean; membershipConditions?: string; createdBy: { id: string };
   members: TMember[];
   status: 'PENDING' | 'ACTIVE' | 'COMPLETED';
   startDaysAgo: number;
@@ -152,7 +152,7 @@ async function seedTontine(o: {
       targetAmount: o.targetAmount != null ? dec(o.targetAmount) : null,
       amount: dec(o.amount), currency: 'XOF', frequency: o.frequency,
       startDate: start, maxMembers: o.maxMembers, rules: o.rules,
-      isPublic: o.isPublic ?? false, inviteCode,
+      isPublic: o.isPublic ?? false, membershipConditions: o.membershipConditions ?? null, inviteCode,
       status: o.status,
       createdById: o.createdBy.id,
       currentRound: isActive ? currentRound : 0,
@@ -320,6 +320,7 @@ async function wipe() {
     () => prisma.tontineEvent.deleteMany(),
     () => prisma.tontineContribution.deleteMany(),
     () => prisma.tontineSchedule.deleteMany(),
+    () => prisma.tontineJoinRequest.deleteMany(),
     () => prisma.tontineMember.deleteMany(),
     () => prisma.tontine.deleteMany(),
     () => prisma.kycDocument.deleteMany(),
@@ -443,10 +444,52 @@ async function main() {
 
   const achat = await seedTontine({
     name: 'Achat groupé — Congélateurs', description: 'Se regrouper pour acheter des congélateurs à prix négocié, chacun son tour.',
-    type: 'PURCHASE', purchaseMode: 'GROUP', amount: 40_000, frequency: 'MONTHLY', maxMembers: 4, isPublic: true,
+    type: 'PURCHASE', purchaseMode: 'GROUP', amount: 40_000, frequency: 'MONTHLY', maxMembers: 6, isPublic: true,
+    membershipConditions: 'Être commerçant·e du marché ou d’un quartier voisin. Disposer d’un local pour recevoir l’appareil. Cotisation de 40 000 FCFA/mois pendant 6 mois.',
     createdBy: koffi, status: 'PENDING', startDaysAgo: -10,
     members: [
-      { user: koffi, joinDaysAgo: 5 }, { user: kossi, joinDaysAgo: 4 }, { user: akossiwa, joinDaysAgo: 3 }, { user: adjoa, joinDaysAgo: 2 },
+      { user: koffi, joinDaysAgo: 5 }, { user: akossiwa, joinDaysAgo: 3 }, { user: adjoa, joinDaysAgo: 2 },
+    ],
+  });
+
+  // ── Tontines publiques ouvertes — alimentent /discover ──
+  const marche = await seedTontine({
+    name: 'Tontine des Maraîchères d’Agoè', description: 'Cycle classique : chacune reçoit la cagnotte à son tour pour renforcer son fonds de roulement.',
+    type: 'CLASSIC_ROTATING', amount: 15_000, frequency: 'BIWEEKLY', maxMembers: 8, isPublic: true,
+    membershipConditions: 'Réservée aux femmes exerçant une activité de maraîchage ou de revente de produits vivriers. Présence obligatoire aux réunions du groupe (2 par mois).',
+    rules: 'Cotisation à chaque réunion. Deux absences non justifiées = exclusion.',
+    createdBy: ama, status: 'PENDING', startDaysAgo: -14,
+    members: [
+      { user: ama, joinDaysAgo: 6 }, { user: adjoa, joinDaysAgo: 5 }, { user: akossiwa, joinDaysAgo: 4 },
+    ],
+  });
+
+  const projetSolaire = await seedTontine({
+    name: 'Projet — Kits solaires boutiques', description: 'Collecte commune pour équiper les boutiques du groupe en kits solaires (éclairage + recharge).',
+    type: 'PROJECT', amount: 20_000, frequency: 'MONTHLY', maxMembers: 10, isPublic: true,
+    membershipConditions: 'Tenir une boutique ou un atelier à Lomé. Objectif d’achat groupé validé ensemble au démarrage.',
+    createdBy: afiwa, status: 'PENDING', startDaysAgo: -20,
+    members: [
+      { user: afiwa, joinDaysAgo: 10 }, { user: sena, joinDaysAgo: 9 },
+    ],
+  });
+
+  const jeunes = await seedTontine({
+    name: 'Épargne Jeunes Entrepreneurs', description: 'Club d’épargne d’encouragement : chacun récupère intégralement sa mise en fin de cycle.',
+    type: 'GROWTH', amount: 10_000, frequency: 'MONTHLY', maxMembers: 12, isPublic: true,
+    createdBy: koffi, status: 'PENDING', startDaysAgo: -8,
+    members: [
+      { user: koffi, joinDaysAgo: 4 }, { user: komla, joinDaysAgo: 3 },
+    ],
+  });
+
+  // Demandes d'adhésion de démonstration
+  await prisma.tontineJoinRequest.createMany({
+    data: [
+      { tontineId: marche.id, userId: sena.id, status: 'PENDING', message: 'Je vends des légumes au marché d’Agoè depuis 4 ans, je serais ravie de rejoindre le groupe.', createdAt: daysAgo(2) },
+      { tontineId: marche.id, userId: komla.id, status: 'PENDING', message: 'Bonjour, je livre des produits vivriers, puis-je participer ?', createdAt: daysAgo(1) },
+      { tontineId: projetSolaire.id, userId: kossi.id, status: 'PENDING', message: 'Atelier d’électronique à Nyékonakpoè — le kit solaire m’intéresse beaucoup.', createdAt: daysAgo(3) },
+      { tontineId: jeunes.id, userId: ama.id, status: 'REJECTED', decisionNote: 'Groupe réservé aux moins de 35 ans pour cette édition.', decidedById: koffi.id, decidedAt: daysAgo(2), createdAt: daysAgo(4) },
     ],
   });
 
@@ -807,7 +850,7 @@ async function main() {
     ],
   });
 
-  console.log('\n✅ Seed terminé — 12 comptes, 7 tontines (dont 1 achat individuel), 4 entreprises, Fonds de Garantie (démo).\n');
+  console.log('\n✅ Seed terminé — 12 comptes, 10 tontines (dont 1 achat individuel + 4 publiques ouvertes), demandes d’adhésion, 4 entreprises, Fonds de Garantie (démo).\n');
   console.table([
     { Rôle: 'Membre (SME)', Téléphone: '+22890000001', Nom: 'Kossi Amétépé' },
     { Rôle: 'Membre (Micro)', Téléphone: '+22890000002', Nom: 'Ama Dossou' },

@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { apiGet, apiSend, type ApiResult } from '@/lib/api/client';
 import type {
   ContributionStatus,
+  JoinRequestStatus,
   MemberStatus,
   PurchaseMode,
   TontineFrequency,
@@ -64,6 +65,7 @@ export type TontineDetail = {
   maxMembers: number;
   rules: string | null;
   isPublic: boolean;
+  membershipConditions: string | null;
   inviteCode: string;
   status: TontineStatus;
   createdById: string;
@@ -79,6 +81,10 @@ export type TontineDetail = {
   memberCount: number;
   isMember: boolean;
   isCreator: boolean;
+  /** demande d'adhésion de l'utilisateur courant (null si membre ou aucune) */
+  myJoinRequest: { status: JoinRequestStatus; decisionNote: string | null; createdAt: string } | null;
+  /** nombre de demandes en attente (visible uniquement par le gestionnaire) */
+  pendingJoinRequestCount: number;
   /** séquestre (§6.5) — présent dès que la tontine est ACTIVE/COMPLETED */
   escrow: { held: number; expectedHeld: number; balanced: boolean } | null;
 };
@@ -117,6 +123,23 @@ export function useTontineDetail(id: string) {
     return result;
   }
 
+  async function requestJoin(message?: string): Promise<ActionResult> {
+    const result = toActionResult(
+      await apiSend(`/api/v1/tontine/${id}/join-requests`, 'POST', { message })
+    );
+    if (result.success) mutate();
+    return result;
+  }
+
+  async function cancelJoinRequest(): Promise<ActionResult> {
+    // l'API accepte requestId — on route via la ressource "ma demande"
+    const result = toActionResult(
+      await apiSend(`/api/v1/tontine/${id}/join-requests/me`, 'PATCH', { action: 'cancel' })
+    );
+    if (result.success) mutate();
+    return result;
+  }
+
   return {
     tontine: data ?? null,
     isLoading,
@@ -124,5 +147,7 @@ export function useTontineDetail(id: string) {
     refresh: () => mutate(),
     contribute,
     startTontine,
+    requestJoin,
+    cancelJoinRequest,
   };
 }

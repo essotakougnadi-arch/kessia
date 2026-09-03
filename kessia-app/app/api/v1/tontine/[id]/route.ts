@@ -21,6 +21,7 @@ const updateTontineSchema = z.object({
   description: z.string().max(500).optional(),
   rules: z.string().max(1000).optional(),
   isPublic: z.boolean().optional(),
+  membershipConditions: z.string().max(1000).optional(),
   action: z.literal('start').optional(),
 });
 
@@ -76,11 +77,26 @@ export async function GET(
         ? await reconcileTontineEscrow(tontine.id)
         : null;
 
+    const isCreator = tontine.createdById === context.userId;
+    const [myJoinRequest, pendingJoinRequestCount] = await Promise.all([
+      isMember
+        ? null
+        : prisma.tontineJoinRequest.findUnique({
+            where: { tontineId_userId: { tontineId: tontine.id, userId: context.userId } },
+            select: { status: true, decisionNote: true, createdAt: true },
+          }),
+      isCreator
+        ? prisma.tontineJoinRequest.count({ where: { tontineId: tontine.id, status: 'PENDING' } })
+        : 0,
+    ]);
+
     return ok({
       ...tontine,
       amount: Number(tontine.amount),
       targetAmount: tontine.targetAmount != null ? Number(tontine.targetAmount) : null,
       memberCount: tontine._count.members,
+      myJoinRequest,
+      pendingJoinRequestCount,
       escrow: escrow
         ? { held: escrow.held, expectedHeld: escrow.expectedHeld, balanced: escrow.balanced }
         : null,
@@ -94,7 +110,7 @@ export async function GET(
         amount: Number(c.amount),
       })),
       isMember,
-      isCreator: tontine.createdById === context.userId,
+      isCreator,
     });
   } catch (error) {
     logApiError('/v1/tontine/[id]', error);

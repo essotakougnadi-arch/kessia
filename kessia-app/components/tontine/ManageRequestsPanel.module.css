@@ -1,0 +1,143 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-primary, #B65A3A);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text, #1A1209);
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-primary, #B65A3A);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.loading {
+  font-size: 13px;
+  color: var(--color-text-tertiary, #9C8E7E);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--color-earth, #F5EDDF);
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary, #B65A3A);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.who { min-width: 0; }
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text, #1A1209);
+}
+
+.kyc {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.kycOk { background: rgba(31, 122, 84, 0.15); color: #1F7A54; }
+.kycMid { background: rgba(214, 168, 79, 0.22); color: #9a7326; }
+.kycNone { background: rgba(0, 0, 0, 0.08); color: var(--color-text-tertiary, #9C8E7E); }
+
+.meta {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #9C8E7E);
+  margin-top: 2px;
+}
+
+.message {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-text-secondary, #5B5147);
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.rejectBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.noteInput {
+  width: 100%;
+  border: 1.5px solid var(--color-border-medium, rgba(26, 18, 9, 0.13));
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #1A1209);
+}
+.noteInput:focus {
+  outline: none;
+  border-color: var(--color-primary, #B65A3A);
+}
+
+.rejectBtn {
+  background: var(--color-danger, #C0392B) !important;
+  color: #fff !important;
+}

@@ -555,3 +555,30 @@ Voir `docs/progress/status.md`.
 
 ### Vérification
 - **ADR 0037** ; `tsc` + `lint` (0 warning) + `vitest` (**153**, +6) + `build` au vert.
+
+## [Non publié] — Découverte de tontines & demandes d'adhésion (ADR 0038)
+
+### Ajouté
+- **`GET /api/v1/discover`** (publique) : tontines `isPublic` + `PENDING` +
+  non pleines, triées par date de création.
+- **`TontineJoinRequest`** + `enum JoinRequestStatus` + `Tontine.membershipConditions`
+  (texte libre). `lib/tontine/join.ts` `describeJoinability()` (+ 7 tests).
+- **`POST/GET /api/v1/tontine/[id]/join-requests`** + **`PATCH …/[requestId]`**
+  (`approve` / `reject` + motif par le gestionnaire ; `cancel` par le candidat
+  via `requestId = "me"`). L'acceptation crée le membre et démarre la tontine
+  si elle devient complète. Notifications à chaque étape.
+- **`GET /api/v1/tontine/[id]`** enrichi : `membershipConditions`,
+  `myJoinRequest`, `pendingJoinRequestCount`.
+- **`components/discover/DiscoveryRail.tsx`** (rail / grille) sur la landing
+  (« Tontines ouvertes en ce moment ») et l'accueil ; **page publique
+  `/discover`** (hors `PROTECTED_ROUTES`).
+- **Détail tontine** : `JoinRequestPanel` (candidat) + `ManageRequestsPanel`
+  (gestionnaire) ; sections membres masquées aux non-membres.
+- `useAuth.finishSession` : redirection `?next` / `?from` / intention stockée
+  (chemins internes) au lieu de `/home` en dur.
+- i18n FR + EN : `discover.*`, `tontineJoin.*`, `tontineRequests.*`.
+- Seed : 4 tontines publiques ouvertes + 4 demandes de démonstration.
+
+### Vérification
+- **ADR 0038** ; `tsc` + `lint` (0 warning) + `vitest` (**160**, +7) + `build`
+  + E2E (auth, tontine-lifecycle) au vert. Smoke test API du parcours complet.

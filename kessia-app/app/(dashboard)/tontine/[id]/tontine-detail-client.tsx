@@ -7,6 +7,8 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import styles from './tontine-detail.module.css';
 import { Modal } from '@/components/ui/Modal';
+import { JoinRequestPanel } from '@/components/tontine/JoinRequestPanel';
+import { ManageRequestsPanel } from '@/components/tontine/ManageRequestsPanel';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTontineDetail } from '@/hooks/useTontineDetail';
@@ -23,7 +25,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const addToast = useUiStore((s) => s.addToast);
   const typeMeta = useTontineTypeMeta();
-  const { tontine: td, isLoading, error, contribute, startTontine } = useTontineDetail(id);
+  const { tontine: td, isLoading, error, contribute, startTontine, requestJoin, cancelJoinRequest } = useTontineDetail(id);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [contributing, setContributing] = useState(false);
@@ -156,7 +158,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
             })}
           </div>
         </div>
-        {!isSolo && (
+        {!isSolo && td.isMember && (
           <button
             className={styles.menuBtn}
             aria-label={t('tontineDetail.shareCodeAria')}
@@ -168,7 +170,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
         )}
       </header>
 
-      {!isSolo && showInvite && (
+      {!isSolo && td.isMember && showInvite && (
         <div className={styles.inviteBox}>
           <span className={styles.inviteCode}>{td.inviteCode}</span>
           <button className={styles.inviteCopy} onClick={copyInvite}>{t('tontineDetail.copy')}</button>
@@ -260,6 +262,24 @@ export default function TontineDetailClient({ id }: { id: string }) {
         ) : null}
       </section>
 
+      {/* Demandes d'adhésion (gestionnaire) */}
+      {td.isCreator && !isSolo && (
+        <section className={styles.section}>
+          <ManageRequestsPanel tontineId={id} enabled={td.isCreator} />
+        </section>
+      )}
+
+      {/* Demander à rejoindre (non-membre, tontine publique) */}
+      {!td.isMember && !td.isCreator && !isSolo && (td.isPublic || td.myJoinRequest) && (
+        <section className={styles.section}>
+          <JoinRequestPanel
+            tontine={td}
+            requestJoin={requestJoin}
+            cancelJoinRequest={cancelJoinRequest}
+          />
+        </section>
+      )}
+
       {/* Démarrage — plan d'achat individuel */}
       {canStartSolo && (
         <section className={styles.section}>
@@ -297,7 +317,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
         </section>
       )}
 
-      {!isSolo && td.status === 'PENDING' && !td.isCreator && (
+      {!isSolo && td.status === 'PENDING' && !td.isCreator && td.isMember && (
         <section className={styles.section}>
           <div className={styles.myTurnInfo}>
             <span>⏳</span>
@@ -307,6 +327,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
       )}
 
       {/* Actions rapides */}
+      {(td.isMember || isSolo) && (
       <section className={styles.section}>
         <div className={styles.actionsRow}>
           <button
@@ -332,6 +353,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
           )}
         </div>
       </section>
+      )}
 
       {/* Contrat numérique + Fonds de Garantie */}
       {td.isMember && (
