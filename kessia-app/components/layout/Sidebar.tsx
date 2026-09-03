@@ -4,24 +4,43 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './Sidebar.module.css';
 import { KessiaLogo, KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
+import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
+import { initials } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
 
 const NAV_ITEMS = [
-  { href: '/home',      icon: '🏠', key: 'nav.home'     },
-  { href: '/wallet',    icon: '💰', key: 'nav.wallet'   },
-  { href: '/tontine',   icon: '🔄', key: 'nav.tontines' },
-  { href: '/business',  icon: '🏪', key: 'nav.business' },
-  { href: '/explore',   icon: '🧭', key: 'nav.explore'  },
-  { href: '/support',   icon: '💬', key: 'nav.support'  },
+  { href: '/home',        icon: '🏠', key: 'nav.home'     },
+  { href: '/wallet',      icon: '💰', key: 'nav.wallet'   },
+  { href: '/tontine',     icon: '🔄', key: 'nav.tontines' },
+  { href: '/business',    icon: '🏪', key: 'nav.business' },
+  { href: '/marketplace', icon: '🛒', key: 'nav.marketplace' },
+  { href: '/explore',     icon: '🧭', key: 'nav.explore'  },
+  { href: '/support',     icon: '💬', key: 'nav.support'  },
 ];
 
 const BOTTOM_ITEMS = [
   { href: '/profile', icon: '👤', key: 'nav.myProfile' },
 ];
 
+const KYC_LABEL: Record<string, string> = {
+  NOT_STARTED: 'nav.kycNotStarted',
+  IN_PROGRESS: 'nav.kycInProgress',
+  UNDER_REVIEW: 'nav.kycInProgress',
+  ACTION_REQUIRED: 'nav.kycInProgress',
+  VERIFIED: 'nav.kycVerified',
+  REJECTED: 'nav.kycNotStarted',
+  EXPIRED: 'nav.kycNotStarted',
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
   const t = useT();
+  const user = useAuthStore((s) => s.user);
+  const { logout } = useAuth();
+
+  const name = user ? `${user.firstName} ${user.lastName}`.trim() : 'KESSIA';
+  const kycKey = KYC_LABEL[user?.kycStatus ?? 'NOT_STARTED'] ?? 'nav.kycNotStarted';
 
   return (
     <aside className={styles.sidebar} aria-label="Navigation principale">
@@ -35,20 +54,17 @@ export default function Sidebar() {
       </div>
 
       {/* ——— User Quick Info ——— */}
-      <div className={styles.userQuick}>
-        <div className={styles.avatar}>KA</div>
+      <Link href="/profile" className={styles.userQuick}>
+        <div className={styles.avatar}>{initials(user?.firstName, user?.lastName)}</div>
         <div className={styles.userInfo}>
-          <div className={styles.userName}>Kossi Abalo</div>
+          <div className={styles.userName}>{name}</div>
           <div className={styles.userKyc}>
             <span className={styles.kycDot} />
-            KYC en cours
+            {t(kycKey)}
           </div>
         </div>
-        <Link href="/notifications" className={styles.notifBtn} aria-label="Notifications">
-          <span>🔔</span>
-          <span className={styles.notifBadge}>3</span>
-        </Link>
-      </div>
+        <span className={styles.notifBtn} aria-hidden>›</span>
+      </Link>
 
       {/* ——— Main Navigation ——— */}
       <nav className={styles.nav}>
@@ -100,7 +116,11 @@ export default function Sidebar() {
             </Link>
           );
         })}
-        <button className={`${styles.navItem} ${styles.logoutBtn}`} aria-label={t('nav.logout')}>
+        <button
+          className={`${styles.navItem} ${styles.logoutBtn}`}
+          aria-label={t('nav.logout')}
+          onClick={() => logout()}
+        >
           <div className={styles.navIcon}>🚪</div>
           <span className={styles.navLabel}>{t('nav.logout')}</span>
         </button>

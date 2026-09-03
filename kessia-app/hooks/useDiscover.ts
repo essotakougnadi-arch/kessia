@@ -8,6 +8,7 @@
 
 import useSWR from 'swr';
 import type { PurchaseMode, TontineFrequency, TontineType } from '@prisma/client';
+import type { MarketItem } from './useMarketplace';
 
 export type DiscoverTontine = {
   id: string;
@@ -29,7 +30,7 @@ export type DiscoverTontine = {
   createdAt: string;
 };
 
-type DiscoverData = { tontines: DiscoverTontine[] };
+type DiscoverData = { tontines: DiscoverTontine[]; items: MarketItem[] };
 
 async function fetchDiscover(url: string): Promise<DiscoverData> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -47,6 +48,7 @@ export function useDiscover() {
 
   return {
     tontines: data?.tontines ?? [],
+    items: data?.items ?? [],
     isLoading,
     error: error as Error | undefined,
     refresh: () => mutate(),

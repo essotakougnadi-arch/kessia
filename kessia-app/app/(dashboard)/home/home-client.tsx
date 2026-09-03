@@ -8,6 +8,7 @@ import Link from 'next/link';
 import styles from './home.module.css';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
 import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
+import { MarketplaceRail } from '@/components/discover/MarketplaceRail';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
@@ -37,6 +38,7 @@ const SERVICES: Service[] = [
   { id: 'wallet', icon: '💰', labelKey: 'nav.wallet', href: '/wallet', bg: '#FEF0E8', focus: 'wallet' },
   { id: 'tontines', icon: '🔄', labelKey: 'nav.tontines', href: '/tontine', bg: '#E8F5F0', focus: 'tontine' },
   { id: 'business', icon: '🏪', labelKey: 'nav.business', href: '/business', bg: '#FDF6E8', focus: 'business' },
+  { id: 'marketplace', icon: '🛒', labelKey: 'nav.marketplace', href: '/marketplace', bg: '#FDF6E8' },
   { id: 'ai', icon: '✨', labelKey: 'nav.aiLabel', href: '/ai', bg: '#E8F5F0' },
   { id: 'score', icon: '📊', labelKey: 'home.svcScore', href: '/profile/score', bg: '#FEF0E8' },
   { id: 'growth', icon: '🌱', labelKey: 'home.svcGrowth', href: '/growth', bg: '#E8F5F0' },
@@ -386,6 +388,11 @@ export default function HomeClient() {
       {/* ═══ TONTINES OUVERTES — découverte ═══ */}
       <section className={styles.section}>
         <DiscoveryRail context="home" limit={10} />
+      </section>
+
+      {/* ═══ MARKETPLACE — articles de la communauté ═══ */}
+      <section className={styles.section}>
+        <MarketplaceRail source="discover" limit={10} />
       </section>
 
       {/* ═══ ACTIVITÉS RÉCENTES ═══ */}

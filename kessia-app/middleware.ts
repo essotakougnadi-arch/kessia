@@ -11,7 +11,7 @@ import { jwtVerify } from 'jose';
 
 const PROTECTED_ROUTES = [
   '/home', '/wallet', '/tontine', '/business', '/ai',
-  '/support', '/profile', '/notifications', '/admin',
+  '/support', '/profile', '/notifications', '/admin', '/marketplace',
   '/growth', '/simulator', '/calendar', '/trust', '/explore', '/documents',
 ];
 const AUTH_ROUTES = ['/login', '/register', '/verify-otp', '/onboarding'];

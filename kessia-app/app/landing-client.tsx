@@ -8,6 +8,7 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
 import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
+import { MarketplaceRail } from '@/components/discover/MarketplaceRail';
 import { useT } from '@/lib/i18n';
 
 export default function LandingClient() {
@@ -246,10 +247,11 @@ export default function LandingClient() {
         </div>
       </section>
 
-      {/* ═══ DÉCOUVERTE — tontines ouvertes ═══ */}
+      {/* ═══ DÉCOUVERTE — tontines ouvertes + marketplace ═══ */}
       <section className={styles.discover} id="tontines-ouvertes">
-        <div className={styles.discoverInner}>
+        <div className={styles.discoverInner} style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
           <DiscoveryRail context="landing" limit={12} />
+          <MarketplaceRail source="discover" limit={12} />
         </div>
       </section>
 

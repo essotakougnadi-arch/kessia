@@ -69,8 +69,8 @@ export const MODULES: readonly ModuleEntry[] = [
   },
   {
     key: 'market', name: 'KESSIA Market', tagline: 'Acheter et vendre dans la communauté',
-    description: 'Marketplace de produits et services. La Tontine Achat s’y branchera nativement : financer un article progressivement, en groupe.',
-    icon: '🛒', accent: '#B65A3A', status: 'SOON', ref: '§9',
+    description: 'Marketplace de produits et services entre membres. Paiement depuis le wallet, ou par tontine Achat individuelle pour financer un article progressivement.',
+    icon: '🛒', accent: '#B65A3A', status: 'LIVE', href: '/marketplace', ref: '§16',
   },
   {
     key: 'learn', name: 'KESSIA Academy', tagline: 'Se former pour grandir',

@@ -582,3 +582,31 @@ Voir `docs/progress/status.md`.
 ### Vérification
 - **ADR 0038** ; `tsc` + `lint` (0 warning) + `vitest` (**160**, +7) + `build`
   + E2E (auth, tontine-lifecycle) au vert. Smoke test API du parcours complet.
+
+## [Non publié] — Mini-marketplace & achat par tontine (ADR 0039)
+
+### Ajouté
+- **`MarketplaceItem` + `MarketplaceOrder`** + enums (`MarketplaceItemStatus`,
+  `MarketplaceOrderMode`, `MarketplaceOrderStatus`). `lib/marketplace/`
+  (`installmentAmount`, `describeBuyability` — pures, +7 tests).
+- **API** : `GET /api/v1/marketplace` (public, filtres), `POST` (vente),
+  `GET/PATCH/DELETE /api/v1/marketplace/[id]`, `GET /api/v1/marketplace/mine`,
+  **`POST /api/v1/marketplace/[id]/order`** :
+  - `WALLET` → `postDoubleEntry` acheteur→vendeur (`SALE_PAYMENT`), `stock--` ;
+  - `TONTINE` → crée une tontine `PURCHASE`/`SOLO` pré-remplie (cible = prix)
+    et redirige l'acheteur dessus.
+- `GET /api/v1/discover` renvoie aussi `items` (marketplace).
+- **Pages** `(dashboard)/marketplace/` (protégées) : catalogue + filtres,
+  détail + modale d'achat wallet/tontine, formulaire de vente (photo
+  compressée), « Mes articles & achats ». Nav Marketplace (Sidebar + accueil).
+- **`components/discover/MarketplaceRail.tsx`** sur landing + accueil.
+- Module `market` → **`LIVE`** (`/explore`).
+- **Sidebar branchée sur l'utilisateur réel** (nom, KYC, avatar) +
+  **déconnexion fonctionnelle** — fin du stub « Kossi Abalo ».
+- `lib/files/compress-image.ts` extrait. i18n FR + EN (`market.*`, `nav.*`).
+- Seed : 7 articles + 1 achat wallet.
+
+### Vérification
+- **ADR 0039** ; `tsc` + `lint` (0 warning) + `vitest` (**167**, +7) + `build`
+  + E2E (auth, wallet) au vert. Smoke test API : vente → achat wallet
+  (solde débité) → achat tontine (tontine SOLO créée) → « Mes achats ».

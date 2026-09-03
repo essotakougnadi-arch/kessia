@@ -307,6 +307,8 @@ async function wipe() {
     () => prisma.notificationDelivery.deleteMany(),
     () => prisma.fraudAlert.deleteMany(),
     () => prisma.device.deleteMany(),
+    () => prisma.marketplaceOrder.deleteMany(),
+    () => prisma.marketplaceItem.deleteMany(),
     () => prisma.invoice.deleteMany(),
     () => prisma.expense.deleteMany(),
     () => prisma.saleItem.deleteMany(),
@@ -762,6 +764,44 @@ async function main() {
     ],
   });
 
+  console.log('🛒 Marketplace…');
+  const mkt = await prisma.$transaction(
+    [
+      { seller: akossiwa, title: 'Congélateur horizontal 200 L', description: 'Bon état, très peu servi. Idéal boutique ou revente de produits surgelés. Retrait à Lomé.', category: 'EQUIPEMENT', price: 145_000, city: 'Lomé', payableByTontine: true, tontineInstallments: 5, days: 2 },
+      { seller: kossi, title: 'Onduleur 1200 VA + 2 batteries', description: 'Protège votre matériel des coupures. Batteries changées il y a 6 mois.', category: 'EQUIPEMENT', price: 90_000, city: 'Lomé', payableByTontine: true, tontineInstallments: 4, days: 5 },
+      { seller: ama, title: 'Lot de 50 pagnes wax (grossiste)', description: 'Wax de qualité, motifs variés. Prix dégressif au-delà de 3 lots.', category: 'MATIERE_PREMIERE', price: 220_000, city: 'Kara', payableByTontine: true, tontineInstallments: 6, days: 8 },
+      { seller: afiwa, title: 'Machine à coudre industrielle', description: 'Piqueuse plate, moteur silencieux. Parfaite pour un atelier de couture.', category: 'EQUIPEMENT', price: 175_000, city: 'Lomé', payableByTontine: true, tontineInstallments: 6, days: 3 },
+      { seller: koffi, title: 'Site vitrine + formation (prestation)', description: 'Création d’un site 5 pages + 1 journée de formation à la mise à jour du contenu.', category: 'SERVICE', price: 250_000, city: 'Lomé', payableByTontine: false, days: 6 },
+      { seller: akossiwa, title: 'Sacs de riz local 25 kg (x10)', description: 'Riz de la vallée, récolte récente. Livraison possible dans le Grand Lomé.', category: 'AGRICOLE', price: 130_000, city: 'Lomé', payableByTontine: false, stock: 4, days: 1 },
+      { seller: kossi, title: 'Présentoir métallique 5 niveaux', description: 'Léger, démontable. Deux disponibles.', category: 'EQUIPEMENT', price: 35_000, city: 'Lomé', payableByTontine: false, stock: 2, days: 10 },
+    ].map((it) =>
+      prisma.marketplaceItem.create({
+        data: {
+          sellerId: it.seller.id,
+          title: it.title,
+          description: it.description,
+          category: it.category,
+          price: dec(it.price),
+          currency: 'XOF',
+          city: it.city,
+          payableByTontine: it.payableByTontine,
+          tontineInstallments: it.payableByTontine ? it.tontineInstallments : null,
+          stock: it.stock ?? 1,
+          createdAt: daysAgo(it.days),
+        },
+      })
+    )
+  );
+  // Un achat wallet déjà réglé (Kossi a acheté un lot de riz à Akossiwa)
+  await prisma.marketplaceOrder.create({
+    data: {
+      itemId: mkt[5].id, buyerId: kossi.id, mode: 'WALLET',
+      amount: mkt[5].price, currency: 'XOF', status: 'PAID',
+      ledgerRef: `SEED_MKT_${mkt[5].id}`, createdAt: daysAgo(1),
+    },
+  });
+  await prisma.marketplaceItem.update({ where: { id: mkt[5].id }, data: { stock: { decrement: 1 } } });
+
   console.log('🔔 Notifications & support…');
   await prisma.notification.createMany({
     data: [
@@ -850,7 +890,7 @@ async function main() {
     ],
   });
 
-  console.log('\n✅ Seed terminé — 12 comptes, 10 tontines (dont 1 achat individuel + 4 publiques ouvertes), demandes d’adhésion, 4 entreprises, Fonds de Garantie (démo).\n');
+  console.log('\n✅ Seed terminé — 12 comptes, 10 tontines (dont 1 achat individuel + 4 publiques ouvertes), demandes d’adhésion, 7 articles marketplace, 4 entreprises, Fonds de Garantie (démo).\n');
   console.table([
     { Rôle: 'Membre (SME)', Téléphone: '+22890000001', Nom: 'Kossi Amétépé' },
     { Rôle: 'Membre (Micro)', Téléphone: '+22890000002', Nom: 'Ama Dossou' },
