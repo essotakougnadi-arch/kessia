@@ -64,6 +64,8 @@ export const en: Catalog = {
       welcomeBack: 'Good to see you again!',
       welcomeBackDesc: 'Sign back in to access your tontines, your wallet and all your KESSIA services.',
       aiHelp: 'Need help signing in? I’m here.',
+      demoTitle: 'Demonstration environment',
+      demoHint: 'Tap an account to pre-fill the form. Password: {password}',
     },
     register: {
       title: 'Create my account',
@@ -120,6 +122,7 @@ export const en: Catalog = {
       resend: 'Resend code',
       resendIn: 'Resend in {s}s',
       devHint: 'In development mode, the code is printed to the server console.',
+      demoNote: 'Demonstration mode — code pre-filled: {code}',
       back: '← Back to sign in',
       validate: 'Verify →',
       validating: 'Verifying…',

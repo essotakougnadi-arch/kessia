@@ -63,6 +63,8 @@ export const fr = {
       welcomeBack: 'Content de vous revoir !',
       welcomeBackDesc: 'Reconnectez-vous pour accéder à vos tontines, votre wallet et tous vos services KESSIA.',
       aiHelp: 'Besoin d’aide pour vous connecter ? Je suis là.',
+      demoTitle: 'Environnement de démonstration',
+      demoHint: 'Touchez un compte pour pré-remplir le formulaire. Mot de passe : {password}',
     },
     register: {
       title: 'Créer mon compte',
@@ -119,6 +121,7 @@ export const fr = {
       resend: 'Renvoyer le code',
       resendIn: 'Renvoyer dans {s}s',
       devHint: 'En mode développement, le code s’affiche dans la console du serveur.',
+      demoNote: 'Mode démonstration — code pré-rempli : {code}',
       back: '← Retour à la connexion',
       validate: 'Valider →',
       validating: 'Vérification…',

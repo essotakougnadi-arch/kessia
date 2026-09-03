@@ -24,6 +24,7 @@ export default function VerifyOtpPage() {
   const [resendCooldown, setResendCooldown] = useState(60);
   const [formError, setFormError] = useState<string | null>(null);
   const [code2fa, setCode2fa] = useState('');
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -33,6 +34,13 @@ export default function VerifyOtpPage() {
     const storedPurpose = (sessionStorage.getItem('kessia-otp-purpose') as 'REGISTER' | 'LOGIN' | 'VERIFY') ?? 'REGISTER';
     setPhone(storedPhone);
     setPurpose(storedPurpose);
+
+    // Mode démonstration : le code est renvoyé par l'API → on le pré-remplit
+    const demo = sessionStorage.getItem('kessia-otp-demo');
+    if (demo && /^\d{6}$/.test(demo)) {
+      setDemoOtp(demo);
+      setOtp(demo.split(''));
+    }
 
     if (!storedPhone) {
       router.push('/login');
@@ -95,8 +103,14 @@ export default function VerifyOtpPage() {
     const ok = await requestOtp(phone, purpose);
     if (ok) {
       setResendCooldown(60);
-      setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
+      const demo = sessionStorage.getItem('kessia-otp-demo');
+      if (demo && /^\d{6}$/.test(demo)) {
+        setDemoOtp(demo);
+        setOtp(demo.split(''));
+      } else {
+        setOtp(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+      }
     }
   }
 
@@ -154,6 +168,11 @@ export default function VerifyOtpPage() {
         ) : (
         /* OTP inputs */
         <form className={styles.form} id="verify-otp-form" onSubmit={handleSubmit}>
+          {demoOtp && (
+            <div className={styles.demoNote} role="status">
+              🎭 {t('auth.verifyOtp.demoNote', { code: demoOtp })}
+            </div>
+          )}
           <div className={styles.otpRow}>
             {otp.map((digit, i) => (
               <input

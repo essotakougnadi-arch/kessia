@@ -35,6 +35,9 @@ yarn-error.log*
 /playwright/.cache/
 /blob-report/
 
+# vercel
+/.vercel
+
 # editor
 .vscode/*
 !.vscode/extensions.json

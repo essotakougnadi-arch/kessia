@@ -13,6 +13,7 @@ import { ok, created, conflict, validationError, serverError } from '@/lib/utils
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
+import { withDemoOtp } from '@/lib/config/demo';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,12 +102,15 @@ export async function POST(request: NextRequest) {
     });
 
     return created(
-      {
-        userId: user.id,
-        phone: normalizedPhone,
-        otpSent: true,
-        expiresAt,
-      },
+      withDemoOtp(
+        {
+          userId: user.id,
+          phone: normalizedPhone,
+          otpSent: true,
+          expiresAt,
+        },
+        otp
+      ),
       'Compte créé. Un code de vérification a été envoyé par SMS.'
     );
   } catch (error) {

@@ -15,6 +15,15 @@ import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 type LoginMode = 'password' | 'otp';
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === '1';
+const DEMO_ACCOUNTS = [
+  { label: 'Membre (données riches)', phone: '90 00 00 01' },
+  { label: 'Membre (micro-entreprise)', phone: '90 00 00 02' },
+  { label: 'Conformité', phone: '90 00 00 11' },
+  { label: 'Admin', phone: '90 00 00 00' },
+];
+const DEMO_PASSWORD = 'Kessia2026!';
+
 export default function LoginPage() {
   const router = useRouter();
   const t = useT();
@@ -24,6 +33,17 @@ export default function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [code2fa, setCode2fa] = useState('');
+
+  function fillDemo(phone: string) {
+    setMode('password');
+    setTimeout(() => {
+      const p = document.getElementById('phone-login') as HTMLInputElement | null;
+      const pw = document.getElementById('password-login') as HTMLInputElement | null;
+      if (p) p.value = phone;
+      if (pw) pw.value = DEMO_PASSWORD;
+      pw?.focus();
+    }, 0);
+  }
 
   async function handlePasswordLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -112,6 +132,25 @@ export default function LoginPage() {
               {pending2fa ? t('auth.login.twoFaSubtitle') : t('auth.login.subtitle')}
             </p>
           </div>
+
+          {DEMO_MODE && !pending2fa && (
+            <div className={styles.demoBox}>
+              <div className={styles.demoBoxHead}>🎭 {t('auth.login.demoTitle')}</div>
+              <p className={styles.demoBoxHint}>{t('auth.login.demoHint', { password: DEMO_PASSWORD })}</p>
+              <div className={styles.demoBoxRow}>
+                {DEMO_ACCOUNTS.map((a) => (
+                  <button
+                    key={a.phone}
+                    type="button"
+                    className={styles.demoChip}
+                    onClick={() => fillDemo(a.phone)}
+                  >
+                    {a.label} · +228&nbsp;{a.phone}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {pending2fa && (
             <form className={styles.form} onSubmit={handle2fa}>

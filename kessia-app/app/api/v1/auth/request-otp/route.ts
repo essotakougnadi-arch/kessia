@@ -10,6 +10,7 @@ import { generateOtp, otpExpiresAt, normalizePhone } from '@/lib/utils/crypto';
 import { ok, badRequest, validationError, serverError, tooManyRequests } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
+import { withDemoOtp } from '@/lib/config/demo';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 3;
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     return ok(
-      { phone: normalizedPhone, expiresAt, otpSent: true },
+      withDemoOtp({ phone: normalizedPhone, expiresAt, otpSent: true }, otp),
       'Code OTP envoyé par SMS.'
     );
   } catch (error) {

@@ -5,6 +5,8 @@
 
 Ce dossier (`kessia-app/`) contient l'**application web Next.js** : frontend + API routes + accès base de données (modular monolith, conforme au cahier des charges §40 pour le MVP).
 
+**En ligne (démonstration) :** <https://kessia-dun.vercel.app> — déploiement continu depuis GitHub (`main`).
+
 ## Stack
 
 | Couche | Techno |
@@ -33,6 +35,10 @@ npm run dev                 # http://localhost:3000
 
 Clés attendues : voir `.env.local` (DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, SMS_PROVIDER, Supabase…).
 En développement, les codes OTP s'affichent dans la console du serveur (`SMS_PROVIDER=DEV`).
+
+**Mode démonstration** (`DEMO_MODE=1` + `NEXT_PUBLIC_DEMO_MODE=1`, uniquement si `SMS_PROVIDER=DEV`) :
+sur un déploiement public sans fournisseur SMS, l'API renvoie le code OTP dans sa réponse et
+`/login` affiche les comptes de test. À n'activer que sur un environnement de démonstration.
 
 Optionnelles :
 - `PAYMENT_WEBHOOK_SECRET` — clé HMAC-SHA256 vérifiant la signature des webhooks de règlement (`POST /api/v1/payments/webhooks/[provider]`). **Non définie en dev** → les webhooks sont acceptés mais tracés. **Obligatoire en production.**
@@ -82,7 +88,9 @@ En CI : [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) (Postgres é
 app/
   (auth)/        login · register · verify-otp
   (dashboard)/   home · wallet · tontine · business · ai · support · notifications · profile
-  (admin)/       back-office (en construction — Phase 6)
+  admin/         back-office (dashboard · users · KYC · transactions · tontines · support · fraude · analytics)
+  documents/     devis / factures / reçus imprimables
+  legal/ offline/ …
   api/v1/        routes API versionnées
 components/      design-system · layout · ui
 hooks/           useAuth · useWallet · useTontines · useTontineDetail · useProfile · useKyc · …
@@ -90,6 +98,17 @@ lib/             api/client (fetch authentifié + refresh) · auth · db · ledg
 prisma/          schema.prisma · seed.ts
 docs/            architecture · décisions · base · avancement
 ```
+
+## Déploiement
+
+Hébergé sur **Vercel**, connecté au dépôt GitHub : chaque `push` sur `main` redéploie.
+
+| Réglage | Valeur |
+|---|---|
+| Root Directory | `kessia-app` |
+| Build Command | `prisma generate && next build` (via `package.json`) |
+| Variables d'env | contenu de `.env.local` sauf `NODE_ENV` ; `NEXTAUTH_URL` = l'URL de production |
+| Cron | `vercel.json` — `/api/v1/cron/tontine-tick` (quotidien sur le plan Hobby) |
 
 ## État & feuille de route
 
@@ -103,5 +122,3 @@ La feuille de route par phases est dans le cahier des charges (§52).
 - `../KESSIA_DESIGN_SYSTEM.md`
 - `../CLAUDE_CODE_RULES.md`
 - Cahier des charges final (61 sections) — document produit maître.
-
-<!-- deploy 2026-09-02T16:47:46.3941239+00:00 -->
