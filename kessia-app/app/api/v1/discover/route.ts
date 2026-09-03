@@ -13,58 +13,57 @@ import { serializeItem } from '@/lib/marketplace/serialize';
 import { ok, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
+import { cached } from '@/lib/utils/ttl-cache';
 
-export const dynamic = 'force-dynamic';
+// Réponse publique, peu changeante, servie à fort volume (landing +
+// accueil). Cache mémoire 45 s + requêtes séquentielles : allège le
+// pooler DB (session mode Supabase = 15 connexions max).
+export const revalidate = 45;
 
 const LIMIT = 24;
 const ITEMS_LIMIT = 16;
 
-export async function GET(request: NextRequest) {
-  try {
-    const limited = await enforceRateLimit(request, 'discover', { limit: 60, windowMs: 60_000 });
-    if (limited) return limited;
+async function buildPayload() {
+  const raw = await prisma.tontine.findMany({
+    where: { isPublic: true, status: 'PENDING' },
+    orderBy: { createdAt: 'desc' },
+    take: LIMIT * 2,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      type: true,
+      purchaseMode: true,
+      purchaseItem: true,
+      amount: true,
+      targetAmount: true,
+      currency: true,
+      frequency: true,
+      maxMembers: true,
+      totalRounds: true,
+      membershipConditions: true,
+      createdAt: true,
+      createdBy: { select: { firstName: true } },
+      _count: { select: { members: { where: { status: 'ACTIVE' } } } },
+    },
+  });
 
-    const [raw, rawItems] = await Promise.all([
-      prisma.tontine.findMany({
-      where: { isPublic: true, status: 'PENDING' },
-      orderBy: { createdAt: 'desc' },
-      take: LIMIT * 2,
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        type: true,
-        purchaseMode: true,
-        purchaseItem: true,
-        amount: true,
-        targetAmount: true,
-        currency: true,
-        frequency: true,
-        maxMembers: true,
-        totalRounds: true,
-        membershipConditions: true,
-        createdAt: true,
-        createdBy: { select: { firstName: true } },
-        _count: { select: { members: { where: { status: 'ACTIVE' } } } },
-      },
-    }),
-      prisma.marketplaceItem.findMany({
-        where: { status: 'ACTIVE', stock: { gt: 0 } },
-        orderBy: { createdAt: 'desc' },
-        take: ITEMS_LIMIT,
-        include: {
-          seller: { select: { id: true, firstName: true, lastName: true } },
-          business: { select: { id: true, name: true } },
-        },
-      }),
-    ]);
+  const rawItems = await prisma.marketplaceItem.findMany({
+    where: { status: 'ACTIVE', stock: { gt: 0 } },
+    orderBy: { createdAt: 'desc' },
+    take: ITEMS_LIMIT,
+    include: {
+      seller: { select: { id: true, firstName: true, lastName: true } },
+      business: { select: { id: true, name: true } },
+    },
+  });
 
-    const items = rawItems.map((it) => serializeItem(it, { includeImage: true }));
+  const items = rawItems.map((it) => serializeItem(it, { includeImage: true }));
 
-    const tontines = raw
-      .filter((t) => t._count.members < t.maxMembers)
-      .slice(0, LIMIT)
-      .map((t) => ({
+  const tontines = raw
+    .filter((t) => t._count.members < t.maxMembers)
+    .slice(0, LIMIT)
+    .map((t) => ({
         id: t.id,
         name: t.name,
         description: t.description,
@@ -79,14 +78,26 @@ export async function GET(request: NextRequest) {
         totalRounds: t.totalRounds,
         memberCount: t._count.members,
         seatsLeft: t.maxMembers - t._count.members,
-        hasConditions: !!t.membershipConditions,
-        createdByFirstName: t.createdBy.firstName,
-        createdAt: t.createdAt,
-      }));
+      hasConditions: !!t.membershipConditions,
+      createdByFirstName: t.createdBy.firstName,
+      createdAt: t.createdAt,
+    }));
 
-    return ok({ tontines, items });
+  return { tontines, items };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const limited = await enforceRateLimit(request, 'discover', { limit: 120, windowMs: 60_000 });
+    if (limited) return limited;
+
+    const payload = await cached('discover:v2', 45_000, buildPayload);
+    return ok(payload);
   } catch (error) {
+    // Fil public non essentiel : en cas d'incident DB, on renvoie un
+    // résultat vide (200) plutôt qu'une erreur — les carrousels
+    // disparaissent proprement au lieu de casser la page.
     logApiError('/v1/discover', error);
-    return serverError();
+    return ok({ tontines: [], items: [] });
   }
 }

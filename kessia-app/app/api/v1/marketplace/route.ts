@@ -15,6 +15,7 @@ import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { elevateRole } from '@/lib/auth/roles';
+import { cached, invalidate } from '@/lib/utils/ttl-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,30 +34,38 @@ export async function GET(request: NextRequest) {
     const tontineOnly = url.searchParams.get('tontine') === '1';
     const cursor = url.searchParams.get('cursor');
 
-    const items = await prisma.marketplaceItem.findMany({
-      where: {
-        status: 'ACTIVE',
-        stock: { gt: 0 },
-        ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] } : {}),
-        ...(category && (MARKETPLACE_CATEGORIES as readonly string[]).includes(category) ? { category } : {}),
-        ...(tontineOnly ? { payableByTontine: true } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: PAGE + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      include: {
-        seller: { select: { id: true, firstName: true, lastName: true } },
-        business: { select: { id: true, name: true } },
-      },
-    });
+    const runQuery = () =>
+      prisma.marketplaceItem
+        .findMany({
+          where: {
+            status: 'ACTIVE',
+            stock: { gt: 0 },
+            ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] } : {}),
+            ...(category && (MARKETPLACE_CATEGORIES as readonly string[]).includes(category) ? { category } : {}),
+            ...(tontineOnly ? { payableByTontine: true } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: PAGE + 1,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          include: {
+            seller: { select: { id: true, firstName: true, lastName: true } },
+            business: { select: { id: true, name: true } },
+          },
+        })
+        .then((items) => {
+          const hasMore = items.length > PAGE;
+          const page = items.slice(0, PAGE);
+          return {
+            items: page.map((it) => serializeItem(it, { includeImage: true })),
+            nextCursor: hasMore ? page[page.length - 1].id : null,
+          };
+        });
 
-    const hasMore = items.length > PAGE;
-    const page = items.slice(0, PAGE);
+    // Le catalogue par défaut (sans filtre) est servi à tous : cache 30 s.
+    const noFilter = !q && !category && !tontineOnly && !cursor;
+    const payload = noFilter ? await cached('marketplace:first-page', 30_000, runQuery) : await runQuery();
 
-    return ok({
-      items: page.map((it) => serializeItem(it, { includeImage: true })),
-      nextCursor: hasMore ? page[page.length - 1].id : null,
-    });
+    return ok(payload);
   } catch (error) {
     logApiError('/v1/marketplace', error);
     return serverError();
@@ -109,6 +118,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    invalidate('marketplace:first-page');
+    invalidate('discover:v2');
     void elevateRole(context.userId, 'BUSINESS_OWNER');
     void recordAudit({
       userId: context.userId, action: 'marketplace.item.create', entity: 'MarketplaceItem', entityId: item.id, request,
