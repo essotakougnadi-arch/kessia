@@ -1,8 +1,15 @@
 # État d'avancement — KESSIA App
 
-_Dernière mise à jour : 2026-09-02 (+ ADR 0035 : 2 couleurs d'accent au choix `#B65A3A` / `#C84B1E` via `data-accent` + Tontine Achat individuelle `PurchaseMode.SOLO` — plan d'achat pour soi, séquestre bloqué jusqu'au dernier versement ; + corrections auto-audit ADR 0034 : PDF validé par `pdf-lib`, §38 = 🟢 exact, KPI §54 sous test d'intégration, 2 décisions sécu tracées ; + ADR 0033 KPI §54 / anti-fraude comportemental / voix EN ; + ADR 0032 PDF serveur / e-mail / offline ; + ADR 0031 wallet séquestre)_
+_Dernière mise à jour : 2026-09-03 (**déployé et opérationnel : https://kessia-dun.vercel.app** — GitHub `essotakougnadi-arch/kessia` + Vercel, déploiement continu, env de démonstration ; `/api/health` = `db: ok`, login compte démo OK) — + ADR 0035 : 2 couleurs d'accent au choix `#B65A3A` / `#C84B1E` via `data-accent` + Tontine Achat individuelle `PurchaseMode.SOLO` ; + ADR 0034 corrections auto-audit ; + ADR 0033 KPI §54 / anti-fraude comportemental / voix EN ; + ADR 0032 PDF serveur / e-mail / offline ; + ADR 0031 wallet séquestre)_
 
 Référence : cahier des charges final (61 §) + feuille de route par phases (§52).
+
+## Déploiement (2026-09-03)
+
+- **En ligne** : https://kessia-dun.vercel.app — Vercel (plan Hobby), **déploiement continu** à chaque push sur `main` du dépôt GitHub `essotakougnadi-arch/kessia` (privé).
+- Build : `prisma generate && next build` (+ `postinstall`), Root Directory `kessia-app`, 15 variables d'env, cron tontine quotidien (limite Hobby).
+- **Environnement de démonstration** : base Supabase de dev (comptes de démo), OTP en mode `DEV` (pas d'envoi SMS). Vérifié en direct : `/api/health` → `db: ok`, `POST /api/v1/auth/login` (`+22890000001` / `Kessia2026!`) → jetons émis.
+- Reste pour un env. **régulé** : base de production séparée, APM sur `/api/metrics`, gestionnaire de secrets, Redis Upstash, secret ordonnanceur, rétention + copie backup + test DR (cf. bloquants pilote).
 
 ## Légende
 ✅ fait · 🟡 partiel · ❌ à faire · ⏭️ hors MVP (Phase 8+)
