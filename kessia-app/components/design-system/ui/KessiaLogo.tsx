@@ -1,10 +1,9 @@
 // ============================================================
 // KESSIA — Logo
-//   • variant "full"   → image officielle /public/logo/kessia-logo.jpg
-//   • variant "white"  → lockup blanc officiel /public/logo/kessia-logo-white*.png (fonds sombres)
+//   • variant "full"   → lockup couleur officiel /public/logo/kessia-logo-color*.png (fonds clairs)
+//   • variant "white"  → lockup blanc officiel   /public/logo/kessia-logo-white*.png (fonds sombres)
 //   • variant "symbol" → symbole K seul (SVG)
-// Le symbole SVG et l'icône mobile restent codés (fonds sombres,
-// petites tailles, favicon…).
+// Le symbole SVG et l'icône mobile restent codés (petites tailles, favicon…).
 // ============================================================
 
 interface KessiaLogoProps {
@@ -19,55 +18,46 @@ const GOLD   = '#D6A84F';
 const GREEN  = '#1F5D4A';
 
 // ─────────────────────────────────────────────────────────────
-// Logo image officiel — rogné à la volée (le fichier source a
-// une marge blanche). Ajuster CROP si le fichier logo change.
-// Source : 768 × 512, zone utile en fractions de l'image.
+// Lockups officiels (PNG transparents, dérivés de
+// public/images/logo2Kessia.png [couleur] et LOGO KESSIA.png [blanc]).
+//   *-color / *-white       → symbole + « KESSIA » (sans tagline)
+//   *-color-full / *-white-full → + « Épargner… / Grandir ensemble »
 // ─────────────────────────────────────────────────────────────
-const LOGO_SRC = '/logo/kessia-logo.jpg';
-// Boîte du contenu mesurée (94..698 × 126..350 sur 768×512) + petite marge.
-const CROP = { left: 0.092, top: 0.222, width: 0.845, height: 0.492 };
-
-// Lockup blanc officiel (fonds sombres) — dérivé de public/images/LOGO KESSIA.png
+const COLOR_SRC        = '/logo/kessia-logo-color.png';       // 748 × 260
+const COLOR_SRC_FULL   = '/logo/kessia-logo-color-full.png';  // 770 × 260
+const COLOR_RATIO      = 748 / 260;
+const COLOR_FULL_RATIO = 770 / 260;
 const WHITE_SRC        = '/logo/kessia-logo-white.png';       // 1232 × 439
-const WHITE_SRC_FULL   = '/logo/kessia-logo-white-full.png';  // 1242 × 443 (+ taglines)
+const WHITE_SRC_FULL   = '/logo/kessia-logo-white-full.png';  // 1242 × 443
 const WHITE_RATIO      = 1232 / 439;
 const WHITE_FULL_RATIO = 1242 / 443;
-const IMG_RATIO = 768 / 512;
-const LOGO_RATIO = (CROP.width * 768) / (CROP.height * 512);
 
-function KessiaLogoImage({ height, className = '' }: { height: number; className?: string }) {
-  const imgH = height / CROP.height;
-  const imgW = imgH * IMG_RATIO;
+function KessiaLogoImage({
+  height,
+  showTagline = false,
+  className = '',
+}: {
+  height: number;
+  showTagline?: boolean;
+  className?: string;
+}) {
+  const src   = showTagline ? COLOR_SRC_FULL : COLOR_SRC;
+  const ratio = showTagline ? COLOR_FULL_RATIO : COLOR_RATIO;
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt="KESSIA"
       className={className}
-      role="img"
-      aria-label="KESSIA"
       style={{
-        display: 'inline-block',
         height,
-        width: height * LOGO_RATIO,
-        overflow: 'hidden',
-        position: 'relative',
+        width: Math.round(height * ratio),
+        maxWidth: '100%',
+        objectFit: 'contain',
+        display: 'block',
         flexShrink: 0,
       }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={LOGO_SRC}
-        alt="KESSIA"
-        style={{
-          position: 'absolute',
-          left: -CROP.left * imgW,
-          top: -CROP.top * imgH,
-          width: imgW,
-          height: imgH,
-          maxWidth: 'none',
-          // le fichier a un fond blanc cassé → se fond dans les fonds clairs
-          mixBlendMode: 'multiply',
-        }}
-      />
-    </span>
+    />
   );
 }
 
@@ -187,9 +177,9 @@ export function KessiaLogo({
     return <KessiaSymbol size={size} />;
   }
 
-  // Fonds clairs → image officielle
+  // Fonds clairs → lockup couleur officiel
   if (variant !== 'white') {
-    return <KessiaLogoImage height={size} className={className} />;
+    return <KessiaLogoImage height={size} showTagline={showTagline} className={className} />;
   }
 
   // variant "white" → lockup officiel blanc (PNG transparent, fonds sombres)
