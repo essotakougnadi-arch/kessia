@@ -1,7 +1,7 @@
 // ============================================================
 // KESSIA — Indicatifs pays pour la saisie du numéro de téléphone
-// Périmètre : UEMOA d'abord (Togo par défaut), puis reste de
-// l'Afrique de l'Ouest / Centrale, puis diaspora.
+// Périmètre : Afrique de l'Ouest (CEDEAO) — UEMOA d'abord (Togo
+// par défaut), puis les autres États de la CEDEAO + la Mauritanie.
 // `min` / `max` = longueur du numéro national (hors indicatif),
 // utilisée pour une validation indicative côté client seulement —
 // la validation qui fait foi reste côté serveur (Zod + normalizePhone).
@@ -29,27 +29,17 @@ export const COUNTRIES: Country[] = [
   { iso: 'NE', name: 'Niger',           dial: '227', flag: '🇳🇪', example: '93 12 34 56', min: 8, max: 8 },
   { iso: 'SN', name: 'Sénégal',         dial: '221', flag: '🇸🇳', example: '70 123 45 67', min: 9, max: 9 },
 
-  // ── Afrique de l'Ouest / Centrale ─────────────────────────
+  // ── Autres États de la CEDEAO ────────────────────────────
   { iso: 'GH', name: 'Ghana',           dial: '233', flag: '🇬🇭', example: '24 123 4567', min: 9, max: 9 },
   { iso: 'NG', name: 'Nigéria',         dial: '234', flag: '🇳🇬', example: '80 1234 5678', min: 7, max: 11 },
   { iso: 'GN', name: 'Guinée',          dial: '224', flag: '🇬🇳', example: '62 12 34 56', min: 8, max: 9 },
   { iso: 'CV', name: 'Cabo Verde',      dial: '238', flag: '🇨🇻', example: '991 12 34', min: 7, max: 7 },
-  { iso: 'MR', name: 'Mauritanie',      dial: '222', flag: '🇲🇷', example: '22 12 34 56', min: 8, max: 8 },
+  { iso: 'GM', name: 'Gambie',          dial: '220', flag: '🇬🇲', example: '301 23 45', min: 7, max: 7 },
   { iso: 'SL', name: 'Sierra Leone',    dial: '232', flag: '🇸🇱', example: '25 123456', min: 8, max: 8 },
   { iso: 'LR', name: 'Libéria',         dial: '231', flag: '🇱🇷', example: '77 012 3456', min: 7, max: 9 },
-  { iso: 'CM', name: 'Cameroun',        dial: '237', flag: '🇨🇲', example: '6 71 23 45 67', min: 8, max: 9 },
-  { iso: 'GA', name: 'Gabon',           dial: '241', flag: '🇬🇦', example: '06 03 12 34', min: 6, max: 8 },
-  { iso: 'CG', name: 'Congo',           dial: '242', flag: '🇨🇬', example: '06 123 4567', min: 9, max: 9 },
-  { iso: 'CD', name: 'RD Congo',        dial: '243', flag: '🇨🇩', example: '99 123 4567', min: 9, max: 9 },
-  { iso: 'TD', name: 'Tchad',           dial: '235', flag: '🇹🇩', example: '63 12 34 56', min: 8, max: 8 },
 
-  // ── Diaspora ─────────────────────────────────────────────
-  { iso: 'FR', name: 'France',          dial: '33',  flag: '🇫🇷', example: '6 12 34 56 78', min: 9, max: 9 },
-  { iso: 'BE', name: 'Belgique',        dial: '32',  flag: '🇧🇪', example: '470 12 34 56', min: 8, max: 9 },
-  { iso: 'DE', name: 'Allemagne',       dial: '49',  flag: '🇩🇪', example: '151 23456789', min: 6, max: 11 },
-  { iso: 'GB', name: 'Royaume-Uni',     dial: '44',  flag: '🇬🇧', example: '7400 123456', min: 9, max: 10 },
-  { iso: 'CA', name: 'Canada',          dial: '1',   flag: '🇨🇦', example: '506 234 5678', min: 10, max: 10 },
-  { iso: 'US', name: 'États-Unis',      dial: '1',   flag: '🇺🇸', example: '212 555 0123', min: 10, max: 10 },
+  // ── Afrique de l'Ouest (hors CEDEAO) ─────────────────────
+  { iso: 'MR', name: 'Mauritanie',      dial: '222', flag: '🇲🇷', example: '22 12 34 56', min: 8, max: 8 },
 ];
 
 export const DEFAULT_COUNTRY_ISO = 'TG';

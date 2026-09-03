@@ -17,8 +17,11 @@ numéro déjà en `+indicatif…`. Seul le front-end bloquait.
 ## Décision
 
 ### Liste de pays — `lib/constants/countries.ts`
-- 26 pays, ordre d'affichage : **UEMOA d'abord** (Togo par défaut), puis
-  Afrique de l'Ouest / Centrale, puis diaspora (FR, BE, DE, GB, CA, US).
+- **16 pays d'Afrique de l'Ouest** : les 15 États de la CEDEAO + la
+  Mauritanie. Ordre d'affichage : **UEMOA d'abord** (Togo par défaut),
+  puis les autres États CEDEAO, puis la Mauritanie.
+  _(Révisé le 2026-09-03 : la liste initiale incluait l'Afrique centrale
+  et la diaspora — retirées, périmètre recentré sur l'Afrique de l'Ouest.)_
 - Par pays : `iso` (ISO 3166-1 alpha-2), `name` (FR), `dial`, `flag`,
   `example`, `min`/`max` (longueur nationale — validation **indicative**
   côté client ; la validation qui fait foi reste le serveur).

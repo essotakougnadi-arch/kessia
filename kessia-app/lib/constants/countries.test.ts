@@ -30,8 +30,14 @@ describe('countries', () => {
   it('toE164 compose un numéro international et retire le 0 initial', () => {
     expect(toE164('TG', '90 12 34 56')).toBe('+22890123456');
     expect(toE164('CI', '0123456789')).toBe('+225123456789');
-    expect(toE164('FR', '06 12 34 56 78')).toBe('+33612345678');
+    expect(toE164('GH', '024 123 4567')).toBe('+233241234567');
     expect(toE164('TG', '')).toBe('');
+  });
+
+  it('ne contient que des pays d’Afrique de l’Ouest (indicatifs 22x / 23x / 245 / 220)', () => {
+    for (const c of COUNTRIES) {
+      expect(c.dial).toMatch(/^(22\d|23\d|245|220)$/);
+    }
   });
 
   it('isNationalLengthPlausible valide la longueur nationale', () => {

@@ -531,10 +531,11 @@ Voir `docs/progress/status.md`.
 ## [Non publié] — Choix du pays au téléphone (ADR 0037)
 
 ### Ajouté
-- **`lib/constants/countries.ts`** : 26 pays (UEMOA d'abord, Togo par défaut,
-  puis Afrique de l'Ouest / Centrale, puis diaspora), helpers `toE164`,
-  `findCountry`, `isNationalLengthPlausible`, `readStoredCountryIso` /
-  `storeCountryIso` (mémorise le dernier pays dans `localStorage`).
+- **`lib/constants/countries.ts`** : **16 pays d'Afrique de l'Ouest** (15 États
+  CEDEAO + Mauritanie ; UEMOA d'abord, Togo par défaut), affichés « 🇹🇬 +228 »,
+  helpers `toE164`, `findCountry`, `isNationalLengthPlausible`,
+  `readStoredCountryIso` / `storeCountryIso` (mémorise le dernier pays dans
+  `localStorage`).
 - **`components/auth/CountryPhoneField.tsx`** : `<select>` indicatif + champ
   numéro, contrôlé, deux champs cachés (`phone` en E.164, `country` en ISO),
   libellé d'aide dynamique, cue de longueur non bloquant.
@@ -550,4 +551,4 @@ Voir `docs/progress/status.md`.
   + icônes animées.
 
 ### Vérification
-- **ADR 0037** ; `tsc` + `lint` (0 warning) + `vitest` (**152**, +5) + `build` au vert.
+- **ADR 0037** ; `tsc` + `lint` (0 warning) + `vitest` (**153**, +6) + `build` au vert.
