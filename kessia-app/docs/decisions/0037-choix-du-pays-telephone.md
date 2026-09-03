@@ -32,12 +32,18 @@ numéro déjà en `+indicatif…`. Seul le front-end bloquait.
 
 ### Composant — `components/auth/CountryPhoneField.tsx`
 - Contrôlé : le parent détient `{ iso, national }`.
-- `<select>` natif (drapeau + `+indicatif`) accolé à l'`<input type="tel">`,
-  même habillage que l'ancien préfixe (`.wrap` / `.country` / `.field`).
+- **Liste déroulante maison** (bouton `role="combobox"` + `ul role="listbox"`)
+  accolée à l'`<input type="tel">` — un `<select>` natif **n'affiche pas les
+  drapeaux emoji sous Windows** (rendu OS des `<option>`). Clavier
+  (↑↓ / Début / Fin / Entrée / Échap / Tab), saisie au clavier (type-ahead),
+  fermeture au clic extérieur, `aria-activedescendant`.
+- **Drapeaux SVG réels** : `public/flags/<iso>.svg` (16 fichiers, ~8 Ko au
+  total, source `flag-icons` 4×3, non versionné en dépendance) rendus en
+  `<img>` — fonctionnent partout, y compris hors ligne (SW).
 - Émet **deux champs cachés** pour la soumission classique du formulaire :
   `phone` = numéro **E.164**, `country` = code ISO.
-- Libellé d'aide dynamique « 🇸🇳 Sénégal · +221 » ; bordure rouge non
-  bloquante si la longueur nationale est hors fourchette.
+- Libellé d'aide dynamique « Sénégal · +221 » ; bordure rouge non
+  bloquante si la longueur nationale est hors fourchette. Thème clair/sombre.
 
 ### Câblage
 - `/register` et `/login` (mots de passe **et** OTP) : état
@@ -51,12 +57,12 @@ numéro déjà en `+indicatif…`. Seul le front-end bloquait.
   (FR + EN).
 
 ## Conséquences
-- ✅ `tsc` + `lint` (0 warning) + `vitest` (**152**, +5 : `countries.test.ts`)
-  + `build` au vert.
-- ✅ Un membre hors Togo s'inscrit / se connecte avec son vrai numéro ; le
-  pays est mémorisé d'une session à l'autre et enregistré au profil.
-- ⚠️ Sous **Windows**, les emojis drapeaux s'affichent en lettres
-  (« TG », « SN »…) — limitation OS, comportement déjà présent ailleurs
-  dans l'app (puces de démo). Acceptable : le code pays reste lisible.
+- ✅ `tsc` + `lint` (0 warning) + `vitest` (**153**, +6 : `countries.test.ts`)
+  + `build` + E2E auth (5/5) au vert.
+- ✅ Un membre d'un autre pays d'Afrique de l'Ouest s'inscrit / se connecte
+  avec son vrai numéro ; le pays est mémorisé d'une session à l'autre et
+  enregistré au profil.
+- ✅ Drapeaux **SVG réels** dans le sélecteur (le `<select>` natif rendait
+  « TG », « SN »… sous Windows) — d'où la liste déroulante maison.
 - La validation fine par pays reste indicative ; pas d'intégration
   `libphonenumber` (poids). Le serveur valide le format générique.

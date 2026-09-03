@@ -3,8 +3,7 @@
   align-items: stretch;
   border: 1.5px solid var(--color-border-medium);
   border-radius: var(--radius-md);
-  overflow: hidden;
-  background: #fff;
+  background: var(--color-surface, #fff);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -20,25 +19,47 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
 }
 
-.country {
+/* wrapper positionné pour la liste déroulante */
+.countryBox {
+  position: relative;
   flex-shrink: 0;
-  appearance: none;
-  -webkit-appearance: none;
+  display: flex;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 13px 12px;
   border: none;
   border-right: 1px solid var(--color-border-medium);
-  background-color: var(--color-earth);
+  border-radius: calc(var(--radius-md) - 1.5px) 0 0 calc(var(--radius-md) - 1.5px);
+  background: var(--color-earth);
   color: var(--color-text);
   font-size: 14px;
   font-weight: 600;
-  padding: 13px 30px 13px 14px;
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23736357' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 11px center;
+  white-space: nowrap;
+}
+.trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
-.country:focus {
-  outline: none;
+.flag {
+  width: 22px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+  display: block;
+}
+
+.chevron {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
 
 .field {
@@ -47,4 +68,62 @@
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+}
+
+/* ── Liste déroulante ─────────────────────────────── */
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: max-content;
+  min-width: 240px;
+  max-width: 84vw;
+  max-height: 288px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(26, 18, 9, 0.16);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.optionActive {
+  background: var(--color-primary-light);
+}
+
+.option[aria-selected='true'] {
+  font-weight: 700;
+}
+.option[aria-selected='true'] .optionDial {
+  color: var(--color-primary);
+}
+
+.optionName {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.optionDial {
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap {
+    transition: none;
+  }
 }

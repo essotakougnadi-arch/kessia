@@ -536,10 +536,13 @@ Voir `docs/progress/status.md`.
   helpers `toE164`, `findCountry`, `isNationalLengthPlausible`,
   `readStoredCountryIso` / `storeCountryIso` (mémorise le dernier pays dans
   `localStorage`).
-- **`components/auth/CountryPhoneField.tsx`** : `<select>` indicatif + champ
-  numéro, contrôlé, deux champs cachés (`phone` en E.164, `country` en ISO),
-  libellé d'aide dynamique, cue de longueur non bloquant.
-- `countries.test.ts` (5 tests).
+- **`components/auth/CountryPhoneField.tsx`** : liste déroulante maison
+  (`combobox` + `listbox`, clavier + type-ahead) avec **drapeaux SVG réels**
+  (`public/flags/<iso>.svg`, 16 fichiers ~8 Ko) — le `<select>` natif n'affiche
+  pas les drapeaux emoji sous Windows. Champ contrôlé, deux champs cachés
+  (`phone` en E.164, `country` en ISO), libellé d'aide dynamique, cue de
+  longueur non bloquant, thème clair/sombre.
+- `countries.test.ts` (6 tests).
 
 ### Modifié
 - `/register` et `/login` (mot de passe **et** OTP) : `CountryPhoneField` à la
