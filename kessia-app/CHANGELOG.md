@@ -527,3 +527,27 @@ Voir `docs/progress/status.md`.
 ### Vérification
 - **ADR 0036** ; `tsc` + `lint` (0 warning) + `vitest` (147) + `build` + E2E auth
   (7/7) au vert. Déploiement continu confirmé (5 pushs → 5 builds `READY`).
+
+## [Non publié] — Choix du pays au téléphone (ADR 0037)
+
+### Ajouté
+- **`lib/constants/countries.ts`** : 26 pays (UEMOA d'abord, Togo par défaut,
+  puis Afrique de l'Ouest / Centrale, puis diaspora), helpers `toE164`,
+  `findCountry`, `isNationalLengthPlausible`, `readStoredCountryIso` /
+  `storeCountryIso` (mémorise le dernier pays dans `localStorage`).
+- **`components/auth/CountryPhoneField.tsx`** : `<select>` indicatif + champ
+  numéro, contrôlé, deux champs cachés (`phone` en E.164, `country` en ISO),
+  libellé d'aide dynamique, cue de longueur non bloquant.
+- `countries.test.ts` (5 tests).
+
+### Modifié
+- `/register` et `/login` (mot de passe **et** OTP) : `CountryPhoneField` à la
+  place du préfixe `+228` en dur ; le handler compose le numéro E.164.
+- `registerSchema` : `country` optionnel (ISO alpha-2) → `UserProfile.country`.
+- i18n FR + EN : `auth.{login,register}.countryLabel`, `auth.register.phoneError`.
+- Interface (hors ADR) : logos officiels PNG transparents (couleur / blanc) à la
+  place du JPEG rogné en CSS ; cartes « Fonctionnalités » de la landing centrées
+  + icônes animées.
+
+### Vérification
+- **ADR 0037** ; `tsc` + `lint` (0 warning) + `vitest` (**152**, +5) + `build` au vert.

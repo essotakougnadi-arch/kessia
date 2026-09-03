@@ -42,6 +42,7 @@ function stashDemoOtp(data: unknown) {
 
 export type RegisterPayload = {
   phone: string;
+  country?: string;
   firstName: string;
   lastName: string;
   password: string;

@@ -10,8 +10,10 @@ import { useRouter } from 'next/navigation';
 import styles from './auth.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { CountryPhoneField, PhoneValue } from '@/components/auth/CountryPhoneField';
 import { useAuth } from '@/hooks/useAuth';
 import { useT } from '@/lib/i18n';
+import { toE164, readStoredCountryIso } from '@/lib/constants/countries';
 import { LEGAL_VERSION, LEGAL_VERSION_LABEL } from '@/lib/legal/versions';
 
 const PROFILE_TYPES = [
@@ -60,6 +62,7 @@ export default function RegisterPage() {
 
   const [profileType, setProfileType] = useState<string>('INDIVIDUAL');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState<PhoneValue>(() => ({ iso: readStoredCountryIso(), national: '' }));
   const [formError, setFormError] = useState<string | null>(null);
 
   const strength = getPasswordStrength(password);
@@ -73,13 +76,16 @@ export default function RegisterPage() {
 
     const firstName = (data.get('firstName') as string).trim();
     const lastName = (data.get('lastName') as string).trim();
-    const phoneRaw = (data.get('phone') as string).replace(/\s/g, '');
-    const phone = `+228${phoneRaw}`;
+    const fullPhone = toE164(phone.iso, phone.national);
     const email = (data.get('email') as string).trim() || undefined;
     const pwd = data.get('password') as string;
     const acceptTerms = data.get('acceptTerms') === 'on';
     const acceptData = data.get('acceptData') === 'on';
 
+    if (fullPhone.replace(/\D/g, '').length < 8) {
+      setFormError(t('auth.register.phoneError'));
+      return;
+    }
     if (!acceptTerms || !acceptData) {
       setFormError(t('auth.register.consentError'));
       return;
@@ -90,7 +96,8 @@ export default function RegisterPage() {
     }
 
     const result = await register({
-      phone,
+      phone: fullPhone,
+      country: phone.iso,
       firstName,
       lastName,
       password: pwd,
@@ -102,7 +109,7 @@ export default function RegisterPage() {
     });
     if (result) {
       // Stocker le numéro en session pour la page OTP
-      sessionStorage.setItem('kessia-otp-phone', phone);
+      sessionStorage.setItem('kessia-otp-phone', fullPhone);
       sessionStorage.setItem('kessia-otp-purpose', 'REGISTER');
       router.push('/verify-otp');
     }
@@ -221,18 +228,14 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="label" htmlFor="phone">
-                {t('auth.register.phone')}
-                <span className="label-hint">{t('auth.register.phoneHint')}</span>
-              </label>
-              <div className={styles.phoneInput}>
-                <div className={styles.phonePrefix}>🇹🇬 +228</div>
-                <input id="phone" name="phone" type="tel"
-                  className={`input ${styles.phoneField}`}
-                  placeholder={t('auth.register.phonePlaceholder')} required autoComplete="tel" />
-              </div>
-            </div>
+            <CountryPhoneField
+              id="phone"
+              label={t('auth.register.phone')}
+              countryAriaLabel={t('auth.register.countryLabel')}
+              value={phone}
+              onChange={setPhone}
+              required
+            />
 
             <div className="form-group">
               <label className="label" htmlFor="email">

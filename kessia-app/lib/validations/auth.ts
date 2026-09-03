@@ -23,6 +23,11 @@ const passwordSchema = z
 
 export const registerSchema = z.object({
   phone: phoneSchema,
+  // Code ISO 3166-1 alpha-2 du pays choisi à la saisie du numéro (§ diaspora / UEMOA).
+  country: z
+    .string()
+    .regex(/^[A-Z]{2}$/, 'Code pays invalide')
+    .optional(),
   firstName: z
     .string()
     .min(2, 'Le prénom doit contenir au moins 2 caractères')

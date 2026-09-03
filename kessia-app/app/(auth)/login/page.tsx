@@ -9,8 +9,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from '../register/auth.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
+import { CountryPhoneField, PhoneValue } from '@/components/auth/CountryPhoneField';
 import { useAuth } from '@/hooks/useAuth';
 import { useT } from '@/lib/i18n';
+import { toE164, readStoredCountryIso } from '@/lib/constants/countries';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 type LoginMode = 'password' | 'otp';
@@ -33,13 +35,13 @@ export default function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [code2fa, setCode2fa] = useState('');
+  const [phone, setPhone] = useState<PhoneValue>(() => ({ iso: readStoredCountryIso(), national: '' }));
 
-  function fillDemo(phone: string) {
+  function fillDemo(national: string) {
     setMode('password');
+    setPhone({ iso: 'TG', national });
     setTimeout(() => {
-      const p = document.getElementById('phone-login') as HTMLInputElement | null;
       const pw = document.getElementById('password-login') as HTMLInputElement | null;
-      if (p) p.value = phone;
       if (pw) pw.value = DEMO_PASSWORD;
       pw?.focus();
     }, 0);
@@ -51,11 +53,10 @@ export default function LoginPage() {
 
     const form = e.currentTarget;
     const data = new FormData(form);
-    const phoneRaw = (data.get('phone') as string).replace(/\s/g, '');
-    const phone = `+228${phoneRaw}`;
+    const fullPhone = toE164(phone.iso, phone.national);
     const password = data.get('password') as string;
 
-    await loginWithPassword({ phone, password });
+    await loginWithPassword({ phone: fullPhone, password });
   }
 
   async function handle2fa(e: FormEvent<HTMLFormElement>) {
@@ -68,14 +69,11 @@ export default function LoginPage() {
     e.preventDefault();
     setFormError(null);
 
-    const form = e.currentTarget;
-    const data = new FormData(form);
-    const phoneRaw = (data.get('phone') as string).replace(/\s/g, '');
-    const phone = `+228${phoneRaw}`;
+    const fullPhone = toE164(phone.iso, phone.national);
 
-    const ok = await requestOtp(phone, 'LOGIN');
+    const ok = await requestOtp(fullPhone, 'LOGIN');
     if (ok) {
-      sessionStorage.setItem('kessia-otp-phone', phone);
+      sessionStorage.setItem('kessia-otp-phone', fullPhone);
       sessionStorage.setItem('kessia-otp-purpose', 'LOGIN');
       setOtpSent(true);
       setTimeout(() => router.push('/verify-otp'), 800);
@@ -201,24 +199,14 @@ export default function LoginPage() {
           {/* ─── Formulaire Mot de passe ─── */}
           {!pending2fa && mode === 'password' && (
             <form className={styles.form} id="login-form" onSubmit={handlePasswordLogin}>
-              <div className="form-group">
-                <label className="label" htmlFor="phone-login">
-                  {t('auth.login.phone')}
-                  <span className="label-hint">{t('auth.login.phoneHint')}</span>
-                </label>
-                <div className={styles.phoneInput}>
-                  <div className={styles.phonePrefix}>🇹🇬 +228</div>
-                  <input
-                    id="phone-login"
-                    name="phone"
-                    type="tel"
-                    className={`input ${styles.phoneField}`}
-                    placeholder={t('auth.login.phonePlaceholder')}
-                    required
-                    autoComplete="tel"
-                  />
-                </div>
-              </div>
+              <CountryPhoneField
+                id="phone-login"
+                label={t('auth.login.phone')}
+                countryAriaLabel={t('auth.login.countryLabel')}
+                value={phone}
+                onChange={setPhone}
+                required
+              />
 
               <div className="form-group">
                 <label className="label" htmlFor="password-login">
@@ -260,24 +248,14 @@ export default function LoginPage() {
           {/* ─── Formulaire OTP ─── */}
           {!pending2fa && mode === 'otp' && (
             <form className={styles.form} id="otp-request-form" onSubmit={handleOtpRequest}>
-              <div className="form-group">
-                <label className="label" htmlFor="phone-otp">
-                  {t('auth.login.phone')}
-                  <span className="label-hint">{t('auth.login.phoneHint')}</span>
-                </label>
-                <div className={styles.phoneInput}>
-                  <div className={styles.phonePrefix}>🇹🇬 +228</div>
-                  <input
-                    id="phone-otp"
-                    name="phone"
-                    type="tel"
-                    className={`input ${styles.phoneField}`}
-                    placeholder={t('auth.login.phonePlaceholder')}
-                    required
-                    autoComplete="tel"
-                  />
-                </div>
-              </div>
+              <CountryPhoneField
+                id="phone-otp"
+                label={t('auth.login.phone')}
+                countryAriaLabel={t('auth.login.countryLabel')}
+                value={phone}
+                onChange={setPhone}
+                required
+              />
 
               {error && (
                 <div className={styles.errorMessage}>⚠️ {error}</div>

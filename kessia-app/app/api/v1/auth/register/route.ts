@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return validationError(parsed.error);
     }
 
-    const { phone, firstName, lastName, password, userType, termsVersion } = parsed.data;
+    const { phone, country, firstName, lastName, password, userType, termsVersion } = parsed.data;
     const normalizedPhone = normalizePhone(phone);
     const acceptedVersion = termsVersion || LEGAL_VERSION;
 
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
       await tx.userProfile.create({
         data: {
           userId: newUser.id,
+          ...(country ? { country } : {}),
           ...(userType ? { userType, userTypeSetAt: new Date() } : {}),
         },
       });
