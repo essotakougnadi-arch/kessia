@@ -1,7 +1,7 @@
 // ============================================================
 // KESSIA — Logo
 //   • variant "full"   → image officielle /public/logo/kessia-logo.jpg
-//   • variant "white"  → lockup SVG blanc (fonds sombres)
+//   • variant "white"  → lockup blanc officiel /public/logo/kessia-logo-white*.png (fonds sombres)
 //   • variant "symbol" → symbole K seul (SVG)
 // Le symbole SVG et l'icône mobile restent codés (fonds sombres,
 // petites tailles, favicon…).
@@ -26,6 +26,12 @@ const GREEN  = '#1F5D4A';
 const LOGO_SRC = '/logo/kessia-logo.jpg';
 // Boîte du contenu mesurée (94..698 × 126..350 sur 768×512) + petite marge.
 const CROP = { left: 0.092, top: 0.222, width: 0.845, height: 0.492 };
+
+// Lockup blanc officiel (fonds sombres) — dérivé de public/images/LOGO KESSIA.png
+const WHITE_SRC        = '/logo/kessia-logo-white.png';       // 1232 × 439
+const WHITE_SRC_FULL   = '/logo/kessia-logo-white-full.png';  // 1242 × 443 (+ taglines)
+const WHITE_RATIO      = 1232 / 439;
+const WHITE_FULL_RATIO = 1242 / 443;
 const IMG_RATIO = 768 / 512;
 const LOGO_RATIO = (CROP.width * 768) / (CROP.height * 512);
 
@@ -186,85 +192,29 @@ export function KessiaLogo({
     return <KessiaLogoImage height={size} className={className} />;
   }
 
-  // variant "white" → lockup SVG (fonds sombres)
-  const textColor = '#fff';
-  const goldColor = 'rgba(255,255,255,0.65)';
-  const subColor  = 'rgba(255,255,255,0.80)';
-  const lineColor = 'rgba(255,255,255,0.35)';
-
-  const symbolHeight = Math.round(size * 206 / 180);
+  // variant "white" → lockup officiel blanc (PNG transparent, fonds sombres)
+  //   • sans tagline  → /logo/kessia-logo-white.png       (symbole + « KESSIA »)
+  //   • avec tagline  → /logo/kessia-logo-white-full.png  (+ « Épargner… / Grandir ensemble »)
+  // Source : public/images/LOGO KESSIA.png, rognée aux boîtes de contenu.
+  const src   = showTagline ? WHITE_SRC_FULL : WHITE_SRC;
+  const ratio = showTagline ? WHITE_FULL_RATIO : WHITE_RATIO;
+  const height = Math.round(size * 1.15);
 
   return (
-    <div
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt="KESSIA"
       className={className}
       style={{
-        display: 'inline-flex',
-        alignItems: showTagline ? 'flex-start' : 'center',
-        gap: Math.round(size * 0.25),
+        height,
+        width: Math.round(height * ratio),
+        maxWidth: '100%',
+        objectFit: 'contain',
+        display: 'block',
+        flexShrink: 0,
       }}
-    >
-      {/* Symbole K */}
-      <KessiaSymbol size={size} variant="white" />
-
-      {/* Texte + tagline */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        paddingTop: showTagline ? Math.round(symbolHeight * 0.1) : 0,
-      }}>
-        {/* KESSIA */}
-        <span style={{
-          fontSize:    Math.round(size * 0.88),
-          fontWeight:  900,
-          color:       textColor,
-          letterSpacing: '-0.5px',
-          fontFamily:  "'Plus Jakarta Sans', 'Inter', sans-serif",
-          lineHeight:  1,
-        }}>
-          KESSIA
-        </span>
-
-        {/* Taglines — visibles si showTagline=true */}
-        {showTagline && (
-          <div style={{ marginTop: 5 }}>
-            {/* "ÉPARGNER ENSEMBLE. ENTREPRENDRE ENSEMBLE." */}
-            <div style={{
-              fontSize:      Math.round(size * 0.19),
-              fontWeight:    700,
-              color:         subColor,
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase' as const,
-              fontFamily:    "'Plus Jakarta Sans', 'Inter', sans-serif",
-            }}>
-              Épargner ensemble. Entreprendre ensemble.
-            </div>
-
-            {/* "— GRANDIR ENSEMBLE. —" avec lignes */}
-            <div style={{
-              display:    'flex',
-              alignItems: 'center',
-              gap:        6,
-              marginTop:  3,
-            }}>
-              <div style={{ flex: 1, height: 1, background: lineColor }} />
-              <span style={{
-                fontSize:      Math.round(size * 0.18),
-                fontWeight:    800,
-                color:         goldColor,
-                letterSpacing: '0.8px',
-                textTransform: 'uppercase' as const,
-                fontFamily:    "'Plus Jakarta Sans', 'Inter', sans-serif",
-                whiteSpace:    'nowrap',
-              }}>
-                Grandir ensemble.
-              </span>
-              <div style={{ flex: 1, height: 1, background: lineColor }} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    />
   );
 }
 
