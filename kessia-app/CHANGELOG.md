@@ -500,3 +500,30 @@ Voir `docs/progress/status.md`.
   + **E2E 40/40** (+ plan solo, + bascule couleur Brique persistée) + `db:seed`
   (7 tontines). Le test `wallet` « transfert refusé » a échoué une fois sur
   instabilité du pooler puis passé au rejeu — pas une régression.
+
+## [Non publié] — Mise en ligne + mode démonstration (ADR 0036)
+
+### Déploiement
+- **En ligne : https://kessia-dun.vercel.app** — dépôt GitHub
+  `essotakougnadi-arch/kessia` + Vercel en **déploiement continu** (chaque push
+  sur `main` redéploie). Build `prisma generate && next build` + `postinstall`,
+  Root Directory `kessia-app`, 15 variables d'env, cron tontine quotidien (Hobby).
+  Vérifié : `/api/health` = `db: ok`, login compte de démo → jetons émis.
+- **Environnement de démonstration** : base Supabase de dev, `SMS_PROVIDER=DEV`.
+
+### Ajouté
+- **Mode démonstration** (`lib/config/demo.ts`) : `DEMO_MODE=1` fait renvoyer le
+  code OTP par `POST /auth/register` et `POST /auth/request-otp` (champ `demoOtp`),
+  pré-rempli sur `/verify-otp` avec un encart dédié. **Garde-fou** : inactif si
+  `SMS_PROVIDER ≠ DEV` ; avertissement de sécurité journalisé (même posture
+  qu'`E2E_RATE_LIMIT_BYPASS`).
+- **`NEXT_PUBLIC_DEMO_MODE=1`** : `/login` affiche les comptes de test
+  (Membre / Micro-entreprise / Conformité / Admin) — un clic pré-remplit le
+  formulaire. Clés `auth.login.demo*` + `auth.verifyOtp.demoNote` FR + EN.
+- **`README.md` à la racine du dépôt** (page d'accueil GitHub) + `kessia-app/README.md`
+  mis à jour (déploiement, mode démo, structure `admin/*`). `.env.example` :
+  `DEMO_MODE` / `NEXT_PUBLIC_DEMO_MODE`. `.gitignore` : `.vercel`.
+
+### Vérification
+- **ADR 0036** ; `tsc` + `lint` (0 warning) + `vitest` (147) + `build` + E2E auth
+  (7/7) au vert. Déploiement continu confirmé (5 pushs → 5 builds `READY`).

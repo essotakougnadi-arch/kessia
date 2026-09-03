@@ -1,14 +1,16 @@
 # État d'avancement — KESSIA App
 
-_Dernière mise à jour : 2026-09-03 (**déployé et opérationnel : https://kessia-dun.vercel.app** — GitHub `essotakougnadi-arch/kessia` + Vercel, déploiement continu, env de démonstration ; `/api/health` = `db: ok`, login compte démo OK) — + ADR 0035 : 2 couleurs d'accent au choix `#B65A3A` / `#C84B1E` via `data-accent` + Tontine Achat individuelle `PurchaseMode.SOLO` ; + ADR 0034 corrections auto-audit ; + ADR 0033 KPI §54 / anti-fraude comportemental / voix EN ; + ADR 0032 PDF serveur / e-mail / offline ; + ADR 0031 wallet séquestre)_
+_Dernière mise à jour : 2026-09-03 (**déployé et opérationnel : https://kessia-dun.vercel.app** — GitHub `essotakougnadi-arch/kessia` + Vercel, déploiement continu, env de démonstration ; `/api/health` = `db: ok`, login compte démo OK) — + ADR 0036 mode démonstration (OTP renvoyé par l'API si `DEMO_MODE=1`, comptes de test sur `/login`) + README dépôt ; + ADR 0035 : 2 couleurs d'accent au choix `#B65A3A` / `#C84B1E` via `data-accent` + Tontine Achat individuelle `PurchaseMode.SOLO` ; + ADR 0034 corrections auto-audit ; + ADR 0033 KPI §54 / anti-fraude comportemental / voix EN ; + ADR 0032 PDF serveur / e-mail / offline ; + ADR 0031 wallet séquestre)_
 
 Référence : cahier des charges final (61 §) + feuille de route par phases (§52).
 
-## Déploiement (2026-09-03)
+## Déploiement (2026-09-03, ADR 0036)
 
-- **En ligne** : https://kessia-dun.vercel.app — Vercel (plan Hobby), **déploiement continu** à chaque push sur `main` du dépôt GitHub `essotakougnadi-arch/kessia` (privé).
+- **En ligne** : https://kessia-dun.vercel.app — Vercel (plan Hobby), **déploiement continu** à chaque push sur `main` du dépôt GitHub `essotakougnadi-arch/kessia` (privé). Confirmé : 5 pushs → 5 builds `READY`.
 - Build : `prisma generate && next build` (+ `postinstall`), Root Directory `kessia-app`, 15 variables d'env, cron tontine quotidien (limite Hobby).
-- **Environnement de démonstration** : base Supabase de dev (comptes de démo), OTP en mode `DEV` (pas d'envoi SMS). Vérifié en direct : `/api/health` → `db: ok`, `POST /api/v1/auth/login` (`+22890000001` / `Kessia2026!`) → jetons émis.
+- **Environnement de démonstration** : base Supabase de dev (comptes de démo), OTP en mode `DEV`. Vérifié : `/api/health` → `db: ok`, login `+22890000001` / `Kessia2026!` → jetons émis.
+- **Mode démo** (`DEMO_MODE=1` + `NEXT_PUBLIC_DEMO_MODE=1`) : l'API renvoie l'OTP (garde-fou : inactif si `SMS_PROVIDER ≠ DEV`), `/login` propose les comptes de test. `lib/config/demo.ts`.
+- **`README.md` à la racine du dépôt** (page GitHub) créé.
 - Reste pour un env. **régulé** : base de production séparée, APM sur `/api/metrics`, gestionnaire de secrets, Redis Upstash, secret ordonnanceur, rétention + copie backup + test DR (cf. bloquants pilote).
 
 ## Légende
