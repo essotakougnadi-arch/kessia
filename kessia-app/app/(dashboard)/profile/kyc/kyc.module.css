@@ -14,7 +14,7 @@
 .progressLabel { font-size: 12px; color: var(--color-text-tertiary); font-weight: 500; }
 
 /* UNLOCK BANNER */
-.unlockBanner { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; background: linear-gradient(135deg, #1F5D4A, #2D7A63); border-radius: 16px; padding: 14px; }
+.unlockBanner { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; background: var(--gradient-green); border-radius: 16px; padding: 14px; }
 .unlockIcon { font-size: 26px; flex-shrink: 0; }
 .unlockTitle { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 3px; }
 .unlockSub { font-size: 11px; color: rgba(255,255,255,0.7); }

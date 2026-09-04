@@ -40,7 +40,7 @@
 .actionLabel { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
 
 /* SAVINGS BANNER */
-.savingsBanner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(135deg, #1F5D4A, #2D7A63); border-radius: 18px; padding: 16px; text-decoration: none; box-shadow: var(--shadow-green); transition: all 0.2s; }
+.savingsBanner { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--gradient-green); border-radius: 18px; padding: 16px; text-decoration: none; box-shadow: var(--shadow-green); transition: all 0.2s; }
 .savingsBanner:hover { transform: translateY(-2px); }
 .savingsBannerLeft { display: flex; align-items: center; gap: 12px; }
 .savingsIcon { width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 22px; }

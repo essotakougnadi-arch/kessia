@@ -301,14 +301,14 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  background: linear-gradient(135deg, #1F5D4A, #2D7A63);
+  background: var(--gradient-green);
   border-radius: 18px;
   padding: 16px;
   text-decoration: none;
   box-shadow: var(--shadow-green);
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.scoreBanner:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(31,93,74,0.35); }
+.scoreBanner:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 
 .scoreBannerLeft {
   display: flex;
