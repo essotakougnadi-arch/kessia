@@ -13,7 +13,7 @@
 // /api/** (non caché) et re-validé au retour en ligne.
 // ============================================================
 
-const VERSION = 'kessia-v2';
+const VERSION = 'kessia-v3';
 const SHELL = `${VERSION}-shell`;
 const NAV = `${VERSION}-nav`;
 const RUNTIME = `${VERSION}-runtime`;
@@ -26,7 +26,7 @@ const PRECACHE = [
 ];
 const NAV_SHELLS = ['/home', '/wallet', '/tontine', '/business', '/profile', '/login'];
 
-const NAV_TIMEOUT_MS = 3500;
+const NAV_TIMEOUT_MS = 6000;
 const NAV_CACHE_MAX = 16;
 
 self.addEventListener('install', (event) => {

@@ -599,6 +599,18 @@ Voir `docs/progress/status.md`.
 ### Vérification
 - `tsc` + `lint` (0 warning) + `vitest` (**167**) + `build` + E2E navigation (6/6).
 
+## [Non publié] — Service Worker : purge du cache (kessia-v3)
+
+### Corrigé
+- Après une série de déploiements rapprochés, le Service Worker pouvait
+  servir à un visiteur revenant une **coquille de page en cache
+  périmée** (ex. landing sans les carrousels tontines/marketplace) si
+  la requête réseau dépassait le délai de repli. `VERSION` passe de
+  `kessia-v2` à **`kessia-v3`** → à la prochaine visite, tous les
+  anciens caches sont purgés (`activate` supprime tout ce qui ne
+  commence pas par la nouvelle version). `NAV_TIMEOUT_MS` 3,5 s → **6 s**
+  (marge sous charge DB avant repli hors ligne).
+
 ## [Non publié] — Mini-marketplace & achat par tontine (ADR 0039)
 
 ### Ajouté
