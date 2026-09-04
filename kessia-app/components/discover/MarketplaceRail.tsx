@@ -1,10 +1,12 @@
 'use client';
 // ============================================================
 // KESSIA — Fil « Marketplace » (rail horizontal / grille)
-// Articles récents de la communauté. Visibles partout ; acheter
-// (ou voir le détail) exige un compte → clic déconnecté = redirection.
+// Articles récents de la communauté. Sur la landing : défilement
+// automatique droite → gauche (marquee, pause au survol,
+// désactivé si prefers-reduced-motion).
 // ============================================================
 
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useDiscover } from '@/hooks/useDiscover';
 import { useMarketplaceList, type MarketItem } from '@/hooks/useMarketplace';
@@ -23,6 +25,8 @@ interface Props {
   layout?: 'rail' | 'grid';
   limit?: number;
   showHeader?: boolean;
+  /** défilement automatique droite → gauche (marquee) — landing */
+  autoScroll?: boolean;
   emptyText?: string;
 }
 
@@ -31,6 +35,7 @@ export function MarketplaceRail({
   layout = 'rail',
   limit = 12,
   showHeader = true,
+  autoScroll = false,
   emptyText,
 }: Props) {
   const t = useT();
@@ -46,6 +51,7 @@ export function MarketplaceRail({
   }
 
   const shown = items.slice(0, limit);
+  const marquee = autoScroll && layout === 'rail' && !isLoading && shown.length >= 3;
 
   function hrefFor(it: MarketItem) {
     return isAuthenticated ? `/marketplace/${it.id}` : `/register?next=${encodeURIComponent(`/marketplace/${it.id}`)}`;
@@ -57,6 +63,38 @@ export function MarketplaceRail({
     } catch {
       /* indisponible */
     }
+  }
+
+  function Card({ it, dup = false }: { it: MarketItem; dup?: boolean }) {
+    return (
+      <Link
+        href={hrefFor(it)}
+        onClick={() => onClick(it)}
+        className={`${styles.card} ${styles.itemCard}`}
+        role="listitem"
+        id={dup ? undefined : `market-item-${it.id}`}
+        tabIndex={dup ? -1 : undefined}
+        aria-hidden={dup || undefined}
+      >
+        <div className={styles.thumb}>
+          {it.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={it.imageUrl} alt="" loading="lazy" />
+          ) : (
+            <span className={styles.thumbFallback}>🛍️</span>
+          )}
+          {it.payableByTontine && <span className={styles.tontineBadge}>🔄 {t('market.byTontine')}</span>}
+        </div>
+        <div className={styles.name}>{it.title}</div>
+        <div className={styles.metaRow}>
+          <strong>{formatNumber(it.price)}</strong> {fcfa(it.currency)}
+        </div>
+        <div className={styles.footRow}>
+          <span className={styles.seats}>{it.businessName || it.sellerName || t('market.community')}</span>
+          <span className={styles.cta}>{isAuthenticated ? t('market.view') : t('market.discover')} →</span>
+        </div>
+      </Link>
+    );
   }
 
   return (
@@ -71,38 +109,23 @@ export function MarketplaceRail({
         </div>
       )}
 
-      <div className={layout === 'grid' ? styles.grid : styles.rail} role="list">
-        {isLoading && [0, 1, 2].map((i) => <div key={i} className={`${styles.card} ${styles.cardSkeleton}`} role="listitem" />)}
-
-        {shown.map((it) => (
-          <Link
-            key={it.id}
-            href={hrefFor(it)}
-            onClick={() => onClick(it)}
-            className={`${styles.card} ${styles.itemCard}`}
-            role="listitem"
-            id={`market-item-${it.id}`}
+      {marquee ? (
+        <div className={styles.marquee}>
+          <div
+            className={styles.marqueeTrack}
+            style={{ '--marquee-duration': `${Math.max(28, shown.length * 4)}s` } as CSSProperties}
+            role="list"
           >
-            <div className={styles.thumb}>
-              {it.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.imageUrl} alt="" loading="lazy" />
-              ) : (
-                <span className={styles.thumbFallback}>🛍️</span>
-              )}
-              {it.payableByTontine && <span className={styles.tontineBadge}>🔄 {t('market.byTontine')}</span>}
-            </div>
-            <div className={styles.name}>{it.title}</div>
-            <div className={styles.metaRow}>
-              <strong>{formatNumber(it.price)}</strong> {fcfa(it.currency)}
-            </div>
-            <div className={styles.footRow}>
-              <span className={styles.seats}>{it.businessName || it.sellerName || t('market.community')}</span>
-              <span className={styles.cta}>{isAuthenticated ? t('market.view') : t('market.discover')} →</span>
-            </div>
-          </Link>
-        ))}
-      </div>
+            {shown.map((it) => <Card key={it.id} it={it} />)}
+            {shown.map((it) => <Card key={`dup-${it.id}`} it={it} dup />)}
+          </div>
+        </div>
+      ) : (
+        <div className={layout === 'grid' ? styles.grid : styles.rail} role="list">
+          {isLoading && [0, 1, 2].map((i) => <div key={i} className={`${styles.card} ${styles.cardSkeleton}`} role="listitem" />)}
+          {shown.map((it) => <Card key={it.id} it={it} />)}
+        </div>
+      )}
     </section>
   );
 }

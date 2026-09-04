@@ -57,6 +57,49 @@
   flex: none;
 }
 
+/* ── Défilement automatique (marquee) — landing ───── */
+.marquee {
+  overflow: hidden;
+  padding: 4px 0 10px;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 3%, #000 97%, transparent);
+}
+
+.marqueeTrack {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  animation: marquee-x var(--marquee-duration, 40s) linear infinite;
+  will-change: transform;
+}
+
+.marquee:hover .marqueeTrack,
+.marquee:focus-within .marqueeTrack {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  /* -7px = moitié de l'écart (gap 14px) entre les deux copies */
+  to { transform: translateX(calc(-50% - 7px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .marqueeTrack {
+    animation: none;
+    width: auto;
+  }
+  /* pas d'animation → on masque la copie dupliquée, rail scrollable normal */
+  .marqueeTrack .card[aria-hidden='true'] {
+    display: none;
+  }
+}
+
 .empty {
   margin: 0;
   padding: 32px 0;

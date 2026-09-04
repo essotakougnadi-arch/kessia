@@ -1,11 +1,13 @@
 'use client';
 // ============================================================
 // KESSIA — Fil de découverte (rail horizontal)
-// Tontines publiques ouvertes qui défilent sur la landing et
-// l'accueil. Les données sont publiques ; rejoindre exige un
-// compte → clic déconnecté = redirection connexion/inscription.
+// Tontines publiques ouvertes. Sur la landing : défilement
+// automatique droite → gauche (marquee, pause au survol,
+// désactivé si prefers-reduced-motion). Sur l'accueil : rail
+// à défilement manuel.
 // ============================================================
 
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useDiscover, type DiscoverTontine } from '@/hooks/useDiscover';
 import { useAuthStore } from '@/store/authStore';
@@ -25,6 +27,8 @@ interface Props {
   showHeader?: boolean;
   /** 'rail' = défilement horizontal (accueil) · 'grid' = grille (page /discover) */
   layout?: 'rail' | 'grid';
+  /** défilement automatique droite → gauche (marquee) — landing */
+  autoScroll?: boolean;
   /** message quand il n'y a aucune tontine (sinon le composant ne rend rien) */
   emptyText?: string;
 }
@@ -34,6 +38,7 @@ export function DiscoveryRail({
   limit = 12,
   showHeader = true,
   layout = 'rail',
+  autoScroll = false,
   emptyText,
 }: Props) {
   const t = useT();
@@ -46,6 +51,8 @@ export function DiscoveryRail({
   }
 
   const items = tontines.slice(0, limit);
+  // Le marquee n'a de sens qu'avec assez de cartes pour boucler.
+  const marquee = autoScroll && layout === 'rail' && !isLoading && items.length >= 3;
 
   function hrefFor(tn: DiscoverTontine) {
     if (isAuthenticated) return `/tontine/${tn.id}`;
@@ -59,6 +66,58 @@ export function DiscoveryRail({
     } catch {
       /* indisponible */
     }
+  }
+
+  function Card({ tn, dup = false }: { tn: DiscoverTontine; dup?: boolean }) {
+    const meta = typeMeta(tn.type);
+    const isSolo = tn.type === 'PURCHASE' && tn.purchaseMode === 'SOLO';
+    return (
+      <Link
+        href={hrefFor(tn)}
+        onClick={() => onCardClick(tn)}
+        className={styles.card}
+        role="listitem"
+        id={dup ? undefined : `discover-tontine-${tn.id}`}
+        tabIndex={dup ? -1 : undefined}
+        aria-hidden={dup || undefined}
+      >
+        <div className={styles.cardTop}>
+          <span className={styles.icon} style={{ background: `${meta.accent}1F`, color: meta.accent }}>
+            {meta.icon}
+          </span>
+          <span className={styles.typeTag}>{meta.label}</span>
+        </div>
+
+        <div className={styles.name}>{tn.name}</div>
+        {tn.hasConditions && (
+          <span className={styles.condTag} title={t('discover.hasConditions')}>
+            🔎 {t('discover.conditions')}
+          </span>
+        )}
+        {(tn.description || (isSolo && tn.purchaseItem)) && (
+          <p className={styles.desc}>{isSolo && tn.purchaseItem ? tn.purchaseItem : tn.description}</p>
+        )}
+
+        <div className={styles.metaRow}>
+          <span>
+            <strong>{formatNumber(tn.amount)}</strong> {fcfa(tn.currency)}
+            {' · '}
+            {formatFrequency(tn.frequency)}
+          </span>
+        </div>
+
+        <div className={styles.footRow}>
+          <span className={styles.seats}>
+            {tn.seatsLeft > 0
+              ? t('discover.seatsLeft', { n: tn.seatsLeft, max: tn.maxMembers })
+              : t('discover.full')}
+          </span>
+          <span className={styles.cta}>
+            {isAuthenticated ? t('discover.view') : t('discover.joinCta')} →
+          </span>
+        </div>
+      </Link>
+    );
   }
 
   return (
@@ -77,61 +136,24 @@ export function DiscoveryRail({
         </div>
       )}
 
-      <div className={layout === 'grid' ? styles.grid : styles.rail} role="list">
-        {isLoading &&
-          [0, 1, 2].map((i) => <div key={i} className={`${styles.card} ${styles.cardSkeleton}`} role="listitem" />)}
-
-        {items.map((tn) => {
-          const meta = typeMeta(tn.type);
-          const isSolo = tn.type === 'PURCHASE' && tn.purchaseMode === 'SOLO';
-          return (
-            <Link
-              key={tn.id}
-              href={hrefFor(tn)}
-              onClick={() => onCardClick(tn)}
-              className={styles.card}
-              role="listitem"
-              id={`discover-tontine-${tn.id}`}
-            >
-              <div className={styles.cardTop}>
-                <span className={styles.icon} style={{ background: `${meta.accent}1F`, color: meta.accent }}>
-                  {meta.icon}
-                </span>
-                <span className={styles.typeTag}>{meta.label}</span>
-              </div>
-
-              <div className={styles.name}>{tn.name}</div>
-              {tn.hasConditions && (
-                <span className={styles.condTag} title={t('discover.hasConditions')}>
-                  🔎 {t('discover.conditions')}
-                </span>
-              )}
-              {(tn.description || (isSolo && tn.purchaseItem)) && (
-                <p className={styles.desc}>{isSolo && tn.purchaseItem ? tn.purchaseItem : tn.description}</p>
-              )}
-
-              <div className={styles.metaRow}>
-                <span>
-                  <strong>{formatNumber(tn.amount)}</strong> {fcfa(tn.currency)}
-                  {' · '}
-                  {formatFrequency(tn.frequency)}
-                </span>
-              </div>
-
-              <div className={styles.footRow}>
-                <span className={styles.seats}>
-                  {tn.seatsLeft > 0
-                    ? t('discover.seatsLeft', { n: tn.seatsLeft, max: tn.maxMembers })
-                    : t('discover.full')}
-                </span>
-                <span className={styles.cta}>
-                  {isAuthenticated ? t('discover.view') : t('discover.joinCta')} →
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      {marquee ? (
+        <div className={styles.marquee}>
+          <div
+            className={styles.marqueeTrack}
+            style={{ '--marquee-duration': `${Math.max(28, items.length * 4)}s` } as CSSProperties}
+            role="list"
+          >
+            {items.map((tn) => <Card key={tn.id} tn={tn} />)}
+            {items.map((tn) => <Card key={`dup-${tn.id}`} tn={tn} dup />)}
+          </div>
+        </div>
+      ) : (
+        <div className={layout === 'grid' ? styles.grid : styles.rail} role="list">
+          {isLoading &&
+            [0, 1, 2].map((i) => <div key={i} className={`${styles.card} ${styles.cardSkeleton}`} role="listitem" />)}
+          {items.map((tn) => <Card key={tn.id} tn={tn} />)}
+        </div>
+      )}
 
       {context === 'landing' && (
         <p className={styles.landingNote}>{t('discover.landingNote')}</p>

@@ -250,8 +250,8 @@ export default function LandingClient() {
       {/* ═══ DÉCOUVERTE — tontines ouvertes + marketplace ═══ */}
       <section className={styles.discover} id="tontines-ouvertes">
         <div className={styles.discoverInner} style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
-          <DiscoveryRail context="landing" limit={12} />
-          <MarketplaceRail source="discover" limit={12} />
+          <DiscoveryRail context="landing" limit={12} autoScroll />
+          <MarketplaceRail source="discover" limit={12} autoScroll />
         </div>
       </section>
 
