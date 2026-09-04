@@ -1083,6 +1083,9 @@ export const en: Catalog = {
       studentsN: '{n} enrolled',
       toastEnrolled: 'Simulated enrollment in “{title}”. Real content will arrive with our training partners.',
       toastContinue: 'Course content will be available when KESSIA Academy opens.',
+      toastCompleted: 'Course “{title}” completed (demo) — your certificate is ready.',
+      completed: '✓ Completed',
+      getCertificate: 'View my certificate',
     },
     community: {
       pageTitle: 'Community',

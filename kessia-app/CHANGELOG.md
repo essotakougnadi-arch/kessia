@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Certificat de fin de cours Academy (ADR 0041, 5/7)
+
+### Ajouté
+- `/academy` : le bouton « Continuer » fait progresser une vraie jauge
+  (état client, +24 %/clic) au lieu d'un simple toast. À 100 %, badge
+  « ✓ Terminé » + bouton **« Voir mon certificat »**.
+- `GET /api/v1/academy/certificate?course=<id>` : PDF généré à la volée
+  (moteur maison `MiniPdf`, comme factures/reçus) avec le nom réel du
+  membre, le détail du cours, et un disclaimer explicite (certificat de
+  démonstration, pas une certification professionnelle réelle).
+- `lib/modules/academy-certificate.ts` + `academy-certificate.test.ts`
+  (2 tests).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**, +2) + `build` +
+  **E2E complet (40/40)** au vert. Téléchargement réel du PDF vérifié
+  (Playwright, 200, `application/pdf`).
+
 ## [Non publié] — Messagerie Communauté (ADR 0041, 1/7)
 
 ### Ajouté

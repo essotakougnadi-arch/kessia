@@ -84,10 +84,37 @@ l'utilisateur) :
 liste de conversations, ouverture d'un fil, envoi + réponse automatique,
 bouton appel vidéo.
 
+## Livré — 5/7 : Certificat de fin de cours (Academy) (2026-09-04)
+
+- Le clic « Continuer » d'un cours inscrit fait désormais **progresser
+  une jauge réelle** (état client, +24 % par clic, plafonnée à 100 %) au
+  lieu du toast placebo précédent — `PROGRESS_STEP` dans
+  `academy-client.tsx`.
+- À 100 %, la carte affiche un badge **« ✓ Terminé »** et un bouton
+  **« Voir mon certificat »** (lien direct vers
+  `GET /api/v1/academy/certificate?course=<id>`, cookie GET déjà géré par
+  `withAuth`).
+- `lib/modules/academy-certificate.ts::renderCertificatePdf()` — réutilise
+  le moteur PDF maison (`MiniPdf`, déjà utilisé pour factures/reçus,
+  ADR 0032) : nom du membre (issu du profil réel), titre/catégorie/
+  niveau/durée/formateur du cours, date d'émission, et un **disclaimer
+  explicite** rappelant qu'il s'agit d'un certificat de démonstration
+  (progression simulée), pas encore une certification professionnelle
+  reconnue. Rien n'est persisté côté serveur — la progression reste un
+  état client, cohérent avec le reste du module.
+- `academy-certificate.test.ts` (2 tests, relecture `pdf-lib`).
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**174**, +2) + `build` (route
+`/api/v1/academy/certificate` compilée) + **E2E complet (40/40)** au
+vert. Vérifié de bout en bout (Playwright) : inscription → 4 clics
+« Continuer » → badge Terminé → téléchargement réel du PDF (200,
+`content-type: application/pdf`, en-tête `%PDF-` valide).
+
 ## Suivi
 
-Les 6 items restants (PIN, objectif d'épargne, panier Marketplace,
-certificats Academy, crowdfunding, prêts coopératifs) et la refonte
-visuelle module par module seront ajoutés à cet ADR au fur et à mesure,
-chacun avec sa propre section « Livré — n/7 » ou son propre paragraphe de
-refonte visuelle, suivant le même patron de vérification.
+Les 5 items restants (PIN, objectif d'épargne, panier Marketplace,
+crowdfunding, prêts coopératifs) et la refonte visuelle module par
+module seront ajoutés à cet ADR au fur et à mesure, chacun avec sa
+propre section « Livré — n/7 » ou son propre paragraphe de refonte
+visuelle, suivant le même patron de vérification.

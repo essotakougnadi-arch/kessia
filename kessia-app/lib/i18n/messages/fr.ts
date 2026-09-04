@@ -1099,6 +1099,9 @@ export const fr = {
       studentsN: '{n} inscrit·e·s',
       toastEnrolled: 'Inscription simulée à « {title} ». Le contenu réel arrivera avec nos partenaires formateurs.',
       toastContinue: 'Le contenu du cours sera disponible à l’ouverture de KESSIA Academy.',
+      toastCompleted: 'Cours « {title} » terminé (démonstration) — votre certificat est prêt.',
+      completed: '✓ Terminé',
+      getCertificate: 'Voir mon certificat',
     },
     community: {
       pageTitle: 'Communauté',
