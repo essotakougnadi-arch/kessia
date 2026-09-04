@@ -599,6 +599,31 @@ Voir `docs/progress/status.md`.
 ### Vérification
 - `tsc` + `lint` (0 warning) + `vitest` (**167**) + `build` + E2E navigation (6/6).
 
+## [Non publié] — Modules de la feuille de route en simulation (ADR 0040)
+
+### Ajouté
+- **KESSIA Academy** (`/academy`), **Communauté** (`/community`),
+  **KESSIA Jobs** (`/jobs`), **KESSIA Global / Diaspora** (`/diaspora`)
+  passent **LIVE** : pages complètes, données de démonstration
+  (`lib/modules/*-data.ts`), actions simulées côté client (inscription,
+  adhésion, candidature). `/diaspora` réutilise les **vraies** données
+  de `/discover` (tontines + marketplace) pour ses rails de découverte.
+- **KESSIA Invest** (`/invest`) et **KESSIA Insurance** (`/insurance`)
+  restent **`REGULATED`** (aucune promesse de rendement / KESSIA n'est
+  pas assureur) : page d'attente plus riche (catégories envisagées,
+  bascule d'intérêt, ponts vers Plan de croissance / Simulateurs /
+  Fonds de Garantie) mais **sans aucune offre ni montant simulé**.
+- `components/modules/module-page.module.css` — styles partagés des 6
+  pages. `lib/modules/catalog.ts` : 4 modules `SOON → LIVE` + `href` ;
+  `INTEREST_KEYS` accepte aussi des clés hors catalogue (`diaspora_transfer`).
+- `/explore` : les modules `SOON`/`REGULATED` avec `href` affichent un
+  lien « En savoir plus → » à côté de la bascule d'intérêt.
+- `catalog.test.ts` (5 tests). i18n FR + EN (`modulesPages.*`).
+
+### Vérification
+- **ADR 0040** ; `tsc` + `lint` (0 warning) + `vitest` (**172**, +5) +
+  `build` + **E2E complet (40/40)** au vert.
+
 ## [Non publié] — Service Worker : purge du cache (kessia-v3)
 
 ### Corrigé

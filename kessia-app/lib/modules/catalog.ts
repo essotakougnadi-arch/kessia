@@ -75,38 +75,47 @@ export const MODULES: readonly ModuleEntry[] = [
   {
     key: 'learn', name: 'KESSIA Academy', tagline: 'Se former pour grandir',
     description: 'Cours (entrepreneuriat, gestion, finance, vente), quiz, progression, certification. Mentorat et cohortes en Academy+.',
-    icon: '🎓', accent: '#1F5D4A', status: 'SOON', ref: '§10',
+    icon: '🎓', accent: '#1F5D4A', status: 'LIVE', href: '/academy', ref: '§10',
   },
   {
     key: 'community', name: 'Communauté', tagline: 'Se connecter, échanger',
     description: 'Fil, groupes, forums, messagerie, événements, profils professionnels. La modération est intégrée.',
-    icon: '🤝', accent: '#D6A84F', status: 'SOON', ref: '§11',
+    icon: '🤝', accent: '#D6A84F', status: 'LIVE', href: '/community', ref: '§11',
   },
   {
     key: 'jobs', name: 'KESSIA Jobs', tagline: 'Emplois, stages, missions',
     description: 'Offres d’emploi et de freelance, candidatures, aide de l’IA au CV et à la préparation d’entretien.',
-    icon: '💼', accent: '#7A5CC0', status: 'SOON', ref: '§12',
+    icon: '💼', accent: '#7A5CC0', status: 'LIVE', href: '/jobs', ref: '§12',
   },
   {
     key: 'invest', name: 'KESSIA Invest', tagline: 'Financer des projets',
     description: 'Mise en relation entre porteurs de projets et partenaires financiers. Ce module ne sera ouvert qu’après validation réglementaire — aucune promesse de rendement.',
-    icon: '📈', accent: '#1F5D4A', status: 'REGULATED', ref: '§13',
+    icon: '📈', accent: '#1F5D4A', status: 'REGULATED', href: '/invest', ref: '§13',
   },
   {
     key: 'insurance', name: 'KESSIA Insurance', tagline: 'Se protéger via des partenaires',
     description: 'Découverte, comparaison et souscription de produits d’assurance proposés par des assureurs habilités. KESSIA agit comme intermédiaire, jamais comme assureur.',
-    icon: '🛡️', accent: '#D6A84F', status: 'REGULATED', ref: '§14',
+    icon: '🛡️', accent: '#D6A84F', status: 'REGULATED', href: '/insurance', ref: '§14',
   },
   {
     key: 'diaspora', name: 'KESSIA Global / Diaspora', tagline: 'Soutenir depuis l’étranger',
     description: 'Découverte de projets, contributions autorisées, suivi, services transfrontaliers selon disponibilité.',
-    icon: '🌍', accent: '#B65A3A', status: 'SOON', ref: '§15',
+    icon: '🌍', accent: '#B65A3A', status: 'LIVE', href: '/diaspora', ref: '§15',
   },
 ] as const;
 
 export const LIVE_MODULES = MODULES.filter((m) => m.status === 'LIVE');
 export const UPCOMING_MODULES = MODULES.filter((m) => m.status !== 'LIVE');
-export const INTEREST_KEYS = UPCOMING_MODULES.map((m) => m.key);
+
+// Clés d'intérêt hors catalogue : sous-fonctionnalités pas encore
+// disponibles au sein d'un module par ailleurs LIVE (ex. transferts
+// transfrontaliers directs sur KESSIA Global / Diaspora, §15).
+const EXTRA_INTEREST_KEYS = ['diaspora_transfer'] as const;
+
+export const INTEREST_KEYS: string[] = [
+  ...UPCOMING_MODULES.map((m) => m.key),
+  ...EXTRA_INTEREST_KEYS,
+];
 
 export function moduleByKey(key: string): ModuleEntry | undefined {
   return MODULES.find((m) => m.key === key);

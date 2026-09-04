@@ -21,9 +21,12 @@
 .sSoon { background: var(--color-primary-subtle); color: var(--color-primary); }
 .sReg { background: var(--color-warning-light, #f3ebd8); color: var(--color-warning, #b45309); }
 
-.interestBtn { align-self: flex-start; margin-top: 4px; font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 100px; border: 1.5px solid var(--color-primary); background: none; color: var(--color-primary); cursor: pointer; transition: all .15s; }
+.upcomingActions { display: flex; align-items: center; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+.interestBtn { font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 100px; border: 1.5px solid var(--color-primary); background: none; color: var(--color-primary); cursor: pointer; transition: all .15s; }
 .interestBtn:hover { background: var(--color-primary-subtle); }
 .interestOn { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.learnMore { font-size: 12px; font-weight: 700; color: var(--color-text-secondary); text-decoration: none; }
+.learnMore:hover { color: var(--color-primary); }
 
 .arrow { color: var(--color-primary); font-weight: 800; }
 .note { margin: 18px 16px 0; font-size: 11px; color: var(--color-text-tertiary); line-height: 1.5; }

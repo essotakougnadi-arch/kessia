@@ -74,12 +74,19 @@ export default function ExploreClient() {
                   </span>
                 </div>
                 <p className={styles.desc}>{m.description}</p>
-                <button
-                  className={`${styles.interestBtn} ${on ? styles.interestOn : ''}`}
-                  onClick={() => onToggle(m)}
-                >
-                  {on ? t('explore.interestOn') : t('explore.interestOff')}
-                </button>
+                <div className={styles.upcomingActions}>
+                  <button
+                    className={`${styles.interestBtn} ${on ? styles.interestOn : ''}`}
+                    onClick={() => onToggle(m)}
+                  >
+                    {on ? t('explore.interestOn') : t('explore.interestOff')}
+                  </button>
+                  {m.href && (
+                    <Link href={m.href} className={styles.learnMore}>
+                      {t('explore.learnMore')} →
+                    </Link>
+                  )}
+                </div>
               </div>
             );
           })}

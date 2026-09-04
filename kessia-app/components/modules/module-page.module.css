@@ -1,0 +1,145 @@
+/* ============================================================
+   KESSIA — Styles partagés des modules « feuille de route »
+   (Academy, Communauté, Jobs, Diaspora, Invest, Insurance)
+   ============================================================ */
+
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.back {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.header { display: flex; align-items: flex-start; gap: 14px; }
+.headerIcon {
+  width: 52px; height: 52px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+}
+.title { font-size: clamp(21px, 3vw, 26px); font-weight: 900; letter-spacing: -0.4px; color: var(--color-text); margin: 0; }
+.sub { margin: 4px 0 0; font-size: 14px; color: var(--color-text-secondary); }
+
+.banner {
+  background: var(--color-warning-light, #f3ebd8);
+  border: 1px solid var(--color-warning, #d6a84f);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+.banner strong { color: var(--color-warning, #b45309); }
+
+.sectionTitle { font-size: 15px; font-weight: 800; color: var(--color-text); margin: 4px 0 0; }
+.sectionSub { font-size: 12.5px; color: var(--color-text-tertiary); margin: 2px 0 12px; }
+
+/* ── Filtres (chips) ─────────────────────────── */
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  font-size: 12.5px; font-weight: 700;
+  padding: 7px 13px; border-radius: 100px;
+  border: 1.5px solid var(--color-border-medium);
+  background: var(--color-surface); color: var(--color-text-secondary);
+  cursor: pointer; white-space: nowrap;
+}
+.chipActive { border-color: var(--color-primary); background: var(--color-primary-subtle); color: var(--color-primary); }
+
+/* ── Grille de cartes ────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+
+.card {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--color-surface); border: 1px solid var(--color-border-medium);
+  border-radius: 16px; padding: 16px;
+  box-shadow: var(--shadow-card);
+}
+.cardTop { display: flex; align-items: center; gap: 10px; }
+.cardIcon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+.cardTitle { font-size: 14.5px; font-weight: 800; color: var(--color-text); line-height: 1.3; }
+.cardMeta { font-size: 12px; color: var(--color-text-tertiary); }
+.cardDesc { font-size: 12.5px; line-height: 1.5; color: var(--color-text-secondary); margin: 0; }
+
+.tagRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+  padding: 3px 8px; border-radius: 100px;
+  background: var(--color-primary-subtle); color: var(--color-primary);
+}
+.tagGreen { background: rgba(31,93,74,0.1); color: #1F5D4A; }
+.tagGold { background: rgba(214,168,79,0.18); color: #9a7326; }
+
+.cardFoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--color-border-medium); }
+.cardStat { font-size: 12px; color: var(--color-text-tertiary); }
+
+.actionBtn {
+  font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 100px;
+  border: 1.5px solid var(--color-primary); background: var(--color-primary); color: #fff;
+  cursor: pointer; transition: opacity .15s, transform .12s;
+}
+.actionBtn:hover { transform: translateY(-1px); }
+.actionBtnDone { background: var(--color-success-light); border-color: transparent; color: var(--color-success); cursor: default; }
+.actionBtnDone:hover { transform: none; }
+.actionBtnGhost { background: none; color: var(--color-primary); }
+
+/* ── Progression (Academy) ──────────────────── */
+.progressBar { height: 6px; border-radius: 4px; background: var(--color-border-medium); overflow: hidden; }
+.progressFill { height: 100%; background: var(--color-primary); border-radius: 4px; transition: width .4s; }
+
+/* ── Feed (Communauté) ───────────────────────── */
+.feedItem { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--color-border-medium); }
+.feedItem:last-child { border-bottom: none; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 800; flex-shrink: 0; }
+.feedBody { flex: 1; min-width: 0; }
+.feedHead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+.feedAuthor { font-weight: 700; color: var(--color-text); }
+.feedGroup { color: var(--color-text-tertiary); font-size: 12px; }
+.feedTime { color: var(--color-text-tertiary); font-size: 11.5px; margin-left: auto; }
+.feedText { font-size: 13.5px; color: var(--color-text-secondary); line-height: 1.5; margin: 4px 0 6px; }
+.likeBtn { font-size: 12px; color: var(--color-text-tertiary); background: none; border: none; cursor: pointer; padding: 0; }
+.likeBtnOn { color: var(--color-primary); font-weight: 700; }
+
+/* ── Hero (Invest / Insurance) ───────────────── */
+.hero { background: var(--gradient-hero); border-radius: 18px; padding: 24px; color: #fff; }
+.heroTitle { font-size: 18px; font-weight: 800; margin: 0 0 6px; }
+.heroText { font-size: 13.5px; line-height: 1.6; opacity: .92; margin: 0; }
+
+.catGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.catCard { background: var(--color-surface); border: 1px solid var(--color-border-medium); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.catIcon { font-size: 26px; }
+.catTitle { font-size: 14px; font-weight: 800; color: var(--color-text); }
+.catDesc { font-size: 12.5px; color: var(--color-text-secondary); line-height: 1.5; margin: 0; }
+
+.bridgeRow { display: flex; gap: 10px; flex-wrap: wrap; }
+.bridgeLink {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--color-text);
+  background: var(--color-surface); border: 1px solid var(--color-border-medium);
+  border-radius: 12px; padding: 10px 14px; text-decoration: none;
+}
+.bridgeLink:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ── Stats en ligne (Diaspora) ───────────────── */
+.statRow { display: flex; flex-wrap: wrap; gap: 10px; }
+.statChip {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--color-text);
+  background: var(--color-surface); border: 1px solid var(--color-border-medium);
+  border-radius: 100px; padding: 8px 14px;
+}
+.statChip strong { font-variant-numeric: tabular-nums; }
+
+.empty { text-align: center; padding: 32px 16px; font-size: 13px; color: var(--color-text-tertiary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .actionBtn, .progressFill { transition: none; }
+}
