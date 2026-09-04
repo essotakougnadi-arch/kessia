@@ -3,6 +3,20 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Objectif d'épargne dans le Wallet (ADR 0041, 2/7)
+
+### Ajouté
+- La tuile « 💎 Épargne » du Wallet (jusque-là « bientôt disponible »)
+  ouvre un panneau **« Vos objectifs d'épargne »** : liste des tontines
+  Achat-Solo de l'utilisateur avec barre de progression, plus un bouton
+  « + Nouvel objectif ». **Aucun nouveau mécanisme** : réutilise tel
+  quel le séquestre/restitution des tontines Achat individuel (ADR
+  0035) — juste une présentation « objectif » plutôt que « tontine ».
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+  **E2E complet (40/40)** au vert.
+
 ## [Non publié] — Certificat de fin de cours Academy (ADR 0041, 5/7)
 
 ### Ajouté

@@ -111,10 +111,39 @@ vert. Vérifié de bout en bout (Playwright) : inscription → 4 clics
 « Continuer » → badge Terminé → téléchargement réel du PDF (200,
 `content-type: application/pdf`, en-tête `%PDF-` valide).
 
+## Livré — 2/7 : Objectif d'épargne (Wallet) (2026-09-04)
+
+Décision de non-duplication (cf. règle de traitement) : un « objectif
+d'épargne » est **le même mécanisme** qu'une tontine Achat en mode
+**Solo** (séquestre bloqué jusqu'au dernier versement puis restitution
+intégrale, ADR 0035) — aucune nouvelle table, aucun nouveau flux
+d'argent. Seule la **présentation** change pour coller à la maquette :
+
+- La tuile « 💎 Épargne », jusque-là un cul-de-sac (« bientôt
+  disponible »), ouvre désormais un vrai panneau **« Vos objectifs
+  d'épargne »** sur `/wallet` : liste des tontines Achat-Solo de
+  l'utilisateur (`useTontines()`, filtre `type==='PURCHASE' &&
+  purchaseMode==='SOLO'`), chacune avec nom/article visé, barre de
+  progression (`totalContributed / targetAmount`), pourcentage, lien
+  vers le détail de la tontine. Bouton **« + Nouvel objectif »** →
+  `/tontine?type=purchase` (réutilise le formulaire de création
+  existant, l'utilisateur choisit ensuite « Individuel »).
+- Réutilise une classe CSS `.savingsBanner`/`.savingsIcon` qui existait
+  déjà dans `wallet.module.css` sans jamais avoir été câblée — pas de
+  nouveau fichier de style, seulement `.goalList`/`.goalItem`/`.goalBar`
+  ajoutés pour la liste elle-même.
+- i18n FR+EN (`wallet.savings{Title,Hint,Empty,Progress,Done,NewGoal}`).
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé — aucune
+nouvelle logique pure) + `build` + **E2E complet (40/40)** au vert.
+Vérifié visuellement (Playwright, compte de démo avec plans solo réels
+en base) : liste, barres de progression, lien de création.
+
 ## Suivi
 
-Les 5 items restants (PIN, objectif d'épargne, panier Marketplace,
-crowdfunding, prêts coopératifs) et la refonte visuelle module par
-module seront ajoutés à cet ADR au fur et à mesure, chacun avec sa
-propre section « Livré — n/7 » ou son propre paragraphe de refonte
-visuelle, suivant le même patron de vérification.
+Les 4 items restants (PIN, panier Marketplace, crowdfunding, prêts
+coopératifs) et la refonte visuelle module par module seront ajoutés à
+cet ADR au fur et à mesure, chacun avec sa propre section « Livré —
+n/7 » ou son propre paragraphe de refonte visuelle, suivant le même
+patron de vérification.

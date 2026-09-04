@@ -17,6 +17,7 @@ import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useT } from '@/lib/i18n';
 import { useWallet, type DepositMethod } from '@/hooks/useWallet';
+import { useTontines } from '@/hooks/useTontines';
 import {
   describeTransaction,
   formatNumber,
@@ -54,15 +55,16 @@ export default function WalletClient() {
   const phone = useAuthStore((s) => s.user?.phone ?? null);
   const { wallet, stats, transactions, isLoading, error, refresh, deposit, transfer, withdraw } = useWallet();
 
-  const [modal, setModal] = useState<'deposit' | 'send' | 'receive' | 'withdraw' | null>(null);
+  const [modal, setModal] = useState<'deposit' | 'send' | 'receive' | 'withdraw' | 'savings' | null>(null);
   const [filter, setFilter] = useState<TxFilter>('all');
+  const { tontines: goalTontines } = useTontines();
 
   // Ouvrir automatiquement la modale demandée via ?action=
   useEffect(() => {
     const action = searchParams.get('action') as ActionKey | null;
-    if (action === 'deposit' || action === 'send' || action === 'receive' || action === 'withdraw') {
-      setModal(action);
-    } else if (action && ['airtime', 'save'].includes(action)) {
+    if (action === 'deposit' || action === 'send' || action === 'receive' || action === 'withdraw' || action === 'save') {
+      setModal(action === 'save' ? 'savings' : action);
+    } else if (action === 'airtime') {
       addToast({ type: 'info', message: t('common.soon') });
       router.replace('/wallet');
     }
@@ -72,6 +74,8 @@ export default function WalletClient() {
   function handleAction(key: ActionKey) {
     if (key === 'deposit' || key === 'send' || key === 'receive' || key === 'withdraw') {
       setModal(key);
+    } else if (key === 'save') {
+      setModal('savings');
     } else {
       addToast({ type: 'info', message: t('common.soon') });
     }
@@ -296,6 +300,67 @@ export default function WalletClient() {
           }}
         />
       </Modal>
+
+      <Modal open={modal === 'savings'} onClose={closeModal} title={t('wallet.savingsTitle')}>
+        <SavingsGoalsPanel tontines={goalTontines} currency={currency} />
+      </Modal>
+    </div>
+  );
+}
+
+// ── Objectifs d'épargne (réutilise les plans d'Achat individuel) ──
+// §6.4 — pas de nouveau mécanisme d'épargne : un « objectif » est ici
+// une tontine Achat en mode Solo (séquestre + restitution déjà en
+// place, ADR 0035). On les présente simplement sous l'angle « Épargne »
+// pour coller au parcours attendu, sans dupliquer la logique.
+
+function SavingsGoalsPanel({
+  tontines,
+  currency,
+}: {
+  tontines: { id: string; name: string; purchaseMode: string; type: string; purchaseItem: string | null; targetAmount: number | null; status: string; myMembership: { totalContributed: string } | null }[];
+  currency: string;
+}) {
+  const t = useT();
+  const goals = tontines.filter((tn) => tn.type === 'PURCHASE' && tn.purchaseMode === 'SOLO' && tn.status !== 'CANCELLED');
+
+  return (
+    <div className={styles.modalForm}>
+      <p className={styles.modalHint}>{t('wallet.savingsHint')}</p>
+
+      {goals.length === 0 ? (
+        <div className={styles.goalEmpty}>{t('wallet.savingsEmpty')}</div>
+      ) : (
+        <div className={styles.goalList}>
+          {goals.map((g) => {
+            const target = g.targetAmount ?? 0;
+            const contributed = Number(g.myMembership?.totalContributed ?? 0);
+            const pct = target > 0 ? Math.min(100, Math.round((contributed / target) * 100)) : 0;
+            const done = g.status === 'COMPLETED';
+            return (
+              <Link key={g.id} href={`/tontine/${g.id}`} className={styles.goalItem} id={`goal-${g.id}`}>
+                <span className={styles.goalIcon}>💎</span>
+                <div className={styles.goalBody}>
+                  <div className={styles.goalName}>{g.purchaseItem || g.name}</div>
+                  <div className={styles.goalMeta}>
+                    {done
+                      ? t('wallet.savingsDone')
+                      : t('wallet.savingsProgress', { done: formatNumber(contributed), target: formatNumber(target), currency: fcfa(currency) })}
+                  </div>
+                  <div className={styles.goalBar}>
+                    <div className={styles.goalBarFill} style={{ width: `${done ? 100 : pct}%` }} />
+                  </div>
+                </div>
+                <span className={styles.goalPct}>{done ? '✓' : `${pct}%`}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      <Link href="/tontine?type=purchase" className={styles.goalCreateLink} id="btn-new-goal">
+        + {t('wallet.savingsNewGoal')}
+      </Link>
     </div>
   );
 }
