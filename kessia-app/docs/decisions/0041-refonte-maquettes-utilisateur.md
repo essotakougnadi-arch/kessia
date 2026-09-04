@@ -204,9 +204,46 @@ de `/invest` plutôt qu'un module séparé — pas de nouvelle entrée
 **E2E complet (40/40)** au vert. Vérifié visuellement (Playwright) :
 bascule d'onglet, filtre par catégorie, action + toast.
 
+## Livré — 7/7 : Prêts coopératifs (2026-09-04)
+
+Dernier des 7 items — même traitement que KESSIA Invest/Insurance
+(ADR 0040) : octroyer un crédit, **même sans intérêt**, est une
+activité potentiellement réglementée. Nouveau module `loans`, statut
+`REGULATED` (comme `invest`/`insurance`) — absent du cahier des
+charges initial, ajouté explicitement sur demande à partir des
+maquettes utilisateur (`ref` du catalogue le documente).
+
+- `lib/modules/loans-data.ts` : `LOAN_CATEGORIES` (4 motifs : besoin
+  urgent, développement d'activité, études, famille) +
+  `LOAN_EXAMPLE_REQUESTS` (5 demandes d'exemple). **Cadrage solidarité
+  sans intérêt** (pas un crédit à taux, cohérent avec la culture
+  tontine/coopérative de KESSIA) — chaque carte porte quand même la
+  mention explicite « exemple d'entraide entre membres — sans intérêt,
+  sans engagement réel », en plus du bandeau de page.
+- `/loans` : hero, catégories, grille filtrable de demandes d'exemple
+  avec barre de progression, action « Soutenir cette demande » →
+  toast (même patron que le financement participatif d'Invest). Ponts
+  vers le Fonds de Garantie Solidaire et la Tontine Croissance (outils
+  réels déjà existants, dans le même esprit d'entraide).
+- `catalog.ts` : entrée `loans` ajoutée, `status: 'REGULATED'`,
+  `href: '/loans'`. Automatiquement inclus dans `INTEREST_KEYS`
+  (dérivé des modules non-LIVE) et sur `/explore` (lien « En savoir
+  plus »). `middleware.ts` +`/loans` route protégée. i18n FR+EN
+  complet (`modulesPages.loans.*` + `explore.modules.loans.*`).
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé — `catalog.
+test.ts` toujours vert, `loans` bien classé `REGULATED`/non-LIVE) +
+`build` (route `/loans` compilée) + **E2E complet (41/41)** au vert.
+Vérifié visuellement (Playwright) : catégories, filtre, action+toast,
+et présence confirmée sur `/explore`.
+
 ## Suivi
 
-Les 2 items restants (panier Marketplace, prêts coopératifs) et la
-refonte visuelle module par module seront ajoutés à cet ADR au fur et
-à mesure. **Prêts coopératifs** suivra le même traitement que KESSIA
-Invest/Insurance (catégories + exemples chiffrés, statut `REGULATED`).
+6 des 7 items sont livrés : Code PIN · Objectif d'épargne (Wallet) ·
+Messagerie + appel vidéo (aperçu) Communauté · Certificat Academy ·
+Financement participatif (fusionné dans Invest) · Prêts coopératifs.
+Reste : le **panier multi-articles Marketplace** (le plus gros
+morceau, changement du modèle de commande) — section à suivre.
+Reste également, hors de cet ADR : la **refonte visuelle** module par
+module (4 phases définies, non commencée).

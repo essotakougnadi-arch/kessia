@@ -1177,6 +1177,24 @@ export const en: Catalog = {
       bridgeTitle: 'In the meantime, explore',
       bridgeGuarantee: 'Solidarity Guarantee Fund',
     },
+    loans: {
+      heroTitle: 'Helping each other, transparently',
+      heroText: 'Cooperative Loans will let members request funding from the cooperative, backed by the Solidarity Guarantee Fund. This module will only open after regulatory approval — no real credit is granted or will be granted here.',
+      exampleBanner: 'The requests below are teaching examples (illustrative amounts and progress) to show what this module will look like. They are not real requests and no loan is granted.',
+      categoriesTitle: 'Purposes under consideration',
+      requestsTitle: 'Example requests',
+      allCategories: 'All purposes',
+      fundedLabel: '{percent}% raised (example)',
+      durationLabel: 'Repaid over {n} months',
+      noInterestNote: 'Example of member-to-member support — no interest, no real commitment.',
+      goalLabel: 'Needs {amount} (example)',
+      support: 'Support this request',
+      supported: '✓ Support noted',
+      toastSupport: 'Simulated support for “{title}”. No amount was charged — this is a teaching example.',
+      bridgeTitle: 'In the meantime, explore',
+      bridgeGuarantee: 'Solidarity Guarantee Fund',
+      bridgeTontine: 'Growth tontine',
+    },
   },
   explore: {
     title: 'Explore KESSIA',
@@ -1292,6 +1310,12 @@ export const en: Catalog = {
         tagline: 'Support from abroad',
         description:
           'Discover projects, make authorised contributions, track them, cross-border services where available.',
+      },
+      loans: {
+        name: 'Cooperative Loans',
+        tagline: 'Helping each other',
+        description:
+          'Funding requests between cooperative members, backed by the Solidarity Guarantee Fund. This module will only open after regulatory approval — no real credit is granted or will be granted here.',
       },
     },
   },

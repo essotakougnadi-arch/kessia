@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Prêts coopératifs (ADR 0041, 7/7)
+
+### Ajouté
+- Nouveau module **`/loans`** (« Prêts coopératifs »), statut
+  `REGULATED` comme Invest/Insurance : octroyer un crédit, même sans
+  intérêt, reste une activité potentiellement réglementée. Cadrage
+  entraide/solidarité (pas de taux) — 4 motifs, 5 demandes d'exemple
+  avec barre de progression, action « Soutenir cette demande » →
+  toast. Ponts vers le Fonds de Garantie Solidaire et la Tontine
+  Croissance.
+- `lib/modules/loans-data.ts`. `catalog.ts` +entrée `loans`. `/explore`
+  le liste automatiquement (lien « En savoir plus »).
+- i18n FR+EN complet.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+  **E2E complet (41/41)** au vert.
+
 ## [Non publié] — Code PIN de déverrouillage rapide (ADR 0041, 3/7)
 
 ### Ajouté

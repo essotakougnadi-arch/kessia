@@ -102,6 +102,11 @@ export const MODULES: readonly ModuleEntry[] = [
     description: 'Découverte de projets, contributions autorisées, suivi, services transfrontaliers selon disponibilité.',
     icon: '🌍', accent: '#B65A3A', status: 'LIVE', href: '/diaspora', ref: '§15',
   },
+  {
+    key: 'loans', name: 'Prêts coopératifs', tagline: 'S’entraider entre membres',
+    description: 'Demandes de financement entre membres de la coopérative, adossées au Fonds de Garantie Solidaire. Ce module ne sera ouvert qu’après validation réglementaire — aucun octroi de crédit réel n’est fait ni ne sera fait ici.',
+    icon: '🤲', accent: '#1F5D4A', status: 'REGULATED', href: '/loans', ref: 'Hors cahier des charges initial — ajouté sur demande (maquettes utilisateur), ADR 0041',
+  },
 ] as const;
 
 export const LIVE_MODULES = MODULES.filter((m) => m.status === 'LIVE');

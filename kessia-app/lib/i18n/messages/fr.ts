@@ -1193,6 +1193,24 @@ export const fr = {
       bridgeTitle: 'En attendant, explorez',
       bridgeGuarantee: 'Fonds de Garantie Solidaire',
     },
+    loans: {
+      heroTitle: 'S’entraider entre membres, en toute transparence',
+      heroText: 'Les Prêts coopératifs permettront à des membres de demander un financement à la coopérative, adossé au Fonds de Garantie Solidaire. Ce module n’ouvrira qu’après validation réglementaire — aucun octroi de crédit réel n’est fait ni ne sera fait ici.',
+      exampleBanner: 'Les demandes ci-dessous sont des exemples pédagogiques (montants et avancement illustratifs) pour montrer à quoi ressemblera ce module. Ce ne sont pas des demandes réelles et aucun prêt n’est accordé.',
+      categoriesTitle: 'Motifs envisagés',
+      requestsTitle: 'Exemples de demandes',
+      allCategories: 'Tous les motifs',
+      fundedLabel: '{percent} % réuni (exemple)',
+      durationLabel: 'Remboursement sur {n} mois',
+      noInterestNote: 'Exemple d’entraide entre membres — sans intérêt, sans engagement réel.',
+      goalLabel: 'Besoin de {amount} (exemple)',
+      support: 'Soutenir cette demande',
+      supported: '✓ Soutien noté',
+      toastSupport: 'Soutien simulé pour « {title} ». Aucun montant n’a été prélevé — ceci est un exemple pédagogique.',
+      bridgeTitle: 'En attendant, explorez',
+      bridgeGuarantee: 'Fonds de Garantie Solidaire',
+      bridgeTontine: 'Tontine Croissance',
+    },
   },
   explore: {
     title: 'Explorer KESSIA',
@@ -1308,6 +1326,12 @@ export const fr = {
         tagline: 'Soutenir depuis l’étranger',
         description:
           'Découverte de projets, contributions autorisées, suivi, services transfrontaliers selon disponibilité.',
+      },
+      loans: {
+        name: 'Prêts coopératifs',
+        tagline: 'S’entraider entre membres',
+        description:
+          'Demandes de financement entre membres de la coopérative, adossées au Fonds de Garantie Solidaire. Ce module ne sera ouvert qu’après validation réglementaire — aucun octroi de crédit réel n’est fait ni ne sera fait ici.',
       },
     },
   },
