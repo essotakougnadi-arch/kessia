@@ -88,3 +88,35 @@ pages, pour éviter 6 feuilles de style redondantes.
   de prudence réglementaire, cohérente avec le texte déjà présent dans
   le cahier des charges et `explore.roadmapNote` — pas une limitation
   technique.
+
+## Amendement 2026-09-04 — Invest/Insurance enrichis en exemples chiffrés
+
+L'utilisateur, après revue, a explicitement demandé une parité de forme
+avec les 4 autres modules (« simulation complète comme les 4 autres »),
+y compris des montants d'exemple, tout en acceptant qu'ils soient
+marqués comme illustratifs plutôt que comme une offre réelle. Le statut
+`REGULATED` du catalogue reste inchangé (`invest`/`insurance`, voir
+`catalog.test.ts`) — c'est le **contenu** des deux pages qui est enrichi :
+
+- `lib/modules/invest-insurance-data.ts` : `INVEST_EXAMPLE_PROJECTS` (5
+  projets, un par catégorie + un doublon agricole) et
+  `INSURANCE_EXAMPLE_PLANS` (5 formules) — chaque montant/pourcentage
+  porte **toujours** dans son propre libellé la mention « exemple »,
+  « indicatif » ou « non contractuel » (pas seulement dans un bandeau
+  externe qu'on pourrait manquer).
+- `/invest` : grille filtrable par catégorie, barre de progression de
+  financement (illustrative), objectif en FCFA, fourchette de rendement
+  visée **toujours qualifiée « indicatif, non garanti »**, action
+  « M'intéresser à ce projet » (état local, toast — aucune écriture
+  serveur, distincte de la bascule d'intérêt globale du module).
+- `/insurance` : grille filtrable par catégorie, garanties (tags),
+  prime d'exemple **toujours qualifiée « non contractuel »**, action
+  « Voir un exemple de simulation » (toast récapitulatif, aucun calcul
+  actuariel réel, aucune souscription possible).
+- Bandeau `.banner` sur chaque page répète le disclaimer au niveau page,
+  en plus du libellé par carte — défense en profondeur contre une
+  lecture partielle qui laisserait croire à une offre réelle.
+- `tsc` + `lint` (0 warning) + `vitest` (**172**, inchangé — pas de
+  nouvelle logique pure à tester, uniquement des données + JSX) +
+  `build` + **E2E complet (40/40)** au vert. Vérifié visuellement
+  (Playwright, interaction filtre + action + toast sur les deux pages).

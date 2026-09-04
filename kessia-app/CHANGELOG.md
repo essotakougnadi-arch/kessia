@@ -624,6 +624,29 @@ Voir `docs/progress/status.md`.
 - **ADR 0040** ; `tsc` + `lint` (0 warning) + `vitest` (**172**, +5) +
   `build` + **E2E complet (40/40)** au vert.
 
+## [Non publié] — KESSIA Invest / Insurance : exemples chiffrés (ADR 0040, amendement)
+
+### Ajouté
+- `/invest` et `/insurance` (toujours `REGULATED`) affichent désormais
+  des **exemples de projets/formules chiffrés** — 5 projets d'exemple
+  (`INVEST_EXAMPLE_PROJECTS`) et 5 formules d'exemple
+  (`INSURANCE_EXAMPLE_PLANS`) dans `lib/modules/invest-insurance-data.ts` :
+  filtres par catégorie, barre de progression de financement, montants
+  FCFA, garanties. **Chaque montant porte dans son propre libellé** la
+  mention « exemple », « indicatif » ou « non contractuel » (pas
+  seulement dans le bandeau de page) — aucune promesse de rendement,
+  aucune prime réelle, aucune souscription possible.
+- Actions simulées par carte : « M'intéresser à ce projet » (Invest),
+  « Voir un exemple de simulation » (Insurance) — toast de confirmation,
+  aucune écriture serveur, distinctes de la bascule d'intérêt globale du
+  module.
+- i18n FR + EN (`modulesPages.invest.*` / `modulesPages.insurance.*`).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**172**, inchangé) + `build` +
+  **E2E complet (40/40)** au vert. Vérifié visuellement en local
+  (Playwright : filtre catégorie + action + toast sur les deux pages).
+
 ## [Non publié] — Service Worker : purge du cache (kessia-v3)
 
 ### Corrigé
