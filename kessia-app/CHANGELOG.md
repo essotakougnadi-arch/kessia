@@ -583,6 +583,22 @@ Voir `docs/progress/status.md`.
 - **ADR 0038** ; `tsc` + `lint` (0 warning) + `vitest` (**160**, +7) + `build`
   + E2E (auth, tontine-lifecycle) au vert. Smoke test API du parcours complet.
 
+## [Non publié] — Accent Violet + sélecteur visible (amendement ADR 0035)
+
+### Modifié
+- 2ᵉ couleur d'accent : **Violet `#5B34D6`** au lieu de « Brique » (trop proche
+  de la terracotta). `AccentChoice = 'terracotta' | 'violet'` ; `data-accent="violet"`.
+- **`/profile`** : le choix quitte la modale enfouie → **carte inline « Couleur
+  de l'application »** avec 2 grandes tuiles, en haut de la page. Application
+  immédiate, persistée, sans rechargement.
+- `globals.css` : bloc `:root[data-accent='violet']` (+ variantes sombres).
+- Dégradés codés en dur repassés sur les tokens : `.balanceCard` (accueil +
+  wallet), `.progressFill` (tontines), `.profileHero` → suivent l'accent.
+- `navigation.spec.ts` mis à jour (`#accent-violet` / `#accent-terracotta`).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**167**) + `build` + E2E navigation (6/6).
+
 ## [Non publié] — Mini-marketplace & achat par tontine (ADR 0039)
 
 ### Ajouté

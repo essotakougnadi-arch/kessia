@@ -17,8 +17,8 @@ import { cached } from '@/lib/utils/ttl-cache';
 
 // Réponse publique, peu changeante, servie à fort volume (landing +
 // accueil). Cache mémoire 45 s + requêtes séquentielles : allège le
-// pooler DB (session mode Supabase = 15 connexions max).
-export const revalidate = 45;
+// pooler DB (transaction mode Supabase).
+export const dynamic = 'force-dynamic';
 
 const LIMIT = 24;
 const ITEMS_LIMIT = 16;

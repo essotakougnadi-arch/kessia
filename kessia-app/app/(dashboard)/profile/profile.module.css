@@ -3,7 +3,7 @@
 
 /* HERO */
 .profileHero {
-  background: linear-gradient(160deg, #1A0D05 0%, #B65A3A 60%, #D6A84F 100%);
+  background: var(--gradient-hero);
   padding: 40px 20px 32px;
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   position: relative; overflow: hidden;
@@ -74,6 +74,60 @@
 .menuBadge_warning { background: var(--color-warning-light); color: var(--color-warning); }
 .menuBadge_danger  { background: var(--color-danger-light);  color: var(--color-danger);  }
 .menuArrow { font-size: 20px; color: var(--color-text-tertiary); font-weight: 300; }
+
+/* COULEUR DE L'APP */
+.accentCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+}
+.accentHead { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.accentTitle { font-size: 15px; font-weight: 800; color: var(--color-text); }
+.accentSub { font-size: 12.5px; color: var(--color-text-tertiary); }
+
+.accentTiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.accentTile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 2px solid var(--color-border-medium);
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.accentTile:hover { transform: translateY(-2px); }
+.accentTileActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+}
+
+.accentSwatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.accentCheck { color: #fff; font-size: 18px; font-weight: 900; }
+
+.accentName { font-size: 14px; font-weight: 700; color: var(--color-text); }
+.accentHint { font-size: 11.5px; color: var(--color-text-tertiary); line-height: 1.35; }
+
+@media (prefers-reduced-motion: reduce) {
+  .accentTile { transition: none; }
+  .accentTile:hover { transform: none; }
+}
 
 /* LOGOUT */
 .logoutBtn { width: 100%; padding: 14px; border-radius: 14px; background: var(--color-danger-light); border: 1.5px solid rgba(239,68,68,0.2); color: var(--color-danger); font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; }

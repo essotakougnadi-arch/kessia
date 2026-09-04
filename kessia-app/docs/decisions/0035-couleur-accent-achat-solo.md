@@ -2,6 +2,17 @@
 
 **Statut :** accepté · **Date :** 2026-09-02
 
+> **Amendement 2026-09-04** — la 2ᵉ teinte devient **Violet `#5B34D6`**
+> (au lieu de « Brique » `#C84B1E`, trop proche de la terracotta pour
+> que le changement soit perceptible). Le sélecteur quitte la modale
+> enfouie du profil pour une **carte inline « Couleur de l'application »**
+> avec 2 grandes tuiles cliquables, placée en haut de `/profile`.
+> `AccentChoice = 'terracotta' | 'violet'`, `data-accent="violet"`.
+> Bloc CSS `:root[data-accent='violet']` (+ variantes sombres). Quelques
+> dégradés codés en dur (`.balanceCard` accueil/wallet, `.progressFill`,
+> `.profileHero`) repassés sur les tokens `--gradient-*` / `--color-primary`
+> pour qu'ils suivent l'accent. `navigation.spec.ts` mis à jour.
+
 ## Contexte
 Deux demandes utilisateur :
 1. Rendre disponibles **les deux teintes signature** de KESSIA — la

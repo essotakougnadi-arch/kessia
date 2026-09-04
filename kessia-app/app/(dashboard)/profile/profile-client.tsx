@@ -19,7 +19,7 @@ import { formatNumber, initials } from '@/lib/utils/format';
 import { useLocaleStore, useT } from '@/lib/i18n';
 import { LOCALES, LOCALE_META, type Locale } from '@/lib/i18n/config';
 import { useThemeStore, type ThemeChoice } from '@/store/themeStore';
-import { useAccentStore, ACCENT_CHOICES, type AccentChoice } from '@/store/accentStore';
+import { useAccentStore, ACCENT_CHOICES, ACCENT_SWATCH, type AccentChoice } from '@/store/accentStore';
 import { useUserTypeMeta } from '@/lib/user/user-type-i18n';
 import type { KycStatus, UserType } from '@prisma/client';
 
@@ -32,13 +32,12 @@ function scoreRatingKey(score: number): string {
   return 'profile.score.notCalculated';
 }
 
-type MenuAction = 'locale' | 'theme' | 'accent' | 'usertype';
+type MenuAction = 'locale' | 'theme' | 'usertype';
 const MENU_ITEMS: { icon: string; labelKey: string; href: string; ready: boolean; action?: MenuAction }[] = [
   { icon: '🧭', labelKey: 'profile.menu.usertype', href: '', ready: true, action: 'usertype' },
   { icon: '🛡️', labelKey: 'profile.menu.kyc', href: '/profile/kyc', ready: true },
   { icon: '🌍', labelKey: 'profile.menu.locale', href: '', ready: true, action: 'locale' },
   { icon: '🎨', labelKey: 'profile.menu.theme', href: '', ready: true, action: 'theme' },
-  { icon: '🖌️', labelKey: 'profile.menu.accent', href: '', ready: true, action: 'accent' },
   { icon: '🔒', labelKey: 'profile.menu.security', href: '/profile/security', ready: true },
   { icon: '🛡️', labelKey: 'profile.menu.privacy', href: '/profile/privacy', ready: true },
   { icon: '⚖️', labelKey: 'profile.menu.trust', href: '/trust', ready: true },
@@ -57,7 +56,6 @@ export default function ProfileClient() {
   const { accent, setAccent } = useAccentStore();
   const [localeModal, setLocaleModal] = useState(false);
   const [themeModal, setThemeModal] = useState(false);
-  const [accentModal, setAccentModal] = useState(false);
   const [typeModal, setTypeModal] = useState(false);
 
   const { profile, isLoading, error, refresh, updateProfile } = useProfile();
@@ -82,7 +80,6 @@ export default function ProfileClient() {
   function goTo(item: { href: string; ready: boolean; action?: MenuAction }) {
     if (item.action === 'locale') { setLocaleModal(true); return; }
     if (item.action === 'theme') { setThemeModal(true); return; }
-    if (item.action === 'accent') { setAccentModal(true); return; }
     if (item.action === 'usertype') { setTypeModal(true); return; }
     if (item.ready) router.push(item.href);
     else addToast({ type: 'info', message: t('profile.sectionSoon') });
@@ -232,6 +229,34 @@ export default function ProfileClient() {
         </Link>
       </section>
 
+      {/* ═══ COULEUR DE L'APP ═══ */}
+      <section className={styles.section}>
+        <div className={styles.accentCard} id="accent-picker">
+          <div className={styles.accentHead}>
+            <span className={styles.accentTitle}>🎨 {t('profile.accentCardTitle')}</span>
+            <span className={styles.accentSub}>{t('profile.accentCardSub')}</span>
+          </div>
+          <div className={styles.accentTiles}>
+            {ACCENT_CHOICES.map((ac) => (
+              <button
+                key={ac}
+                type="button"
+                id={`accent-${ac}`}
+                aria-pressed={ac === accent}
+                onClick={() => setAccent(ac as AccentChoice)}
+                className={`${styles.accentTile} ${ac === accent ? styles.accentTileActive : ''}`}
+              >
+                <span className={styles.accentSwatch} style={{ background: ACCENT_SWATCH[ac] }} aria-hidden>
+                  {ac === accent && <span className={styles.accentCheck}>✓</span>}
+                </span>
+                <span className={styles.accentName}>{t(`profile.accent.${ac}`)}</span>
+                <span className={styles.accentHint}>{t(`profile.accentHint.${ac}`)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ MENU ═══ */}
       <section className={styles.section}>
         <div className={styles.menuCard}>
@@ -250,9 +275,6 @@ export default function ProfileClient() {
               )}
               {item.action === 'theme' && (
                 <span className={`${styles.menuBadge} ${styles.menuBadge_warning}`}>{t(`profile.theme.${theme}`)}</span>
-              )}
-              {item.action === 'accent' && (
-                <span className={`${styles.menuBadge} ${styles.menuBadge_warning}`}>{t(`profile.accent.${accent}`)}</span>
               )}
               {item.action === 'usertype' && (
                 <span className={`${styles.menuBadge} ${styles.menuBadge_warning}`}>{userTypeI18n.get(userType).label}</span>
@@ -351,34 +373,6 @@ export default function ProfileClient() {
         </div>
       </Modal>
 
-      <Modal open={accentModal} onClose={() => setAccentModal(false)} title={t('profile.menu.accent')}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {ACCENT_CHOICES.map((ac) => {
-            const swatch = ac === 'brique' ? '#C84B1E' : '#B65A3A';
-            return (
-              <button
-                key={ac}
-                onClick={() => { setAccent(ac as AccentChoice); setAccentModal(false); }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                  padding: '12px 14px', borderRadius: 12, cursor: 'pointer', font: 'inherit', textAlign: 'left',
-                  border: `1.5px solid ${ac === accent ? 'var(--color-primary)' : 'var(--color-border-medium)'}`,
-                  background: ac === accent ? 'var(--color-primary-subtle)' : 'var(--color-surface)',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span aria-hidden style={{ width: 22, height: 22, borderRadius: 7, background: swatch, flex: 'none', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.1)' }} />
-                  <span style={{ display: 'flex', flexDirection: 'column' }}>
-                    <strong>{t(`profile.accent.${ac}`)}</strong>
-                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{t(`profile.accentHint.${ac}`)}</span>
-                  </span>
-                </span>
-                {ac === accent && <span style={{ color: 'var(--color-primary)', fontWeight: 800 }}>✓</span>}
-              </button>
-            );
-          })}
-        </div>
-      </Modal>
     </div>
   );
 }

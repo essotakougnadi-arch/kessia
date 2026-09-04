@@ -75,7 +75,7 @@
 
 .progressWrapper { display: flex; flex-direction: column; gap: 4px; }
 .progressBar { height: 6px; background: var(--color-border); border-radius: 100px; overflow: hidden; }
-.progressFill { height: 100%; background: linear-gradient(90deg, #B65A3A, #D6A84F); border-radius: 100px; transition: width 0.8s ease; }
+.progressFill { height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-gold)); border-radius: 100px; transition: width 0.8s ease; }
 .progressMeta { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-text-tertiary); }
 
 /* CREATE / JOIN */

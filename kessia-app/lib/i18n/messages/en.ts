@@ -719,13 +719,15 @@ export const en: Catalog = {
       light: 'Light',
       dark: 'Dark',
     },
+    accentCardTitle: 'App colour',
+    accentCardSub: 'Pick the interface hue. Applied everywhere, instantly.',
     accent: {
       terracotta: 'Terracotta',
-      brique: 'Brick',
+      violet: 'Violet',
     },
     accentHint: {
-      terracotta: 'The current signature shade (#B65A3A)',
-      brique: 'KESSIA’s original shade (#C84B1E)',
+      terracotta: 'The current signature shade',
+      violet: 'The alternative KESSIA shade',
     },
   },
   landing: {

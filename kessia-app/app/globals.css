@@ -195,44 +195,44 @@
 }
 
 /* ============================================================
-   2b. ACCENT « BRIQUE » — teinte d'origine KESSIA (#C84B1E)
-   Choix utilisateur via data-accent="brique" sur <html>.
+   2b. ACCENT « VIOLET » — teinte alternative KESSIA (#5B34D6)
+   Choix utilisateur via data-accent="violet" sur <html>.
    « terracotta » (défaut) = aucun attribut → valeurs de :root.
    Placé APRÈS le dark mode ; les surcharges spécifiques
    [data-theme][data-accent] réajustent les nuances sombres.
    ============================================================ */
-:root[data-accent='brique'] {
-  --color-primary:         #C84B1E;
-  --color-primary-hover:   #B23F14;
-  --color-primary-pressed: #9A340E;
-  --color-primary-dark:    #7C2A0B;
-  --color-primary-light:   rgba(200, 75, 30, 0.12);
-  --color-primary-subtle:  rgba(200, 75, 30, 0.06);
+:root[data-accent='violet'] {
+  --color-primary:         #5B34D6;
+  --color-primary-hover:   #4E2AC0;
+  --color-primary-pressed: #4222A6;
+  --color-primary-dark:    #301A78;
+  --color-primary-light:   rgba(91, 52, 214, 0.12);
+  --color-primary-subtle:  rgba(91, 52, 214, 0.06);
 
-  --color-surface-hover:   rgba(200, 75, 30, 0.03);
-  --color-surface-pressed: rgba(200, 75, 30, 0.06);
-  --color-border-focus:    #C84B1E;
+  --color-surface-hover:   rgba(91, 52, 214, 0.03);
+  --color-surface-pressed: rgba(91, 52, 214, 0.06);
+  --color-border-focus:    #5B34D6;
 
-  --gradient-primary:  linear-gradient(135deg, #C84B1E 0%, #E06A3C 100%);
-  --gradient-hero:     linear-gradient(160deg, #7C2A0B 0%, #C84B1E 50%, #D6A84F 100%);
-  --gradient-card:     linear-gradient(135deg, #C84B1E 0%, #D66B44 60%, #D6A84F 100%);
-  --gradient-warm:     linear-gradient(160deg, #1F5D4A 0%, #C84B1E 50%, #D6A84F 100%);
+  --gradient-primary:  linear-gradient(135deg, #5B34D6 0%, #8B5CF6 100%);
+  --gradient-hero:     linear-gradient(160deg, #301A78 0%, #5B34D6 50%, #9B7BEA 100%);
+  --gradient-card:     linear-gradient(135deg, #5B34D6 0%, #7C4DE0 60%, #B79BF0 100%);
+  --gradient-warm:     linear-gradient(160deg, #1F5D4A 0%, #5B34D6 50%, #D6A84F 100%);
 
-  --shadow-xs:      0 1px 2px rgba(200, 75, 30, 0.07);
-  --shadow-sm:      0 2px 8px rgba(200, 75, 30, 0.10), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:      0 4px 16px rgba(200, 75, 30, 0.12), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg:      0 8px 24px rgba(200, 75, 30, 0.14), 0 4px 8px rgba(0,0,0,0.06);
-  --shadow-xl:      0 16px 40px rgba(200, 75, 30, 0.17), 0 8px 16px rgba(0,0,0,0.06);
-  --shadow-primary:    0 6px 20px rgba(200, 75, 30, 0.42);
-  --shadow-primary-sm: 0 4px 12px rgba(200, 75, 30, 0.32);
+  --shadow-xs:      0 1px 2px rgba(91, 52, 214, 0.07);
+  --shadow-sm:      0 2px 8px rgba(91, 52, 214, 0.10), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:      0 4px 16px rgba(91, 52, 214, 0.12), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:      0 8px 24px rgba(91, 52, 214, 0.14), 0 4px 8px rgba(0,0,0,0.06);
+  --shadow-xl:      0 16px 40px rgba(91, 52, 214, 0.17), 0 8px 16px rgba(0,0,0,0.06);
+  --shadow-primary:    0 6px 20px rgba(91, 52, 214, 0.42);
+  --shadow-primary-sm: 0 4px 12px rgba(91, 52, 214, 0.32);
 }
 
-/* Brique + sombre forcé : nuances translucides et ombres du dark mode */
-:root[data-theme='dark'][data-accent='brique'] {
-  --color-primary-light:   rgba(224, 106, 60, 0.20);
-  --color-primary-subtle:  rgba(224, 106, 60, 0.12);
-  --color-surface-hover:    rgba(200, 75, 30, 0.10);
-  --color-surface-pressed:  rgba(200, 75, 30, 0.15);
+/* Violet + sombre forcé : nuances translucides et ombres du dark mode */
+:root[data-theme='dark'][data-accent='violet'] {
+  --color-primary-light:   rgba(139, 92, 246, 0.22);
+  --color-primary-subtle:  rgba(139, 92, 246, 0.13);
+  --color-surface-hover:    rgba(139, 92, 246, 0.10);
+  --color-surface-pressed:  rgba(139, 92, 246, 0.16);
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
@@ -240,13 +240,13 @@
   --shadow-xl: 0 16px 40px rgba(0,0,0,0.55);
 }
 
-/* Brique + sombre système (aucun data-theme explicite) */
+/* Violet + sombre système (aucun data-theme explicite) */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light'])[data-accent='brique'] {
-    --color-primary-light:   rgba(224, 106, 60, 0.20);
-    --color-primary-subtle:  rgba(224, 106, 60, 0.12);
-    --color-surface-hover:    rgba(200, 75, 30, 0.10);
-    --color-surface-pressed:  rgba(200, 75, 30, 0.15);
+  :root:not([data-theme='light'])[data-accent='violet'] {
+    --color-primary-light:   rgba(139, 92, 246, 0.22);
+    --color-primary-subtle:  rgba(139, 92, 246, 0.13);
+    --color-surface-hover:    rgba(139, 92, 246, 0.10);
+    --color-surface-pressed:  rgba(139, 92, 246, 0.16);
     --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
     --shadow-md: 0 4px 16px rgba(0,0,0,0.45);

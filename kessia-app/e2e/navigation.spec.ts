@@ -29,19 +29,16 @@ test('le profil ouvre le KESSIA Score détaillé', async ({ page }) => {
   await expect(page.getByText(/Ce qui compose votre score/i)).toBeVisible();
 });
 
-test('la couleur d’accent Brique s’applique et persiste', async ({ page }) => {
+test('la couleur d’accent Violet s’applique et persiste', async ({ page }) => {
   await page.goto('/profile');
-  await page.getByText(/Couleur d’accent/i).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: /Brique/i }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-accent', 'brique');
+  await page.locator('#accent-violet').click();
+  await expect(page.locator('html')).toHaveAttribute('data-accent', 'violet');
 
   await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('data-accent', 'brique');
+  await expect(page.locator('html')).toHaveAttribute('data-accent', 'violet');
 
   // remettre Terracotta (pas d'attribut)
-  await page.getByText(/Couleur d’accent/i).click();
-  await page.getByRole('dialog').getByRole('button', { name: /Terracotta/i }).click();
+  await page.locator('#accent-terracotta').click();
   await expect(page.locator('html')).not.toHaveAttribute('data-accent', /.+/);
 });
 

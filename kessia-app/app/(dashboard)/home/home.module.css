@@ -91,7 +91,7 @@
 }
 
 .balanceCard {
-  background: linear-gradient(135deg, #B65A3A 0%, #C46E4A 50%, #D6A84F 100%);
+  background: var(--gradient-card);
   border-radius: 22px;
   padding: 20px 20px 16px;
   position: relative;

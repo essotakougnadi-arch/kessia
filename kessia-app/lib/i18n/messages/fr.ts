@@ -720,13 +720,15 @@ export const fr = {
       light: 'Clair',
       dark: 'Sombre',
     },
+    accentCardTitle: 'Couleur de l’application',
+    accentCardSub: 'Choisissez la teinte de l’interface. Appliquée partout, immédiatement.',
     accent: {
       terracotta: 'Terracotta',
-      brique: 'Brique',
+      violet: 'Violet',
     },
     accentHint: {
-      terracotta: 'La teinte signature actuelle (#B65A3A)',
-      brique: 'La teinte d’origine de KESSIA (#C84B1E)',
+      terracotta: 'La teinte signature actuelle',
+      violet: 'La teinte alternative KESSIA',
     },
   },
   landing: {
