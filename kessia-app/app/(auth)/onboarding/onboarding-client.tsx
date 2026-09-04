@@ -36,14 +36,14 @@ export default function OnboardingClient() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.top} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <LanguageSwitcher />
+      <div className={styles.top}>
+        <LanguageSwitcher variant="onDark" />
         <button className={styles.skip} onClick={() => done('/register')}>{t('auth.onboarding.skip')}</button>
       </div>
 
       <div className={styles.slide} key={i}>
         {i === 0 ? (
-          <div className={styles.art}><KessiaMobileIcon size={104} /></div>
+          <div className={styles.art}><KessiaMobileIcon size={132} /></div>
         ) : (
           <div className={styles.art} aria-hidden>{slide.art}</div>
         )}
