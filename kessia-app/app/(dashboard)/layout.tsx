@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Sidebar from '@/components/layout/Sidebar';
 import BottomNav from '@/components/layout/BottomNav';
 import { LegalGate } from '@/components/legal/LegalGate';
+import { PinLockGate } from '@/components/auth/PinLockGate';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import styles from './dashboard.module.css';
 
@@ -22,6 +23,7 @@ export default function DashboardLayout({
         {children}
       </div>
       <BottomNav />
+      <PinLockGate />
       <LegalGate />
     </div>
   );

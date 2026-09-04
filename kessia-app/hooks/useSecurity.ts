@@ -34,6 +34,12 @@ export function useSecurity() {
     { revalidateOnFocus: false }
   );
 
+  const pin = useSWR<{ enabled: boolean }>(
+    token ? ['/api/v1/auth/pin', token] : null,
+    ([u]: [string, string]) => apiGet(u),
+    { revalidateOnFocus: false }
+  );
+
   async function start2fa() {
     return r(await apiSend('/api/v1/auth/2fa', 'POST', { step: 'setup' }));
   }
@@ -60,12 +66,24 @@ export function useSecurity() {
     if (res.success) sessions.mutate();
     return res;
   }
+  async function enablePin(newPin: string) {
+    const res = r(await apiSend('/api/v1/auth/pin', 'POST', { pin: newPin }));
+    if (res.success) pin.mutate();
+    return res;
+  }
+  async function disablePin() {
+    const res = r(await apiRequest('/api/v1/auth/pin', { method: 'DELETE' }));
+    if (res.success) pin.mutate();
+    return res;
+  }
 
   return {
     twoFactorEnabled: twofa.data?.enabled ?? false,
     backupCodesRemaining: twofa.data?.backupCodesRemaining ?? 0,
     sessions: sessions.data ?? [],
+    pinEnabled: pin.data?.enabled ?? false,
     isLoading: twofa.isLoading || sessions.isLoading,
     start2fa, enable2fa, disable2fa, changePassword, revokeSession, revokeOthers,
+    enablePin, disablePin,
   };
 }

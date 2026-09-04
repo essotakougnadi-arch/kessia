@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Code PIN de déverrouillage rapide (ADR 0041, 3/7)
+
+### Ajouté
+- Nouvelle section « Code PIN de déverrouillage » dans
+  `/profile/security` (activer/changer/désactiver, même patron que la
+  2FA). **Ne remplace pas** le mot de passe/2FA — verrouille l'écran
+  d'une session déjà authentifiée.
+- `GET/POST/DELETE /api/v1/auth/pin` + `POST /api/v1/auth/pin/verify`
+  (limité à 5 tentatives/15min). `User.pinHash`/`pinEnabled`.
+- `components/auth/PinLockGate.tsx` : panneau plein écran bloquant si
+  un PIN est actif et que l'onglet/fenêtre n'a pas encore été
+  déverrouillé (`sessionStorage`, comme sur un téléphone).
+- `e2e/pin-lock.spec.ts` (nouveau, +1 → 41 E2E).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+  **E2E complet (41/41)** au vert.
+
 ## [Non publié] — Financement participatif dans Invest (ADR 0041, 6/7)
 
 ### Ajouté

@@ -33,6 +33,8 @@ export default function SecurityClient() {
 
       <TwoFactorSection sec={s} addToast={addToast} />
 
+      <PinSection sec={s} addToast={addToast} />
+
       <SessionsSection sec={s} addToast={addToast} />
     </div>
   );
@@ -185,6 +187,90 @@ function TwoFactorSection({ sec, addToast }: { sec: ReturnType<typeof useSecurit
           <input className="input" inputMode="numeric" placeholder="123456" value={code} onChange={(e) => setCode(e.target.value)} style={{ textAlign: 'center', letterSpacing: 3 }} />
           {err && <div className={styles.err}>⚠️ {err}</div>}
           <button className="btn btn-danger btn-full" onClick={turnOff} disabled={busy || code.trim().length < 6}>
+            {busy ? t('securityPage.busy') : t('securityPage.disable')}
+          </button>
+          <button className="btn btn-ghost btn-full" onClick={() => setPhase('idle')}>{t('securityPage.cancel')}</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── Code PIN (déverrouillage rapide, ADR 0041) ─────────────
+
+function PinSection({ sec, addToast }: { sec: ReturnType<typeof useSecurity>; addToast: (t: { type: 'success' | 'error' | 'info'; message: string }) => void }) {
+  const t = useT();
+  const [phase, setPhase] = useState<'idle' | 'setup' | 'disable'>('idle');
+  const [pin, setPin] = useState('');
+  const [pin2, setPin2] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function activate() {
+    setErr(null);
+    if (!/^\d{4,6}$/.test(pin)) return setErr(t('securityPage.pinFormat'));
+    if (pin !== pin2) return setErr(t('securityPage.pinMismatch'));
+    setBusy(true);
+    const r = await sec.enablePin(pin);
+    setBusy(false);
+    if (r.success) {
+      try { localStorage.setItem('kessia-pin-set', '1'); sessionStorage.setItem('kessia-pin-unlocked', '1'); } catch { /* ignore */ }
+      addToast({ type: 'success', message: r.message });
+      setPhase('idle'); setPin(''); setPin2('');
+    } else setErr(r.message);
+  }
+
+  async function deactivate() {
+    setBusy(true);
+    const r = await sec.disablePin();
+    setBusy(false);
+    if (r.success) {
+      try { localStorage.removeItem('kessia-pin-set'); sessionStorage.removeItem('kessia-pin-unlocked'); } catch { /* ignore */ }
+      addToast({ type: 'success', message: r.message });
+      setPhase('idle');
+    } else addToast({ type: 'error', message: r.message });
+  }
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.row}>
+        <div>
+          <h2 className={styles.sectionTitle}>{t('securityPage.pinTitle')}</h2>
+          <p className={styles.sectionDesc}>{t('securityPage.pinDesc')}</p>
+        </div>
+        <span className={sec.pinEnabled ? styles.statusOn : styles.statusOff}>
+          {sec.pinEnabled ? t('securityPage.pinOn') : t('securityPage.pinOff')}
+        </span>
+      </div>
+
+      {phase === 'idle' && !sec.pinEnabled && (
+        <button className="btn btn-primary btn-full" style={{ marginTop: 12 }} onClick={() => setPhase('setup')} id="btn-enable-pin">
+          {t('securityPage.enablePin')}
+        </button>
+      )}
+
+      {phase === 'idle' && sec.pinEnabled && (
+        <button className="btn btn-danger btn-full" style={{ marginTop: 12 }} onClick={() => setPhase('disable')} id="btn-disable-pin">
+          {t('securityPage.disablePin')}
+        </button>
+      )}
+
+      {phase === 'setup' && (
+        <div className={styles.form}>
+          <input className="input" inputMode="numeric" type="password" maxLength={6} placeholder={t('securityPage.pinNew')} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} style={{ textAlign: 'center', letterSpacing: 4 }} id="pin-new" />
+          <input className="input" inputMode="numeric" type="password" maxLength={6} placeholder={t('securityPage.pinConfirm')} value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ''))} style={{ textAlign: 'center', letterSpacing: 4 }} id="pin-confirm" />
+          {err && <div className={styles.err}>⚠️ {err}</div>}
+          <button className="btn btn-primary btn-full" onClick={activate} disabled={busy} id="btn-confirm-pin">
+            {busy ? t('securityPage.busy') : t('securityPage.confirmActivate')}
+          </button>
+          <button className="btn btn-ghost btn-full" onClick={() => { setPhase('idle'); setPin(''); setPin2(''); setErr(null); }}>{t('securityPage.cancel')}</button>
+        </div>
+      )}
+
+      {phase === 'disable' && (
+        <div className={styles.form}>
+          <p className={styles.sectionDesc}>{t('securityPage.pinDisableConfirm')}</p>
+          <button className="btn btn-danger btn-full" onClick={deactivate} disabled={busy} id="btn-confirm-disable-pin">
             {busy ? t('securityPage.busy') : t('securityPage.disable')}
           </button>
           <button className="btn btn-ghost btn-full" onClick={() => setPhase('idle')}>{t('securityPage.cancel')}</button>

@@ -1617,6 +1617,18 @@ export const fr = {
     disableConfirm: 'Saisissez un code de votre application pour confirmer.',
     disable: 'Désactiver',
     busy: '…',
+    // Code PIN (déverrouillage rapide)
+    pinTitle: 'Code PIN de déverrouillage',
+    pinDesc: 'Un code à 4-6 chiffres pour retrouver l’appli plus vite, sans remplacer votre mot de passe.',
+    pinOn: '● Activé',
+    pinOff: '○ Désactivé',
+    enablePin: 'Activer un code PIN',
+    disablePin: 'Désactiver le code PIN',
+    pinNew: 'Nouveau code (4 à 6 chiffres)',
+    pinConfirm: 'Confirmer le code',
+    pinFormat: 'Le code doit contenir 4 à 6 chiffres.',
+    pinMismatch: 'Les deux codes ne correspondent pas.',
+    pinDisableConfirm: 'Le déverrouillage rapide sera désactivé ; votre mot de passe restera nécessaire pour vous connecter.',
     // Sessions
     sessionsTitle: 'Sessions actives',
     sessionsDesc: 'Appareils connectés à votre compte.',
@@ -1626,6 +1638,13 @@ export const fr = {
     seenAt: 'vu {date}',
     thisDevice: 'Cet appareil',
     disconnect: 'Déconnecter',
+  },
+  pinLock: {
+    title: 'Entrez votre code PIN',
+    subtitle: 'Déverrouillez KESSIA pour continuer.',
+    unlock: 'Déverrouiller',
+    wrong: 'Code incorrect.',
+    signOut: 'Utiliser mon mot de passe / Se déconnecter',
   },
   kycPage: {
     back: 'Retour',

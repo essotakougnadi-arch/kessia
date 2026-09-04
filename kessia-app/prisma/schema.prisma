@@ -384,6 +384,11 @@ model User {
   twoFactorEnabled      Boolean   @default(false)
   twoFactorSecret       String?
   twoFactorBackup       String[]  @default([])
+  // Code PIN de déverrouillage rapide (ADR 0041, item 1) — NE remplace
+  // PAS la connexion mot de passe/2FA : verrouille/déverrouille une
+  // session déjà authentifiée côté client (aucun jeton émis).
+  pinHash               String?
+  pinEnabled            Boolean   @default(false)
   // Confidentialité (privacy by design §4.5)
   dataExportRequestedAt DateTime?
   deletionRequestedAt   DateTime?

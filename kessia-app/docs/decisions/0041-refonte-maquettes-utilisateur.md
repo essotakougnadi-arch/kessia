@@ -140,6 +140,41 @@ nouvelle logique pure) + `build` + **E2E complet (40/40)** au vert.
 Vérifié visuellement (Playwright, compte de démo avec plans solo réels
 en base) : liste, barres de progression, lien de création.
 
+## Livré — 3/7 : Code PIN de déverrouillage rapide (2026-09-04)
+
+Décision de conception importante : le PIN **ne remplace pas**
+l'authentification (mot de passe + 2FA §31), il **verrouille l'écran**
+d'une session déjà authentifiée — même logique qu'un code de
+déverrouillage de téléphone. Aucun jeton n'est jamais émis par le
+contrôle du PIN.
+
+- **Schéma** : `User.pinHash`/`pinEnabled` (`db push` fait).
+- **API** : `GET/POST/DELETE /api/v1/auth/pin` (activer/changer/
+  désactiver, bcrypt) + `POST /api/v1/auth/pin/verify` — **limité à 5
+  tentatives/15min** (`enforceRateLimit`), un PIN à 4 chiffres n'a que
+  10 000 combinaisons et ne doit jamais être brute-forçable.
+- **Réglage** : nouvelle section dans `/profile/security` (même patron
+  que la 2FA existante : idle/setup/disable), pas de nouvel écran dédié
+  — le PIN est une option de sécurité parmi d'autres, pas une étape
+  obligatoire d'inscription (qui reste inchangée, cf. « ne rien
+  casser »).
+- **Verrou** : `components/auth/PinLockGate.tsx`, monté dans le layout
+  du tableau de bord à côté de `LegalGate`. Si un PIN est actif et
+  qu'aucun déverrouillage n'a eu lieu pour **cet onglet/fenêtre**
+  (`sessionStorage`, se réinitialise à chaque nouvelle ouverture —
+  comme sur un téléphone), un panneau plein écran bloque tout accès
+  jusqu'à saisie correcte ou déconnexion.
+- `e2e/pin-lock.spec.ts` (nouveau, 1 test bout-en-bout : activer → 2ᵉ
+  onglet verrouillé → mauvais code rejeté → bon code déverrouille →
+  désactivation).
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+**E2E complet (41/41, +1)** au vert. Vérifié manuellement (Playwright,
+2 pages du même contexte navigateur = mêmes jetons mais
+`sessionStorage` distinct) : verrouillage confirmé même après tentative
+de défilement (le panneau `position:fixed` couvre tout le viewport).
+
 ## Livré — 6/7 : Financement participatif (fusionné dans Invest) (2026-09-04)
 
 Décision de non-duplication tranchée (question posée dans la section
@@ -171,8 +206,7 @@ bascule d'onglet, filtre par catégorie, action + toast.
 
 ## Suivi
 
-Les 2 items restants (PIN, panier Marketplace) et la refonte visuelle
-module par module seront ajoutés à cet ADR au fur et à mesure. Le
-dernier item, **prêts coopératifs**, suivra le même traitement que
-KESSIA Invest/Insurance (catégories + exemples chiffrés, statut
-`REGULATED`) — pas encore commencé.
+Les 2 items restants (panier Marketplace, prêts coopératifs) et la
+refonte visuelle module par module seront ajoutés à cet ADR au fur et
+à mesure. **Prêts coopératifs** suivra le même traitement que KESSIA
+Invest/Insurance (catégories + exemples chiffrés, statut `REGULATED`).
