@@ -3,6 +3,22 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Financement participatif dans Invest (ADR 0041, 6/7)
+
+### Ajouté
+- `/invest` : nouvel onglet **« Financement participatif »** à côté de
+  « Projets à financer » — 5 campagnes communautaires d'exemple (santé,
+  éducation, infrastructure locale, solidarité), cadre explicitement
+  **don/soutien, jamais de rendement** (répété sur chaque carte).
+  Bouton « Soutenir ce projet » → toast, aucune écriture serveur.
+  Fusionné dans Invest plutôt qu'un module séparé (pas de doublon).
+- `lib/modules/invest-insurance-data.ts` +`CROWDFUNDING_CATEGORIES`
+  +`CROWDFUNDING_CAMPAIGNS`.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+  **E2E complet (40/40)** au vert.
+
 ## [Non publié] — Objectif d'épargne dans le Wallet (ADR 0041, 2/7)
 
 ### Ajouté

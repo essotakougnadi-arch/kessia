@@ -123,6 +123,90 @@ export interface ExamplePlan {
   description: string;
 }
 
+// ── Financement participatif communautaire (crowdfunding) ──────
+// Distinct de l'investissement ci-dessus : ici, on SOUTIENT un projet
+// communautaire (don/contribution), il n'y a jamais de rendement ni de
+// contrepartie financière promise — cadre volontairement différent de
+// KESSIA Invest, présenté comme un second onglet de la même page pour
+// éviter un module dupliqué (ADR 0041, item 6).
+
+export const CROWDFUNDING_CATEGORIES: ModuleCategory[] = [
+  { icon: '🏥', title: 'Santé communautaire', desc: 'Équipement de dispensaire, campagnes de dépistage, urgences médicales locales.' },
+  { icon: '📚', title: 'Éducation', desc: 'Fournitures, bourses, rénovation de salles de classe pour des écoles de quartier.' },
+  { icon: '🚰', title: 'Infrastructure locale', desc: 'Points d’eau, éclairage, voirie de proximité portés par un collectif d’habitants.' },
+  { icon: '🤲', title: 'Solidarité', desc: 'Soutien ponctuel à une famille ou un commerçant après un coup dur (incendie, maladie, vol).' },
+];
+
+export interface CrowdfundingCampaign {
+  id: string;
+  title: string;
+  category: string; // doit correspondre à un title de CROWDFUNDING_CATEGORIES
+  icon: string;
+  location: string;
+  goalAmount: number; // FCFA — exemple
+  raisedPercent: number; // 0-100 — exemple
+  supporters: number;
+  description: string;
+}
+
+export const CROWDFUNDING_CAMPAIGNS: CrowdfundingCampaign[] = [
+  {
+    id: 'cf-dispensaire',
+    title: 'Équiper le dispensaire de quartier',
+    category: 'Santé communautaire',
+    icon: '🏥',
+    location: 'Aného',
+    goalAmount: 900_000,
+    raisedPercent: 47,
+    supporters: 63,
+    description: 'Renouveler le matériel de premiers soins pour le dispensaire communautaire, à sec depuis 2 ans.',
+  },
+  {
+    id: 'cf-fournitures',
+    title: 'Fournitures pour la rentrée de 120 élèves',
+    category: 'Éducation',
+    icon: '📚',
+    location: 'Sokodé',
+    goalAmount: 450_000,
+    raisedPercent: 72,
+    supporters: 118,
+    description: 'Cahiers, kits scolaires et manuels pour les enfants de familles en difficulté du quartier.',
+  },
+  {
+    id: 'cf-point-eau',
+    title: 'Remettre en service un point d’eau collectif',
+    category: 'Infrastructure locale',
+    icon: '🚰',
+    location: 'Kpalimé',
+    goalAmount: 650_000,
+    raisedPercent: 31,
+    supporters: 41,
+    description: 'Réparer la pompe communautaire qui dessert une trentaine de foyers depuis 15 ans.',
+  },
+  {
+    id: 'cf-incendie',
+    title: 'Aider Afiwa à reconstruire son étal après l’incendie',
+    category: 'Solidarité',
+    icon: '🤲',
+    location: 'Lomé, marché de Bè',
+    goalAmount: 300_000,
+    raisedPercent: 88,
+    supporters: 94,
+    description: 'Un incendie a détruit son étal de tissus au marché — l’aider à racheter son stock de départ.',
+  },
+  {
+    id: 'cf-classe',
+    title: 'Rénover une salle de classe délabrée',
+    category: 'Éducation',
+    icon: '📚',
+    location: 'Kara',
+    goalAmount: 780_000,
+    raisedPercent: 19,
+    supporters: 27,
+    description: 'Toiture et mobilier hors d’usage dans une école primaire de 210 élèves.',
+  },
+];
+
 export const INSURANCE_EXAMPLE_PLANS: ExamplePlan[] = [
   {
     id: 'i-sante-essentielle',

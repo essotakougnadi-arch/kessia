@@ -140,10 +140,39 @@ nouvelle logique pure) + `build` + **E2E complet (40/40)** au vert.
 Vérifié visuellement (Playwright, compte de démo avec plans solo réels
 en base) : liste, barres de progression, lien de création.
 
+## Livré — 6/7 : Financement participatif (fusionné dans Invest) (2026-09-04)
+
+Décision de non-duplication tranchée (question posée dans la section
+« Livré 1/7 » d'origine) : le crowdfunding devient un **second onglet**
+de `/invest` plutôt qu'un module séparé — pas de nouvelle entrée
+`/explore`, pas de nouveau statut catalogue.
+
+- `/invest` : chips **« Projets à financer » / « Financement
+  participatif »** en haut de page. Le mode Investissement est
+  inchangé ; le mode Financement participatif affiche des **campagnes
+  communautaires** (`CROWDFUNDING_CAMPAIGNS`, 5 exemples, 4 catégories)
+  avec sa propre bannière explicite : **don/soutien, jamais de
+  rendement ni de contrepartie financière** — cadre volontairement
+  différent de l'investissement, répété sur chaque carte (« Don
+  communautaire — aucun rendement, aucune contrepartie financière »).
+- Action par carte : « Soutenir ce projet » → toast confirmant qu'aucun
+  montant n'est prélevé (état local, aucune écriture serveur, même
+  patron que le reste d'ADR 0040/0041).
+- `lib/modules/invest-insurance-data.ts` +`CROWDFUNDING_CATEGORIES`
+  +`CROWDFUNDING_CAMPAIGNS`. i18n FR+EN (`modulesPages.invest.
+  {modeInvest,modeCrowdfunding,campaignsTitle,crowdfundingBanner,
+  raisedLabel,supportersLabel,noReturnNote,support,supported,
+  toastSupport}`).
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+**E2E complet (40/40)** au vert. Vérifié visuellement (Playwright) :
+bascule d'onglet, filtre par catégorie, action + toast.
+
 ## Suivi
 
-Les 4 items restants (PIN, panier Marketplace, crowdfunding, prêts
-coopératifs) et la refonte visuelle module par module seront ajoutés à
-cet ADR au fur et à mesure, chacun avec sa propre section « Livré —
-n/7 » ou son propre paragraphe de refonte visuelle, suivant le même
-patron de vérification.
+Les 2 items restants (PIN, panier Marketplace) et la refonte visuelle
+module par module seront ajoutés à cet ADR au fur et à mesure. Le
+dernier item, **prêts coopératifs**, suivra le même traitement que
+KESSIA Invest/Insurance (catégories + exemples chiffrés, statut
+`REGULATED`) — pas encore commencé.
