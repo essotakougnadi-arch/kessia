@@ -4,7 +4,7 @@
 // 4 diapositives, "Passer" à tout moment, mémorise la complétion.
 // ============================================================
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './onboarding.module.css';
@@ -19,23 +19,15 @@ const SLIDES = [
   { art: '✨', key: 's4' },
 ] as const;
 
-const STORAGE_KEY = 'kessia_onboarded';
-
 export default function OnboardingClient() {
   const router = useRouter();
   const t = useT();
   const [i, setI] = useState(0);
 
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === '1') router.replace('/register');
-    } catch {
-      /* localStorage indisponible → on affiche l'onboarding */
-    }
-  }, [router]);
-
+  // Le carrousel s'affiche à chaque visite : « Suivant » guide le nouvel
+  // utilisateur jusqu'à l'inscription. « Passer » / « J'ai déjà un compte »
+  // servent de sortie rapide.
   function done(to: string) {
-    try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* ignore */ }
     router.push(to);
   }
 
@@ -77,7 +69,7 @@ export default function OnboardingClient() {
         )}
         <p className={styles.footNote}>
           {t('auth.onboarding.haveAccount')}{' '}
-          <Link href="/login" onClick={() => { try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* ignore */ } }}>{t('auth.onboarding.signIn')}</Link>
+          <Link href="/login">{t('auth.onboarding.signIn')}</Link>
         </p>
       </div>
     </div>
