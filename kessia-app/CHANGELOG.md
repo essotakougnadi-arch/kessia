@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Messagerie Communauté (ADR 0041, 1/7)
+
+### Ajouté
+- `/community` : nouvel onglet **Messagerie** — liste de conversations
+  (badge non-lus), fil de discussion (bulles), envoi de message avec
+  réponse automatique simulée (~1,1 s), bouton **Appel vidéo** en aperçu
+  honnête (toast, aucune connexion réelle — la visio nécessiterait une
+  infrastructure temps réel hors périmètre d'une démonstration).
+- `lib/modules/community-data.ts` : `COMMUNITY_CONVERSATIONS`,
+  `COMMUNITY_MESSAGES`, `AUTO_REPLIES`. Styles partagés `.convoList`,
+  `.msgBubble`, `.msgInputRow`, etc. dans `module-page.module.css`.
+- Premier élément d'ADR 0041 (refonte visuelle + fonctionnalités
+  manquantes d'après les maquettes fournies par l'utilisateur).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**172**, inchangé) + `build` +
+  **E2E complet (40/40)** au vert.
+
 ## [Non publié]
 
 ### Ajouté

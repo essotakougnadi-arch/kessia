@@ -1,0 +1,93 @@
+# ADR 0041 — Refonte visuelle & fonctionnalités manquantes d'après les maquettes utilisateur
+
+**Statut :** en cours · **Date de début :** 2026-09-04
+
+## Contexte
+
+L'utilisateur a fourni 4 planches de maquettes (« KESSIA – parcours complet »)
+couvrant l'essentiel de l'application : onboarding, tableau de bord, wallet,
+tontines, business, marketplace, communauté, academy, IA, invest, insurance,
+jobs, profil, score, notifications — plus quelques écrans qui n'existent pas
+encore dans KESSIA (messagerie/appel vidéo, panier marketplace, code PIN,
+certificats, objectif d'épargne libre, crowdfunding, prêts coopératifs).
+
+Consigne (après clarification, cf. échange utilisateur) :
+> « Ne change rien à ce qui a été déjà fait jusqu'aujourd'hui mais ajoute ce
+> qui est sur les images envoyées et qui ne se trouve pas encore sur
+> l'application (Ex: Chat dans la Communauté, etc). Ne duplique pas si une
+> fonctionnalité existe déjà. Fait moi une organisation propre et parfaite. »
+
+## Décision
+
+Deux chantiers distincts, menés progressivement (« prends ton temps ») :
+
+1. **Refonte visuelle** des écrans existants pour se rapprocher du style des
+   maquettes (cartes, hiérarchie, icônes) — **sans changer la logique**
+   (API, données réelles, permissions). Périmètre détaillé et priorisé en
+   4 phases dans le plan de travail (document de travail partagé avec
+   l'utilisateur, non versionné — cf. section « Suivi »).
+2. **Construction des fonctionnalités absentes**, dans le même esprit que
+   les modules « Phase 8 » déjà livrés (ADR 0040) : des expériences
+   **simulées et honnêtes** (bandeau d'aperçu explicite, aucune donnée
+   fabriquée présentée comme réelle) plutôt qu'une infrastructure lourde
+   non justifiée pour une démonstration.
+
+Couleurs **inchangées** : Terracotta `#B65A3A` reste la couleur par défaut ;
+Violet `#5B34D6` reste le second choix dans le profil.
+
+## Règle de traitement par fonctionnalité manquante
+
+Pour chaque écran absent identifié dans les maquettes, le niveau de
+réalisme dépend du coût réel d'une version fonctionnelle :
+
+- **Faible risque / faible effort** → construit directement (ex. écran de
+  succès post-inscription, jauges, regroupements de navigation).
+- **Infrastructure temps réel non justifiable pour une démo** (messagerie
+  live, visio) → **simulé côté client**, bandeau explicite « aperçu, pas
+  d'interlocuteur réel », strictement dans l'esprit d'ADR 0040.
+- **Activité financière réglementée** (prêts, crédit) → même traitement
+  que KESSIA Invest/Insurance (ADR 0040) : catégories + exemples chiffrés
+  qualifiés, jamais un octroi réel.
+- **Chevauchement avec une fonctionnalité existante** (ex. « objectif
+  d'épargne libre » vs Tontine Croissance/Solo, « crowdfunding » vs
+  Invest) → pas de duplication : soit réutilisation/relabellisation de
+  l'existant, soit fusion, à trancher au cas par cas et documenté ici.
+
+## Livré — 1/7 : Messagerie Communauté (2026-09-04)
+
+Premier des 7 écrans absents (« Ex: Chat dans la Communauté », cité par
+l'utilisateur) :
+
+- `lib/modules/community-data.ts` : `COMMUNITY_CONVERSATIONS` (4),
+  `COMMUNITY_MESSAGES` (historique de démonstration), `AUTO_REPLIES`
+  (réponse automatique aléatoire ~1,1 s après un envoi — simule une
+  conversation vivante sans jamais prétendre qu'un vrai interlocuteur
+  répond).
+- `/community` : 3ᵉ onglet **Messagerie** (à côté de Groupes/Fil) — liste
+  de conversations (badge non-lus), fil de discussion (bulles miennes/
+  siennes), champ d'envoi. Bouton **« Appel vidéo »** dans l'en-tête du
+  fil : ouvre un toast d'aperçu honnête (« arrivera avec le lancement »),
+  **aucune tentative de connexion réelle** — WebRTC/signalisation n'est
+  pas un chantier raisonnable pour une démonstration.
+- Styles partagés ajoutés à `components/modules/module-page.module.css`
+  (`.convoList`, `.msgBubble`, `.msgInputRow`, etc.) — réutilisables si
+  une messagerie apparaît ailleurs plus tard.
+- i18n FR+EN (`modulesPages.community.{tabGroups,tabFeed,tabMessages,
+  messagesTitle,messagesSub,you,videoCall,videoCallPreview,
+  messagePlaceholder,send}`).
+- Aucune nouvelle table Prisma — 100 % état client, comme le reste des
+  modules « Phase 8 ».
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**172**, inchangé) + `build` +
+**E2E complet (40/40)** au vert. Vérifié visuellement (Playwright) :
+liste de conversations, ouverture d'un fil, envoi + réponse automatique,
+bouton appel vidéo.
+
+## Suivi
+
+Les 6 items restants (PIN, objectif d'épargne, panier Marketplace,
+certificats Academy, crowdfunding, prêts coopératifs) et la refonte
+visuelle module par module seront ajoutés à cet ADR au fur et à mesure,
+chacun avec sa propre section « Livré — n/7 » ou son propre paragraphe de
+refonte visuelle, suivant le même patron de vérification.

@@ -38,3 +38,51 @@ export const COMMUNITY_FEED: CommunityPost[] = [
   { id: 'p3', author: 'Afiwa K.', group: 'Artisans & Créateurs', time: 'hier', text: 'Notre tontine Achat pour les machines à coudre démarre la semaine prochaine, encore 2 places !', likes: 9 },
   { id: 'p4', author: 'Yao A.', group: 'Agripreneurs du Togo', time: 'il y a 2 jours', text: 'Bon rendement sur le maïs cette saison. Quelqu’un a des contacts pour l’écoulement vers Lomé ?', likes: 17 },
 ];
+
+// ── Messagerie (démonstration) ──────────────────────────────
+// Aperçu de ce à quoi ressemblera la messagerie de KESSIA Communauté.
+// Envoyer un message est simulé côté client (réponse automatique après
+// un court délai) : rien n'est transmis à un autre utilisateur réel, et
+// rien n'est persisté. L'appel vidéo n'est qu'un bouton d'aperçu — voir
+// ConversationThread dans community-client.tsx.
+
+export interface Conversation {
+  id: string;
+  withName: string;
+  withInitials: string;
+  group: string;
+  unread: number;
+}
+
+export const COMMUNITY_CONVERSATIONS: Conversation[] = [
+  { id: 'c1', withName: 'Ama Dossou', withInitials: 'AD', group: 'Commerçantes de Lomé', unread: 2 },
+  { id: 'c2', withName: 'Koffi Mensah', withInitials: 'KM', group: 'Tech & Digital Togo', unread: 0 },
+  { id: 'c3', withName: 'Afiwa Kokou', withInitials: 'AK', group: 'Artisans & Créateurs', unread: 1 },
+  { id: 'c4', withName: 'Yao Ayao', withInitials: 'YA', group: 'Agripreneurs du Togo', unread: 0 },
+];
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  from: 'me' | 'them';
+  text: string;
+  time: string;
+}
+
+export const COMMUNITY_MESSAGES: ChatMessage[] = [
+  { id: 'm1', conversationId: 'c1', from: 'them', text: 'Bonjour ! Tu cherchais un fournisseur de pagnes wax, j’en ai un fiable à Lomé.', time: '10:12' },
+  { id: 'm2', conversationId: 'c1', from: 'me', text: 'Avec plaisir, tu peux me donner son contact ?', time: '10:15' },
+  { id: 'm3', conversationId: 'c1', from: 'them', text: 'Je t’envoie ça, il livre aussi en dehors de Lomé.', time: '10:16' },
+  { id: 'm4', conversationId: 'c2', from: 'them', text: 'Salut, tu as vu le nouveau cours sur KESSIA Academy ?', time: 'hier' },
+  { id: 'm5', conversationId: 'c3', from: 'them', text: 'Il reste 2 places dans la tontine Achat pour les machines à coudre !', time: 'hier' },
+  { id: 'm6', conversationId: 'c4', from: 'me', text: 'Merci pour les contacts côté écoulement, ça a bien avancé.', time: 'il y a 2 jours' },
+];
+
+// Réponses automatiques après un message envoyé (simulation, pas d'IA
+// ni d'interlocuteur réel derrière).
+export const AUTO_REPLIES = [
+  'D’accord, merci pour le message !',
+  'Bien reçu, je regarde ça et je reviens vers toi.',
+  'Ah super, on en parle au prochain point du groupe ?',
+  'Noté, merci beaucoup 🙏',
+];
