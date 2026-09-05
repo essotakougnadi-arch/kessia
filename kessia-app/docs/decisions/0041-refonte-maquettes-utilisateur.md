@@ -396,6 +396,32 @@ refonte visuelle mais un vrai défaut fonctionnel repéré au passage
 (Playwright) : clic « Ajouter produit » → atterrit sur l'entreprise
 réelle, onglet Produits actif, modale « Ajouter un produit » ouverte.
 
+### Fait — 9 catégories Marketplace + icônes soignées
+
+Sur retour de l'utilisateur (capture des 7 pastilles) : ajout de 2
+catégories après « Agricole » pour arriver à 9 pastilles au total, et
+remplacement de **toutes** les icônes par des choix plus cohérents.
+
+- `lib/validations/marketplace.ts` : `MARKETPLACE_CATEGORIES` +
+  `ALIMENTATION_BOISSONS` (Produits alimentaires & Boissons) et
+  `VETEMENTS_ACCESSOIRES` (Vêtements & Accessoires), insérées entre
+  Agricole et Autre (qui reste le fourre-tout final). Champ
+  `MarketplaceItem.category` est un simple `String?` (pas un enum
+  Prisma) — aucune migration de schéma nécessaire.
+- Icônes revues pour l'ensemble de la rangée : 🧺 Toutes catégories,
+  🛠️ Équipement, 🧱 Matière première, 📦 Produit fini, 🤝 Service, 🌾
+  Agricole, 🍽️ Alimentation & Boissons, 👗 Vêtements & Accessoires, 🏷️
+  Autre.
+- i18n FR+EN pour les 2 nouvelles catégories. `sell-client.tsx` (menu
+  déroulant à la mise en vente) et l'API (`z.enum`) suivent
+  automatiquement la même liste — aucun autre fichier à toucher.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `vitest` (**174**,
+inchangé) + `build` OK. `e2e/marketplace-cart.spec.ts` : 1/1 au vert.
+Vérifié visuellement (Playwright) : 9 pastilles alignées avec les
+nouvelles icônes, filtrage réel testé sur « Vêtements & Accessoires »
+(état vide correct).
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

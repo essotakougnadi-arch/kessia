@@ -3,6 +3,18 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Marketplace : 9 catégories + icônes soignées (ADR 0041)
+
+### Modifié
+- `MARKETPLACE_CATEGORIES` +2 (Produits alimentaires & Boissons,
+  Vêtements & Accessoires), insérées après Agricole → **9 pastilles**
+  au total. Toutes les icônes de la rangée revues (🧺🛠️🧱📦🤝🌾🍽️👗🏷️).
+  Aucune migration de schéma (`category` est un `String?`).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**) + `build` OK.
+  `e2e/marketplace-cart.spec.ts` : 1/1 au vert.
+
 ## [Non publié] — Correction : actions rapides Business (ADR 0041)
 
 ### Corrigé

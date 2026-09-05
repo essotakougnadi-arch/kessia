@@ -20,13 +20,16 @@ function fcfa(c: string) {
 // Icônes de catégorie (refonte visuelle — remplace le <select> texte
 // par une rangée de pastilles, comme sur les maquettes).
 const CATEGORY_ICONS: Record<string, string> = {
-  EQUIPEMENT: '🔧',
-  MATIERE_PREMIERE: '🧵',
+  EQUIPEMENT: '🛠️',
+  MATIERE_PREMIERE: '🧱',
   PRODUIT_FINI: '📦',
-  SERVICE: '🛎️',
+  SERVICE: '🤝',
   AGRICOLE: '🌾',
-  AUTRE: '🔹',
+  ALIMENTATION_BOISSONS: '🍽️',
+  VETEMENTS_ACCESSOIRES: '👗',
+  AUTRE: '🏷️',
 };
+const ALL_CATEGORIES_ICON = '🧺';
 
 export default function MarketplaceClient() {
   const t = useT();
@@ -85,7 +88,7 @@ export default function MarketplaceClient() {
           className={`${styles.categoryChip} ${!category ? styles.categoryChipActive : ''}`}
           onClick={() => setCategory('')}
         >
-          <span className={styles.categoryIcon}>🗂️</span>
+          <span className={styles.categoryIcon}>{ALL_CATEGORIES_ICON}</span>
           {t('market.allCategories')}
         </button>
         {MARKETPLACE_CATEGORIES.map((c) => (

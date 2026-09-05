@@ -170,6 +170,8 @@ export const fr = {
       PRODUIT_FINI: 'Produit fini',
       SERVICE: 'Service',
       AGRICOLE: 'Agricole',
+      ALIMENTATION_BOISSONS: 'Produits alimentaires & Boissons',
+      VETEMENTS_ACCESSOIRES: 'Vêtements & Accessoires',
       AUTRE: 'Autre',
     },
     orderStatus: {

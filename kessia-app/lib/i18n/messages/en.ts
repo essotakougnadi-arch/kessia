@@ -171,6 +171,8 @@ export const en: Catalog = {
       PRODUIT_FINI: 'Finished product',
       SERVICE: 'Service',
       AGRICOLE: 'Agricultural',
+      ALIMENTATION_BOISSONS: 'Food & Beverages',
+      VETEMENTS_ACCESSOIRES: 'Clothing & Accessories',
       AUTRE: 'Other',
     },
     orderStatus: {
