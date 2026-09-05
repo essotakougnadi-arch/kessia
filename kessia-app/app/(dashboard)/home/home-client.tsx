@@ -155,19 +155,19 @@ export default function HomeClient() {
 
           <div className={styles.cardActions}>
             <Link href="/wallet?action=send" className={styles.cardAction} id="btn-envoyer">
-              <div className={styles.cardActionIcon}>➡️</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(96,165,250,0.28)' }}>💸</div>
               <span>{t('wallet.send')}</span>
             </Link>
             <Link href="/wallet?action=receive" className={styles.cardAction} id="btn-recevoir">
-              <div className={styles.cardActionIcon}>⬇️</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(74,222,128,0.28)' }}>💰</div>
               <span>{t('wallet.receive')}</span>
             </Link>
             <Link href="/wallet?action=deposit" className={styles.cardAction} id="btn-recharger">
-              <div className={styles.cardActionIcon}>⬆️</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(250,204,21,0.28)' }}>💳</div>
               <span>{t('wallet.topUp')}</span>
             </Link>
             <Link href="/tontine" className={styles.cardAction} id="btn-tontine-quick">
-              <div className={styles.cardActionIcon}>🔄</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(196,181,253,0.32)' }}>🤝</div>
               <span>{t('nav.tontines')}</span>
             </Link>
           </div>

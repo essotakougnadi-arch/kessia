@@ -443,6 +443,7 @@ export const fr = {
     recipientPhone: 'Téléphone du destinataire',
     invalidRecipient: 'Numéro de téléphone du destinataire invalide.',
     insufficientBalance: 'Solde insuffisant pour ce transfert.',
+    balanceStillLoading: 'Votre solde est encore en cours de chargement — réessayez dans un instant.',
     note: 'Note (optionnel)',
     notePlaceholder: 'Ex. Remboursement déjeuner',
   },

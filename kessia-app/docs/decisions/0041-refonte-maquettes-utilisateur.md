@@ -422,6 +422,49 @@ Vérifié visuellement (Playwright) : 9 pastilles alignées avec les
 nouvelles icônes, filtrage réel testé sur « Vêtements & Accessoires »
 (état vide correct).
 
+### Fait — Icônes Envoyer/Recevoir/Recharger/Tontines (accueil + wallet)
+
+Sur retour utilisateur (capture de la carte de solde) : les 4 actions
+rapides utilisaient des flèches génériques (➡️⬇️⬆️🔄), toutes de la même
+couleur bleutée, peu différenciées visuellement.
+
+- `home-client.tsx` : 💸 Envoyer (fond bleu), 💰 Recevoir (fond vert),
+  💳 Recharger (fond or), 🤝 Tontines (fond violet) — un fond de
+  couleur distinct par action (`.cardActionIcon` reste la même classe,
+  couleur en style inline par action).
+- `wallet-client.tsx` (`QUICK_ACTIONS`) : mêmes icônes pour Recharger/
+  Envoyer/Recevoir (cohérence entre les deux écrans) + 🏧 pour Retirer
+  (au lieu de ⏬).
+
+### Corrigé au passage — course de chargement du solde (transfert)
+
+En vérifiant le transfert par E2E, un **vrai bug** est apparu (sans
+rapport avec les icônes) : ouvrir la modale « Envoyer » et soumettre
+très vite pouvait rejeter un transfert parfaitement valide avec
+« Solde insuffisant », alors que le solde réel était largement
+suffisant. Cause : le libellé « Solde disponible : » de la modale
+s'affiche immédiatement (texte statique), avant que `wallet.balance`
+ait fini de charger — la validation `value > balance` comparait alors
+au solde par défaut (0), pas au vrai solde. Un utilisateur rapide (ou
+un test E2E) pouvait déclencher ce faux rejet ; le risque grandit avec
+la latence réseau/DB (documentée plus haut, pool Supabase à 15
+connexions).
+
+- `TransferForm` reçoit désormais `balanceLoading` (état de chargement
+  du wallet) : tant que le solde n'est pas chargé, la soumission
+  affiche « Votre solde est encore en cours de chargement » au lieu de
+  comparer à un solde à 0 ; le libellé « Solde disponible » affiche
+  aussi cet état plutôt que « 0 FCFA ».
+- `e2e/wallet.spec.ts` renforcé : attend le **solde chiffré réel**
+  affiché dans la modale (pas seulement le libellé) avant de soumettre
+  — élimine la source de flakiness pour ce test.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK.
+`e2e/wallet.spec.ts` + `e2e/navigation.spec.ts` : **9/9 au vert**, y
+compris le test de transfert qui échouait de manière reproductible
+avant cette correction. Vérifié visuellement (Playwright) : 4 icônes
+colorées et distinctes sur `/home`, cohérentes sur `/wallet`.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

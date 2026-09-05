@@ -29,10 +29,10 @@ type ActionKey = 'deposit' | 'send' | 'receive' | 'withdraw' | 'airtime' | 'save
 type TxFilter = 'all' | 'CREDIT' | 'DEBIT';
 
 const QUICK_ACTIONS: { icon: string; labelKey: string; key: ActionKey; id: string }[] = [
-  { icon: '⬆️', labelKey: 'wallet.topUp', key: 'deposit', id: 'btn-deposit' },
-  { icon: '➡️', labelKey: 'wallet.send', key: 'send', id: 'btn-send' },
-  { icon: '⬇️', labelKey: 'wallet.receive', key: 'receive', id: 'btn-receive' },
-  { icon: '⏬', labelKey: 'wallet.withdraw', key: 'withdraw', id: 'btn-withdraw' },
+  { icon: '💳', labelKey: 'wallet.topUp', key: 'deposit', id: 'btn-deposit' },
+  { icon: '💸', labelKey: 'wallet.send', key: 'send', id: 'btn-send' },
+  { icon: '💰', labelKey: 'wallet.receive', key: 'receive', id: 'btn-receive' },
+  { icon: '🏧', labelKey: 'wallet.withdraw', key: 'withdraw', id: 'btn-withdraw' },
   { icon: '📱', labelKey: 'wallet.airtime', key: 'airtime', id: 'btn-airtime' },
   { icon: '💎', labelKey: 'wallet.savings', key: 'save', id: 'btn-save' },
 ];
@@ -273,6 +273,7 @@ export default function WalletClient() {
         <TransferForm
           currency={currency}
           balance={wallet?.balance ?? 0}
+          balanceLoading={isLoading}
           onSubmit={transfer}
           onDone={(msg) => {
             addToast({ type: 'success', message: msg });
@@ -541,11 +542,13 @@ function DepositForm({
 function TransferForm({
   currency,
   balance,
+  balanceLoading,
   onSubmit,
   onDone,
 }: {
   currency: string;
   balance: number;
+  balanceLoading: boolean;
   onSubmit: (phone: string, amount: number, description?: string) => Promise<{ success: boolean; message: string }>;
   onDone: (message: string) => void;
 }) {
@@ -564,6 +567,13 @@ function TransferForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    // Le solde n'a peut-être pas encore fini de charger (ouverture très
+    // rapide de la modale) — attendre plutôt que de comparer à un solde
+    // encore à 0, ce qui rejetterait à tort un transfert valide.
+    if (balanceLoading) {
+      setError(t('wallet.balanceStillLoading'));
+      return;
+    }
     const value = Number(amount);
     const phoneRaw = phone.replace(/\s/g, '');
     if (phoneRaw.length < 8) {
@@ -623,7 +633,9 @@ function TransferForm({
           <span className={styles.currencySuffix}>{fcfa(currency)}</span>
         </div>
         <p className={styles.modalHint}>
-          {t('wallet.balanceLine', { amount: formatNumber(balance), currency: fcfa(currency) })}
+          {balanceLoading
+            ? t('wallet.balanceStillLoading')
+            : t('wallet.balanceLine', { amount: formatNumber(balance), currency: fcfa(currency) })}
         </p>
       </div>
 

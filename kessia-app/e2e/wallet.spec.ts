@@ -37,7 +37,9 @@ test('un transfert vers un numéro inconnu est refusé', async ({ page }) => {
   await page.locator('#btn-send').click();
 
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByText(/Solde disponible :/i)).toBeVisible();
+  // Attend le VRAI solde chiffré (pas juste le libellé statique) pour ne
+  // pas soumettre pendant la fenêtre où le solde affiché vaut encore 0.
+  await expect(dialog.getByText(/Solde disponible : [\d\s]+ FCFA/i)).toBeVisible({ timeout: 10_000 });
   await dialog.locator('#transfer-phone').fill('99999999');
   await dialog.locator('#transfer-amount').fill('100');
   await dialog.getByRole('button', { name: /^Envoyer$/ }).click();

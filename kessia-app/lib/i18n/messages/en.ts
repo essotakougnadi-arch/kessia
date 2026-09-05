@@ -443,6 +443,7 @@ export const en: Catalog = {
     recipientPhone: 'Recipient’s phone',
     invalidRecipient: 'Invalid recipient phone number.',
     insufficientBalance: 'Insufficient balance for this transfer.',
+    balanceStillLoading: 'Your balance is still loading — try again in a moment.',
     note: 'Note (optional)',
     notePlaceholder: 'e.g. Lunch reimbursement',
   },

@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Icônes accueil/wallet + correction transfert (ADR 0041)
+
+### Modifié
+- Accueil et Wallet : icônes des actions rapides revues — 💸 Envoyer,
+  💰 Recevoir, 💳 Recharger, 🤝 Tontines (accueil, fonds colorés
+  distincts) ; mêmes icônes + 🏧 Retirer sur `/wallet`.
+
+### Corrigé
+- **Bug de course** : soumettre un transfert très vite après ouverture
+  de la modale pouvait le rejeter à tort (« Solde insuffisant ») car le
+  solde n'avait pas fini de charger. `TransferForm` attend maintenant
+  explicitement la fin du chargement avant de comparer au solde.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `build` OK. `e2e/wallet.spec.ts` +
+  `e2e/navigation.spec.ts` : 9/9 au vert (le test de transfert, qui
+  échouait de façon reproductible, passe désormais).
+
 ## [Non publié] — Marketplace : 9 catégories + icônes soignées (ADR 0041)
 
 ### Modifié
