@@ -3,6 +3,20 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Refonte visuelle : cadran KESSIA Score (ADR 0041)
+
+### Modifié
+- `/profile/score` : la barre horizontale du hero est remplacée par un
+  **cadran demi-cercle rouge→jaune→vert avec aiguille** (SVG), dans
+  l'esprit des maquettes utilisateur. Aucun texte ni donnée affectée.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `build` OK. `e2e/navigation.spec.ts`
+  (couvre `/profile/score`) : 6/6 au vert. (Une instabilité du pool de
+  connexions Supabase — `max clients reached, pool_size: 15` — a
+  provoqué des échecs aléatoires sur d'autres specs sans rapport ce
+  jour-là ; voir ADR 0041.)
+
 ## [Non publié] — Panier multi-articles Marketplace (ADR 0041, 3/7 — dernier item)
 
 ### Ajouté

@@ -293,6 +293,41 @@ et ne rencontre pas ce cas. Confirmé sans lien de code en inspectant le
 message d'erreur exact et les fichiers modifiés (aucun ne touche au
 support/tickets).
 
+## Refonte visuelle — démarrage (2026-09-05)
+
+Après audit rapide du code réel (pas seulement des captures d'écran),
+constat important : `/home`, `/wallet` et `/tontine` correspondent déjà
+très bien aux maquettes (carte de solde en dégradé, actions rapides,
+grille de services, cartes tontine avec barre de progression, jauge
+circulaire du Score déjà présente en mini-badge sur l'accueil). Le
+travail de refonte visuelle porte donc sur les **écarts réels**,
+identifiés au cas par cas, plutôt que sur une réécriture générale à
+l'aveugle — plus sûr et plus rapide.
+
+### Fait — Cadran KESSIA Score
+
+`/profile/score` utilisait une simple barre horizontale. Remplacée par
+un cadran demi-cercle rouge→jaune→vert avec aiguille (`ScoreGauge` dans
+`score-client.tsx`, SVG pur, `pathLength` pour l'arc de progression),
+dans l'esprit de l'Affiche 3 des maquettes. Le chiffre, le libellé de
+palier et le texte de composition du score restent identiques (aucun
+texte affecté, seul l'habillage visuel du hero change) — `.track`/
+`.fill` (barre) supprimés du CSS, remplacés par `.gauge`.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK.
+`e2e/navigation.spec.ts` (couvre `/profile/score`) : **6/6 au vert** en
+exécution isolée. Une suite E2E complète lancée en parallèle a échoué
+deux fois de suite avec des tests différents à chaque fois
+(`admin`, `growth-simulator`, `tontine.spec`, `trust-fraud-calendar`,
+`wallet`, `support-attachments`) — diagnostiqué et confirmé par le
+message d'erreur serveur exact :
+`FATAL: max clients reached in session mode - max clients are limited
+to pool_size: 15` (épuisement du pool de connexions Supabase après de
+très nombreuses exécutions de suite E2E + serveurs locaux dans cette
+session). **Sans lien avec ce changement** — capture d'écran visuelle
+et test ciblé passés avec succès. À surveiller si récurrent : le pool
+à 15 connexions est aussi celui de la production démo.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·
