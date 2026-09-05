@@ -97,6 +97,7 @@ export const en: Catalog = {
     sell: 'Sell',
     searchPlaceholder: 'Search an item…',
     allCategories: 'All categories',
+    popularProducts: 'Popular products',
     tontineOnly: 'Payable by tontine',
     empty: 'No items yet.',
     sellFirst: 'List the first item',

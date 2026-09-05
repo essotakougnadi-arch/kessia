@@ -347,6 +347,28 @@ exécution isolée. Vérifié visuellement (Playwright) : arc proportionnel
 correct (73/9/8/7/2 % testés), légende alignée, aucune régression sur
 le reste de l'onglet (KPI, produits phares, recommandations inchangés).
 
+### Fait — Catégories en pastilles (Marketplace)
+
+L'utilisateur a envoyé une capture de `/marketplace` en l'état : le
+filtre de catégorie était un `<select>` texte, très éloigné des
+pastilles d'icônes visibles sur les maquettes. Corrigé :
+
+- Rangée de **pastilles catégorie avec icône** (🔧 Équipement, 🧵
+  Matière première, 📦 Produit fini, 🛎️ Service, 🌾 Agricole, 🔹
+  Autre) + « Toutes les catégories », défilement horizontal sur
+  mobile. Remplace le `<select>` (retiré, plus utilisé).
+- Titre de section **« Produits populaires »** (ou le nom de la
+  catégorie active) ajouté au-dessus de la grille, comme sur la
+  maquette — absent auparavant.
+- Aucune donnée ni logique de filtrage changée : même hook
+  `useMarketplaceList`, mêmes catégories `MARKETPLACE_CATEGORIES`.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK.
+`e2e/marketplace-cart.spec.ts` : 1/1 au vert (le panier ne dépend pas
+du sélecteur retiré). Vérifié visuellement (Playwright, desktop et
+mobile) : pastilles, bascule active/inactive, filtrage fonctionnel
+(testé sur la catégorie « Agricole », état vide correctement affiché).
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

@@ -17,6 +17,17 @@ function fcfa(c: string) {
   return c === 'XOF' || c === 'XAF' ? 'FCFA' : c;
 }
 
+// Icônes de catégorie (refonte visuelle — remplace le <select> texte
+// par une rangée de pastilles, comme sur les maquettes).
+const CATEGORY_ICONS: Record<string, string> = {
+  EQUIPEMENT: '🔧',
+  MATIERE_PREMIERE: '🧵',
+  PRODUIT_FINI: '📦',
+  SERVICE: '🛎️',
+  AGRICOLE: '🌾',
+  AUTRE: '🔹',
+};
+
 export default function MarketplaceClient() {
   const t = useT();
   const addToast = useUiStore((s) => s.addToast);
@@ -63,17 +74,35 @@ export default function MarketplaceClient() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select className={`input ${styles.select}`} value={category} onChange={(e) => setCategory(e.target.value)}>
-          <option value="">{t('market.allCategories')}</option>
-          {MARKETPLACE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{t(`market.category.${c}`, c)}</option>
-          ))}
-        </select>
         <label className={styles.toggle}>
           <input type="checkbox" checked={tontine} onChange={(e) => setTontine(e.target.checked)} />
           {t('market.tontineOnly')}
         </label>
       </div>
+
+      <div className={styles.categoryRow}>
+        <button
+          className={`${styles.categoryChip} ${!category ? styles.categoryChipActive : ''}`}
+          onClick={() => setCategory('')}
+        >
+          <span className={styles.categoryIcon}>🗂️</span>
+          {t('market.allCategories')}
+        </button>
+        {MARKETPLACE_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            className={`${styles.categoryChip} ${category === c ? styles.categoryChipActive : ''}`}
+            onClick={() => setCategory(category === c ? '' : c)}
+          >
+            <span className={styles.categoryIcon}>{CATEGORY_ICONS[c]}</span>
+            {t(`market.category.${c}`, c)}
+          </button>
+        ))}
+      </div>
+
+      <h2 className={styles.sectionTitle}>
+        {category ? t(`market.category.${category}`, category) : t('market.popularProducts')}
+      </h2>
 
       {isLoading && <div className={styles.grid}>{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className={styles.skeleton} />)}</div>}
 

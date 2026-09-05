@@ -96,6 +96,7 @@ export const fr = {
     sell: 'Vendre',
     searchPlaceholder: 'Rechercher un article…',
     allCategories: 'Toutes les catégories',
+    popularProducts: 'Produits populaires',
     tontineOnly: 'Payable par tontine',
     empty: 'Aucun article pour l’instant.',
     sellFirst: 'Mettre le premier article en vente',

@@ -3,6 +3,18 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Refonte visuelle : catégories en pastilles Marketplace (ADR 0041)
+
+### Modifié
+- `/marketplace` : le `<select>` de catégorie devient une **rangée de
+  pastilles avec icône** (défilement horizontal), plus proche des
+  maquettes. Titre de section « Produits populaires » ajouté
+  au-dessus de la grille. Aucune donnée ni logique changée.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `build` OK.
+  `e2e/marketplace-cart.spec.ts` : 1/1 au vert.
+
 ## [Non publié] — Refonte visuelle : donut de répartition du CA (ADR 0041)
 
 ### Modifié

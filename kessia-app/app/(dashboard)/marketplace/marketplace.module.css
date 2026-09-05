@@ -53,7 +53,6 @@
   align-items: center;
 }
 .search { flex: 1; min-width: 180px; }
-.select { max-width: 200px; }
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -63,6 +62,44 @@
   white-space: nowrap;
   cursor: pointer;
 }
+
+/* ── Catégories (pastilles, refonte visuelle) ─────────────── */
+.categoryRow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+}
+.categoryRow::-webkit-scrollbar { display: none; }
+.categoryChip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 76px;
+  padding: 10px 4px;
+  border-radius: 14px;
+  border: 1.5px solid var(--color-border-medium, rgba(26, 18, 9, 0.1));
+  background: var(--color-surface, #fff);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.categoryChip:hover { border-color: var(--color-primary); }
+.categoryChipActive { border-color: var(--color-primary); background: var(--color-primary-subtle); color: var(--color-primary); }
+.categoryIcon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; background: var(--color-earth, #F5EDDF);
+}
+.categoryChipActive .categoryIcon { background: var(--color-primary-light, rgba(182,90,58,0.14)); }
+
+.sectionTitle { font-size: 15px; font-weight: 800; color: var(--color-text); margin: 4px 0 0; }
 
 /* ── Grille catalogue ────────────────────── */
 .grid {
