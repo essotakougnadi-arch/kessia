@@ -6,6 +6,7 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './business.module.css';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorNote } from '@/components/ui/ErrorNote';
@@ -20,11 +21,18 @@ const SECTOR_KEYS = [
 
 export default function BusinessClient() {
   const t = useT();
+  const router = useRouter();
   const { businesses, isLoading, error, refresh, createBusiness } = useBusinesses();
   const addToast = useUiStore((s) => s.addToast);
   const [showCreate, setShowCreate] = useState(false);
 
-  const soon = () => addToast({ type: 'info', message: t('business.soon') });
+  // Une activité rapide cible la première entreprise de l'utilisateur ;
+  // sans entreprise, elle ouvre directement la création plutôt qu'un
+  // toast « bientôt disponible ».
+  function quickAction(action: 'sale' | 'product' | 'expense' | 'invoice') {
+    if (businesses.length === 0) { setShowCreate(true); return; }
+    router.push(`/business/${businesses[0].id}?action=${action}`);
+  }
 
   const totals = businesses.reduce(
     (acc, b) => ({
@@ -69,18 +77,19 @@ export default function BusinessClient() {
         </div>
       </div>
 
-      {/* Actions rapides — à venir */}
+      {/* Actions rapides — ciblent la 1ère entreprise, ou proposent d'en créer une */}
       <div className={styles.quickActions}>
-        {[
-          { icon: '➕', key: 'quickNewSale', color: 'green' },
-          { icon: '📦', key: 'quickAddProduct', color: 'primary' },
-          { icon: '💸', key: 'quickExpense', color: 'gold' },
-          { icon: '🧾', key: 'quickInvoice', color: 'primary' },
-        ].map((a) => (
+        {([
+          { icon: '➕', key: 'quickNewSale', color: 'green', action: 'sale' },
+          { icon: '📦', key: 'quickAddProduct', color: 'primary', action: 'product' },
+          { icon: '💸', key: 'quickExpense', color: 'gold', action: 'expense' },
+          { icon: '🧾', key: 'quickInvoice', color: 'primary', action: 'invoice' },
+        ] as const).map((a) => (
           <button
             key={a.key}
             className={`${styles.quickAction} ${styles[`quickAction_${a.color}`]}`}
-            onClick={soon}
+            onClick={() => quickAction(a.action)}
+            id={`btn-${a.key}`}
           >
             <div className={styles.quickActionIcon}>{a.icon}</div>
             <span className={styles.quickActionLabel}>{t(`business.${a.key}`)}</span>

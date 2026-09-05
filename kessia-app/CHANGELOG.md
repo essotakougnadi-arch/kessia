@@ -3,6 +3,20 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Correction : actions rapides Business (ADR 0041)
+
+### Corrigé
+- `/business` : les 4 tuiles « Nouvelle vente / Ajouter produit /
+  Dépense / Facture » n'affichaient qu'un toast « bientôt disponible ».
+  Elles ouvrent maintenant le bon formulaire sur la première entreprise
+  de l'utilisateur (ou proposent d'en créer une s'il n'en a pas).
+- `business-detail-client.tsx` : nouveau support de `?action=` (même
+  patron que `wallet?action=deposit`).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `build` OK.
+  `e2e/explore-crm.spec.ts` : 2/2 au vert.
+
 ## [Non publié] — Refonte visuelle : catégories en pastilles Marketplace (ADR 0041)
 
 ### Modifié

@@ -369,6 +369,33 @@ du sélecteur retiré). Vérifié visuellement (Playwright, desktop et
 mobile) : pastilles, bascule active/inactive, filtrage fonctionnel
 (testé sur la catégorie « Agricole », état vide correctement affiché).
 
+### Corrigé — culs-de-sac des actions rapides Business
+
+L'utilisateur a envoyé une capture de `/business` (compte sans
+entreprise) : les 4 tuiles **« Nouvelle vente / Ajouter produit /
+Dépense / Facture »** étaient des **culs-de-sac** — `onClick={soon}`
+affichait juste un toast « bientôt disponible », sans rapport avec la
+refonte visuelle mais un vrai défaut fonctionnel repéré au passage
+(même famille de bug que l'ex-tuile Épargne du Wallet, ADR 0041 §2).
+
+- `business-client.tsx` (liste) : `quickAction(action)` — avec des
+  entreprises existantes, route vers `/business/<première>?action=X` ;
+  sans aucune entreprise, ouvre directement la modale de création
+  plutôt qu'un message vide.
+- `business-detail-client.tsx` : nouvel effet lisant `?action=` (même
+  patron que le wallet `?action=deposit`) — ouvre le bon formulaire
+  (produit/vente/dépense/facture) sur le bon onglet dès l'arrivée sur
+  la page. Attend la fin du chargement (`b.isLoading`) avant de juger
+  `b.products` vide, pour ne pas rediriger à tort une entreprise qui a
+  déjà des produits mais dont les données arrivent encore. Pour
+  « Nouvelle vente » sans aucun produit : toast explicite au lieu d'un
+  formulaire vide plutôt que d'ouvrir un modal inutilisable.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK.
+`e2e/explore-crm.spec.ts` : 2/2 au vert. Vérifié visuellement
+(Playwright) : clic « Ajouter produit » → atterrit sur l'entreprise
+réelle, onglet Produits actif, modale « Ajouter un produit » ouverte.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

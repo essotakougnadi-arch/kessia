@@ -51,6 +51,27 @@ export default function BusinessDetailClient({ id }: { id: string }) {
   const toast = (r: { success: boolean; message: string }) =>
     addToast({ type: r.success ? 'success' : 'error', message: r.message });
 
+  // Ouvre directement le formulaire demandé depuis les actions rapides
+  // de /business (ex. ?action=sale) — même patron que le wallet
+  // (?action=deposit), pour que « Nouvelle vente »/« Ajouter produit »/
+  // « Dépense »/« Facture » ne soient plus des culs-de-sac (« bientôt
+  // disponible »). Attend la fin du chargement pour ne pas juger
+  // `b.products` vide à tort avant que les données arrivent.
+  useEffect(() => {
+    const action = params.get('action');
+    if (!action || b.isLoading) return;
+    const tabForAction: Record<string, TabKey> = { sale: 'ventes', product: 'produits', expense: 'depenses', invoice: 'factures' };
+    const nextTab = tabForAction[action];
+    if (!nextTab) return;
+    if (action === 'sale' && b.products.length === 0) {
+      addToast({ type: 'info', message: t('business.addProductsFirst') });
+    } else if (action === 'sale' || action === 'product' || action === 'expense' || action === 'invoice') {
+      setModal(action);
+    }
+    router.replace(`/business/${id}?tab=${nextTab}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, b.isLoading]);
+
   if (b.error && !b.isLoading) {
     return (
       <div className={styles.page}>
