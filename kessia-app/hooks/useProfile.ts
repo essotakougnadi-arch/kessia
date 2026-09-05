@@ -74,6 +74,7 @@ export function useProfile() {
     bio?: string;
     language?: 'fr' | 'en';
     userType?: UserType;
+    avatar?: string;
     notifications?: Partial<NotificationPrefs>;
   }): Promise<ActionResult> {
     const result = toActionResult(await apiSend('/api/v1/profile', 'PATCH', payload));

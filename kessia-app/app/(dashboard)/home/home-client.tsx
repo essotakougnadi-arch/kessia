@@ -4,6 +4,7 @@
 // Solde, tontines et activités branchés sur l'API
 // ============================================================
 
+import { useState } from 'react';
 import Link from 'next/link';
 import styles from './home.module.css';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
@@ -72,6 +73,7 @@ export default function HomeClient() {
 
   const meta = useUserTypeMeta().get(profile?.profile.userType ?? 'INDIVIDUAL');
   const services = orderServices(meta.focus);
+  const [servicesOpen, setServicesOpen] = useState(false);
   const growthNext = (growthPlan?.steps ?? []).filter((s) => s.status === 'DOING' || s.status === 'TODO').slice(0, 2);
 
   const firstName = user?.firstName ?? '';
@@ -105,7 +107,12 @@ export default function HomeClient() {
               <span className={styles.notifDot} />
             </Link>
             <Link href="/profile" className={styles.avatarLink} id="btn-home-profile">
-              <div className={styles.avatar}>{initials(user?.firstName, user?.lastName)}</div>
+              <div className={styles.avatar}>
+                {profile?.profile.avatar
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={profile.profile.avatar} alt="" className={styles.avatarImg} />
+                  : initials(user?.firstName, user?.lastName)}
+              </div>
             </Link>
           </div>
         </div>
@@ -123,14 +130,30 @@ export default function HomeClient() {
           <div className={styles.balanceInner}>
             <div className={styles.balanceLabelRow}>
               <span className={styles.balanceLabel}>{t('home.totalBalance')}</span>
-              <button
-                className={styles.eyeBtn}
-                id="btn-toggle-balance"
-                onClick={toggleBalance}
-                aria-label={isBalanceVisible ? t('home.hideBalance') : t('home.showBalance')}
-              >
-                {isBalanceVisible ? '👁' : '🙈'}
-              </button>
+              <div className={styles.balanceLabelActions}>
+                <Link
+                  href="/wallet?action=receive"
+                  className={styles.qrBtn}
+                  id="btn-home-qr"
+                  aria-label={t('wallet.receive')}
+                  title={t('wallet.receive')}
+                >
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                    <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" />
+                  </svg>
+                </Link>
+                <button
+                  className={styles.eyeBtn}
+                  id="btn-toggle-balance"
+                  onClick={toggleBalance}
+                  aria-label={isBalanceVisible ? t('home.hideBalance') : t('home.showBalance')}
+                >
+                  {isBalanceVisible ? '👁' : '🙈'}
+                </button>
+              </div>
             </div>
             <div className={styles.balanceAmountRow}>
               <span className={`${styles.balanceAmount} ${walletLoading ? styles.skeleton : ''}`}>
@@ -171,6 +194,33 @@ export default function HomeClient() {
               <span>{t('nav.tontines')}</span>
             </Link>
           </div>
+
+          {servicesOpen && (
+            <div className={styles.cardServices}>
+              <div className={styles.cardServicesTitle}>{t('home.quickActions')}</div>
+              <div className={styles.cardServicesGrid}>
+                {services.map((svc) => (
+                  <Link key={svc.id} href={svc.href} className={styles.cardService} id={`btn-svc-${svc.id}`}>
+                    <div className={styles.cardServiceIcon}><span>{svc.icon}</span></div>
+                    <span className={styles.cardServiceLabel}>{t(svc.labelKey)}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className={`${styles.servicesToggle} ${servicesOpen ? styles.servicesToggleOpen : ''}`}
+            onClick={() => setServicesOpen((v) => !v)}
+            id="btn-toggle-services"
+            aria-expanded={servicesOpen}
+            aria-label={servicesOpen ? t('home.hideServices') : t('home.showServices')}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
         </div>
       </section>
 
@@ -226,23 +276,6 @@ export default function HomeClient() {
           </div>
         </section>
       )}
-
-      {/* ═══ SERVICES RAPIDES ═══ */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>{t('home.quickActions')}</h2>
-        </div>
-        <div className={styles.servicesGrid}>
-          {services.map((svc) => (
-            <Link key={svc.id} href={svc.href} className={styles.serviceItem} id={`btn-svc-${svc.id}`}>
-              <div className={styles.serviceIcon} style={{ background: svc.bg }}>
-                <span>{svc.icon}</span>
-              </div>
-              <span className={styles.serviceLabel}>{t(svc.labelKey)}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
 
       {/* ═══ KESSIA SCORE ═══ */}
       {kessiaScore && (

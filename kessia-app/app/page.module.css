@@ -40,18 +40,23 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 20px;
   flex: 1;
+  justify-content: center;
 }
 
 .navLink {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: #4B4035;
   text-decoration: none;
   transition: color 0.2s;
   position: relative;
+  white-space: nowrap;
 }
+
+/* Cible d'ancre : décalage pour ne pas passer sous l'en-tête collant */
+.railAnchor { scroll-margin-top: 88px; }
 .navLink:hover { color: #B65A3A; }
 .navLink::after {
   content: '';
@@ -89,6 +94,34 @@
   border-radius: 1px;
   transition: all 0.2s;
 }
+.menuBtnOpen span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menuBtnOpen span:nth-child(2) { opacity: 0; }
+.menuBtnOpen span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Menu mobile déroulant ── */
+.mobileMenu {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 24px 16px;
+  border-top: 1px solid rgba(26, 18, 9, 0.08);
+  background: rgba(255, 255, 255, 0.98);
+}
+.mobileMenuLink {
+  padding: 12px 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1A1209;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(26, 18, 9, 0.06);
+}
+.mobileMenuLink:active { color: #B65A3A; }
+.mobileMenuActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.mobileMenuActions > * { flex: 1; text-align: center; }
 
 /* ═══════════════════════════════════════
    HERO
@@ -122,6 +155,77 @@
   align-items: center;
   position: relative;
   z-index: 1;
+}
+
+/* ── Flèche « découvrir la suite » (bas du hero) ── */
+.scrollCue {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: #8C7A67;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.scrollCue:hover { color: #B65A3A; }
+.scrollCueArrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(26, 18, 9, 0.16);
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  animation: kessia-bounce 1.8s ease-in-out infinite;
+}
+.scrollCue:hover .scrollCueArrow { border-color: #B65A3A; }
+@keyframes kessia-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+/* ── Bouton « revenir en haut » (flottant) ── */
+.toTop {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 90;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #B65A3A;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  text-decoration: none;
+  box-shadow: 0 10px 26px -8px rgba(182, 90, 58, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity 0.25s, transform 0.25s, visibility 0.25s;
+}
+.toTop:hover { background: #8C4329; }
+.toTopVisible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollCueArrow { animation: none; }
 }
 
 /* Left */
@@ -689,7 +793,9 @@
   .nav { display: none; }
   .headerActions { display: none; }
   .menuBtn { display: flex; }
-  .hero { padding: 40px 20px; min-height: auto; }
+  .mobileMenu { display: flex; }
+  .hero { padding: 40px 20px 92px; min-height: auto; }
+  .scrollCue { bottom: 30px; }
   .heroTitle { font-size: 36px; letter-spacing: -1px; }
   .heroActions { flex-direction: column; }
   .featuresGrid { grid-template-columns: 1fr; }

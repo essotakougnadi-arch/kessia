@@ -3,10 +3,11 @@
 // KESSIA — Profil (Client Component)
 // ============================================================
 
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './profile.module.css';
+import { compressImage } from '@/lib/files/compress-image';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { Modal } from '@/components/ui/Modal';
@@ -59,6 +60,8 @@ export default function ProfileClient() {
   const [typeModal, setTypeModal] = useState(false);
 
   const { profile, isLoading, error, refresh, updateProfile } = useProfile();
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const { kyc } = useKyc();
   const { stats } = useWallet();
   const { tontines } = useTontines();
@@ -95,6 +98,30 @@ export default function ProfileClient() {
     if (r.success) refresh();
   }
 
+  async function onAvatarFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addToast({ type: 'error', message: t('profile.photoInvalid') });
+      return;
+    }
+    setAvatarBusy(true);
+    try {
+      const dataUrl = await compressImage(file, 360, 0.8);
+      const r = await updateProfile({ avatar: dataUrl });
+      addToast({
+        type: r.success ? 'success' : 'error',
+        message: r.success ? t('profile.photoUpdated') : r.message,
+      });
+      if (r.success) refresh();
+    } catch {
+      addToast({ type: 'error', message: t('profile.photoInvalid') });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   function chooseLocale(l: Locale) {
     setLocale(l);
     setLocaleModal(false);
@@ -116,15 +143,28 @@ export default function ProfileClient() {
 
         <div className={styles.avatarWrapper}>
           <div className={styles.avatarRing}>
-            <div className={styles.avatar}>{initials(profile?.firstName, profile?.lastName)}</div>
+            <div className={styles.avatar}>
+              {profile?.profile.avatar
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={profile.profile.avatar} alt="" className={styles.avatarImg} />
+                : initials(profile?.firstName, profile?.lastName)}
+            </div>
           </div>
+          <input
+            ref={avatarInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={onAvatarFile}
+          />
           <button
             className={styles.avatarEdit}
             id="btn-edit-avatar"
             aria-label={t('profile.editPhoto')}
-            onClick={() => addToast({ type: 'info', message: t('profile.photoSoon') })}
+            disabled={avatarBusy}
+            onClick={() => avatarInput.current?.click()}
           >
-            📷
+            {avatarBusy ? '…' : '📷'}
           </button>
         </div>
 

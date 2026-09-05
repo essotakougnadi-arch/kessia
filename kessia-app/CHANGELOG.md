@@ -3,6 +3,30 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Page publique : navigation + carte de solde dépliable + photo de profil (ADR 0041)
+
+### Ajouté
+- **Page publique** : 2 liens de navigation « Tontines ouvertes en ce
+  moment » et « La marketplace de la communauté » (avant « Contact »),
+  défilement doux vers les rails correspondants (ancres
+  `#tontines-ouvertes` / `#marketplace-communaute`). Flèche « Découvrir
+  la suite » en bas du hero + bouton flottant « Revenir en haut » après
+  ~700 px de défilement. **Menu mobile hamburger enfin fonctionnel**
+  (il n'avait aucun `onClick` — navigation inaccessible sur mobile).
+- **Accueil** : chevron en V au bas de la carte de solde qui **déplie
+  la carte** pour montrer tous les services ; la section autonome
+  « Services rapides » est retirée (ses tuiles passent dans la carte).
+  Icône QR à côté du solde → écran « Recevoir ».
+- **Photo de profil** : le bouton 📷 de `/profile` ouvre un vrai
+  sélecteur de fichier (compression client → `PATCH /api/v1/profile`).
+  L'avatar (accueil + profil) affiche la photo si elle existe ; l'avatar
+  de l'accueil devient circulaire.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**) + `build` OK.
+  `e2e` navigation + auth : 11/11 au vert. Upload de photo testé de
+  bout en bout (persistée, présente après rechargement).
+
 ## [Non publié] — Icônes accueil/wallet + correction transfert (ADR 0041)
 
 ### Modifié

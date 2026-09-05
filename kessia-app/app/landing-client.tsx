@@ -4,6 +4,7 @@
 // Traduite FR / EN (§38). La <metadata> reste côté serveur (page.tsx).
 // ============================================================
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
@@ -13,12 +14,23 @@ import { useT } from '@/lib/i18n';
 
 export default function LandingClient() {
   const t = useT();
+  const [showTop, setShowTop] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 700);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const navLinks = [
     { key: 'navHome', anchor: '#accueil' },
     { key: 'navAgencies', anchor: '#agences' },
     { key: 'navServices', anchor: '#services' },
     { key: 'navResources', anchor: '#ressources' },
+    { key: 'navOpenTontines', anchor: '#tontines-ouvertes' },
+    { key: 'navCommunityMarket', anchor: '#marketplace-communaute' },
     { key: 'navContact', anchor: '#contact' },
   ] as const;
 
@@ -97,10 +109,39 @@ export default function LandingClient() {
             </Link>
           </div>
 
-          <button className={styles.menuBtn} id="btn-mobile-menu" aria-label={t('landing.menu')}>
+          <button
+            className={`${styles.menuBtn} ${menuOpen ? styles.menuBtnOpen : ''}`}
+            id="btn-mobile-menu"
+            aria-label={t('landing.menu')}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
             <span /><span /><span />
           </button>
         </div>
+
+        {menuOpen && (
+          <div className={styles.mobileMenu} id="mobile-menu">
+            {navLinks.map((link) => (
+              <a
+                key={link.key}
+                href={link.anchor}
+                className={styles.mobileMenuLink}
+                onClick={() => setMenuOpen(false)}
+              >
+                {t(`landing.${link.key}`)}
+              </a>
+            ))}
+            <div className={styles.mobileMenuActions}>
+              <Link href="/login" className="btn btn-ghost btn-sm" onClick={() => setMenuOpen(false)}>
+                {t('landing.login')}
+              </Link>
+              <Link href="/onboarding" className="btn btn-primary btn-sm" onClick={() => setMenuOpen(false)}>
+                {t('landing.start')}
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ═══ HERO ═══ */}
@@ -197,6 +238,11 @@ export default function LandingClient() {
             </div>
           </div>
         </div>
+
+        <a href="#services" className={styles.scrollCue} aria-label={t('landing.scrollDown')}>
+          <span>{t('landing.scrollDown')}</span>
+          <span className={styles.scrollCueArrow} aria-hidden>↓</span>
+        </a>
       </section>
 
       {/* ═══ STATS ═══ */}
@@ -248,10 +294,14 @@ export default function LandingClient() {
       </section>
 
       {/* ═══ DÉCOUVERTE — tontines ouvertes + marketplace ═══ */}
-      <section className={styles.discover} id="tontines-ouvertes">
+      <section className={styles.discover} id="decouverte">
         <div className={styles.discoverInner} style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
-          <DiscoveryRail context="landing" limit={12} autoScroll />
-          <MarketplaceRail source="discover" limit={12} autoScroll />
+          <div id="tontines-ouvertes" className={styles.railAnchor}>
+            <DiscoveryRail context="landing" limit={12} autoScroll />
+          </div>
+          <div id="marketplace-communaute" className={styles.railAnchor}>
+            <MarketplaceRail source="discover" limit={12} autoScroll />
+          </div>
         </div>
       </section>
 
@@ -302,6 +352,15 @@ export default function LandingClient() {
           <p>{t('landing.footerMade')}</p>
         </div>
       </footer>
+
+      <a
+        href="#accueil"
+        className={`${styles.toTop} ${showTop ? styles.toTopVisible : ''}`}
+        aria-label={t('landing.backToTop')}
+        title={t('landing.backToTop')}
+      >
+        ↑
+      </a>
     </div>
   );
 }

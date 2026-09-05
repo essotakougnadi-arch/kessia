@@ -23,6 +23,11 @@ const updateProfileSchema = z.object({
   bio: z.string().max(500).optional(),
   language: z.enum(['fr', 'en']).optional(),
   userType: z.enum(MVP_USER_TYPE_KEYS).optional(),
+  avatar: z
+    .string()
+    .max(1_500_000, 'Image trop lourde (compressez-la).')
+    .regex(/^(data:image\/(jpeg|png|webp);base64,.+|)$/, 'Image invalide.')
+    .optional(),
   notifications: z
     .object({
       notifyPayment: z.boolean().optional(),
@@ -96,7 +101,7 @@ export async function PATCH(request: NextRequest) {
     const parsed = updateProfileSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
-    const { firstName, lastName, email, city, profession, bio, language, userType, notifications } = parsed.data;
+    const { firstName, lastName, email, city, profession, bio, language, userType, avatar, notifications } = parsed.data;
 
     const userData: Record<string, unknown> = {};
     if (firstName !== undefined) userData.firstName = firstName;
@@ -104,6 +109,7 @@ export async function PATCH(request: NextRequest) {
     if (email !== undefined) userData.email = email === '' ? null : email;
 
     const profileData: Record<string, unknown> = {};
+    if (avatar !== undefined) profileData.avatar = avatar === '' ? null : avatar;
     if (city !== undefined) profileData.city = city;
     if (profession !== undefined) profileData.profession = profession;
     if (bio !== undefined) profileData.bio = bio;
@@ -144,6 +150,7 @@ export async function PATCH(request: NextRequest) {
         lastName: user.lastName,
         email: user.email,
         profile: {
+          avatar: user.profile?.avatar ?? null,
           city: user.profile?.city ?? null,
           profession: user.profile?.profession ?? null,
           bio: user.profile?.bio ?? null,

@@ -465,6 +465,88 @@ compris le test de transfert qui échouait de manière reproductible
 avant cette correction. Vérifié visuellement (Playwright) : 4 icônes
 colorées et distinctes sur `/home`, cohérentes sur `/wallet`.
 
+### Fait — Page publique : navigation vers les rails + repères de défilement
+
+Sur retour utilisateur (captures de la barre de navigation et du hero) :
+
+- **2 liens de navigation** ajoutés avant « Contact » : « Tontines
+  ouvertes en ce moment » et « La marketplace de la communauté ». Ils
+  défilent en douceur vers leurs sections respectives — nouveaux
+  ancres `#tontines-ouvertes` (sur le `DiscoveryRail`) et
+  `#marketplace-communaute` (sur le `MarketplaceRail`), avec
+  `scroll-margin-top` pour ne pas passer sous l'en-tête collant. La
+  barre de nav a été légèrement resserrée (gap 28→20 px, police
+  14→13 px, `white-space: nowrap`) pour absorber les libellés plus
+  longs.
+- **Flèche « Découvrir la suite »** en bas du hero (`.scrollCue`,
+  pastille ronde avec ↓ qui rebondit doucement, `prefers-reduced-motion`
+  respecté) — clic → défile vers la section suivante.
+- **Bouton flottant « Revenir en haut »** (`.toTop`, pastille
+  terracotta en bas à droite) qui apparaît après ~700 px de
+  défilement — clic → retour au hero (`#accueil`). Un `useEffect` léger
+  sur `scrollY` gère l'apparition.
+- **Menu mobile enfin fonctionnel** : le bouton hamburger
+  (`#btn-mobile-menu`) n'avait aucun `onClick` — sur mobile la
+  navigation était donc **totalement inaccessible** (défaut
+  préexistant). Ajout d'un état `menuOpen` + panneau déroulant
+  (`.mobileMenu`) listant les 7 liens (dont les 2 nouveaux) + « Se
+  connecter »/« Commencer », hamburger qui se transforme en croix,
+  fermeture au clic d'un lien.
+- Repositionnement de `.scrollCue` sur mobile (`padding-bottom` du hero
+  porté à 92 px, `bottom: 30px`) — sans quoi la flèche chevauchait la
+  ligne de badges de confiance sur petit écran.
+- i18n FR+EN (`landing.navOpenTontines`, `navCommunityMarket`,
+  `scrollDown`, `backToTop`).
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK.
+`e2e/navigation.spec.ts` + `e2e/auth.spec.ts` (couvrent la landing) :
+**11/11 au vert** (un flake de compilation à froid sur le test IA,
+repassé au vert en isolé — sans rapport). Vérifié visuellement
+(Playwright, desktop + mobile) : les 2 liens défilent bien vers les
+bons rails (desktop et via le menu mobile), la flèche du hero
+fonctionne sans chevauchement, le bouton « retour en haut » apparaît au
+défilement et ramène en haut, le menu hamburger ouvre/ferme le panneau.
+
+### Fait — Carte de solde dépliable + QR + photo de profil (accueil)
+
+Sur retour utilisateur (captures de la carte de solde, de la section
+« Services rapides » et image de référence d'une app fintech) :
+
+- **Chevron en V** centré en bas de la carte de solde orange
+  (`#btn-toggle-services`, SVG, pastille translucide, pivote de 180° à
+  l'ouverture). Il **déplie la carte** pour révéler la liste complète
+  des autres services (`.cardServices`, grille 4 colonnes, 3 colonnes
+  sous 380 px).
+- La section autonome **« Services rapides »** (titre + grille séparée
+  sous la carte) est **supprimée** : ses tuiles vivent désormais
+  uniquement dans la carte dépliable. Classes CSS mortes retirées
+  (`.servicesGrid`, `.serviceItem`, `.serviceIcon`, `.serviceLabel`).
+  L'ordre des services suit toujours le profil déclaré
+  (`orderServices(meta.focus)`).
+- **Icône QR** à côté du solde (`#btn-home-qr`, `.qrBtn`, SVG code QR) →
+  `/wallet?action=receive` (l'écran « Recevoir » qui porte déjà le QR
+  réel).
+- **Photo de profil** : l'avatar (accueil + hero du profil) affiche
+  désormais l'image de l'utilisateur si elle existe, sinon les
+  initiales. Sur `/profile`, le bouton 📷 (jusque-là un toast « bientôt
+  disponible ») ouvre un sélecteur de fichier : compression client
+  (`compressImage`, 360 px, qualité 0,8 → data-URI JPEG) puis
+  `PATCH /api/v1/profile { avatar }`. L'avatar de l'accueil devient
+  **circulaire** (au lieu d'un carré arrondi) pour coller à la
+  référence.
+- **API** : `updateProfileSchema.avatar` (`z.string().max(1_500_000)`,
+  regex `data:image/(jpeg|png|webp);base64,…` ou chaîne vide pour
+  effacer), appliqué dans le `PATCH` (`profileData.avatar`), renvoyé par
+  le `GET` et le `PATCH`. `hooks/useProfile` : `avatar?` ajouté au type
+  de charge utile.
+- i18n FR+EN (`profile.photoUpdated`, `profile.photoInvalid`).
+
+**Vérification** : `tsc` + `lint` (0 warning) + `vitest` (**174**,
+inchangé) + `build` OK. Vérifié de bout en bout (Playwright) : carte
+repliée/dépliée avec les 10 services, icône QR, **upload réel d'une
+photo** (compressée, persistée en base, toujours présente après
+rechargement) puis remise à zéro. `e2e` navigation/auth : 11/11.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·
