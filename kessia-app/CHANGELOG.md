@@ -3,6 +3,18 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Refonte visuelle : donut de répartition du CA (ADR 0041)
+
+### Modifié
+- Business, onglet **ADN** : la « Répartition du chiffre d'affaires »
+  passe de barres horizontales à un **donut SVG + légende**, dans
+  l'esprit des maquettes (« Rapports & Analyses »). Mêmes données
+  (`categoryMix`), aucun calcul changé.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `build` OK. `e2e/explore-crm.spec.ts`
+  (couvre l'onglet ADN) : 2/2 au vert.
+
 ## [Non publié] — Refonte visuelle : cadran KESSIA Score (ADR 0041)
 
 ### Modifié

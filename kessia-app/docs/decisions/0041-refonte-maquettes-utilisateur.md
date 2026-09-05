@@ -328,6 +328,25 @@ session). **Sans lien avec ce changement** — capture d'écran visuelle
 et test ciblé passés avec succès. À surveiller si récurrent : le pool
 à 15 connexions est aussi celui de la production démo.
 
+### Fait — Donut de répartition du CA (Business, onglet ADN)
+
+Écart trouvé en poursuivant l'audit (Business/Marketplace/Communauté/
+Academy demandé par l'utilisateur) : la section « Répartition du
+chiffre d'affaires » de l'onglet ADN affichait une liste de barres
+horizontales, une par catégorie — la maquette (Affiche 2, « Rapports &
+Analyses ») montre un camembert. Remplacé par un vrai **donut SVG**
+(`RevenueDonut` dans `business-detail-client.tsx`) + légende à côté
+(pastille couleur, nom, %) — **mêmes données `categoryMix`, aucun
+calcul changé**, seule la représentation visuelle change. Palette
+6 couleurs cyclique (terracotta/vert/or/violet/…) cohérente avec le
+reste de l'identité KESSIA.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK.
+`e2e/explore-crm.spec.ts` (couvre l'onglet ADN) : 2/2 au vert en
+exécution isolée. Vérifié visuellement (Playwright) : arc proportionnel
+correct (73/9/8/7/2 % testés), légende alignée, aucune régression sur
+le reste de l'onglet (KPI, produits phares, recommandations inchangés).
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

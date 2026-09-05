@@ -725,17 +725,7 @@ function DnaTab({ data }: { data: ReturnType<typeof useBusinessDetail>['dna'] })
       {data.activity.categoryMix.length > 0 && (
         <>
           <div className={styles.blockTitle}>{t('business.revenueBreakdown')}</div>
-          <div className={styles.list}>
-            {data.activity.categoryMix.map((c) => (
-              <div key={c.category} className={styles.goalCard}>
-                <div className={styles.goalHead}>
-                  <span className={styles.goalName}>{c.category}</span>
-                  <span className={styles.goalPct}>{c.share}%</span>
-                </div>
-                <div className={styles.bar}><div className={styles.barFill} style={{ width: `${c.share}%` }} /></div>
-              </div>
-            ))}
-          </div>
+          <RevenueDonut segments={data.activity.categoryMix} />
         </>
       )}
 
@@ -767,6 +757,49 @@ function DnaTab({ data }: { data: ReturnType<typeof useBusinessDetail>['dna'] })
           <div className={styles.note}>{t('business.dnaNote')}</div>
         </>
       )}
+    </div>
+  );
+}
+
+// ── Donut de répartition du CA (refonte visuelle, remplace les
+// barres horizontales — mêmes données `categoryMix`, rien de nouveau
+// côté calcul, seule la représentation change) ────────────────
+const DONUT_COLORS = ['#B65A3A', '#1F5D4A', '#D6A84F', '#7A5CC0', '#5B34D6', '#C2884A'];
+
+function RevenueDonut({ segments }: { segments: { category: string; share: number }[] }) {
+  const r = 15.9; // rayon choisi pour un périmètre ≈ 100 (2πr), pratique en %
+  let cumulative = 0;
+
+  return (
+    <div className={styles.donutRow}>
+      <svg viewBox="0 0 36 36" width="128" height="128" className={styles.donutSvg} role="img" aria-label="Répartition du chiffre d'affaires par catégorie">
+        <circle cx="18" cy="18" r={r} fill="none" stroke="var(--color-border-medium)" strokeWidth="4" />
+        {segments.map((s, i) => {
+          const dash = `${s.share} ${100 - s.share}`;
+          const offset = 25 - cumulative; // démarre à midi (25 = un quart du périmètre normalisé à 100)
+          cumulative += s.share;
+          return (
+            <circle
+              key={s.category}
+              cx="18" cy="18" r={r} fill="none"
+              stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+              strokeWidth="4"
+              strokeDasharray={dash}
+              strokeDashoffset={offset}
+              pathLength={100}
+            />
+          );
+        })}
+      </svg>
+      <div className={styles.donutLegend}>
+        {segments.map((s, i) => (
+          <div key={s.category} className={styles.donutLegendRow}>
+            <span className={styles.donutDot} style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+            <span className={styles.donutLegendLabel}>{s.category}</span>
+            <span className={styles.donutLegendPct}>{s.share}%</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
