@@ -238,12 +238,69 @@ test.ts` toujours vert, `loans` bien classé `REGULATED`/non-LIVE) +
 Vérifié visuellement (Playwright) : catégories, filtre, action+toast,
 et présence confirmée sur `/explore`.
 
-## Suivi
+## Livré — 3/7 : Panier multi-articles Marketplace (2026-09-05)
 
-6 des 7 items sont livrés : Code PIN · Objectif d'épargne (Wallet) ·
-Messagerie + appel vidéo (aperçu) Communauté · Certificat Academy ·
-Financement participatif (fusionné dans Invest) · Prêts coopératifs.
-Reste : le **panier multi-articles Marketplace** (le plus gros
-morceau, changement du modèle de commande) — section à suivre.
-Reste également, hors de cet ADR : la **refonte visuelle** module par
-module (4 phases définies, non commencée).
+Dernier des 7 items. Approche volontairement **minimale et sans
+duplication** : le panier est une commodité d'interface 100 % côté
+client (`store/cartStore.ts`, `localStorage`) — au paiement, chaque
+unité de chaque ligne appelle l'API **déjà existante**
+`POST /marketplace/[id]/order` (mode `WALLET`, ADR 0039), une fois par
+article. **Aucune nouvelle route de commande, aucun nouveau modèle de
+données, aucun changement du modèle de commande existant.**
+
+- `store/cartStore.ts` : lignes `{itemId, title, price, currency,
+  imageUrl, qty}`, actions `add/remove/setQty/clear`, persistées en
+  `localStorage`.
+- `/marketplace` : bouton « 🛒 Ajouter au panier » sur chaque carte du
+  catalogue (sans quitter la page — `preventDefault`/`stopPropagation`
+  pour ne pas déclencher le lien vers le détail) + icône panier avec
+  badge de comptage dans l'en-tête.
+- `/marketplace/[id]` : bouton « Ajouter au panier » ajouté **à côté**
+  des boutons d'achat direct existants (wallet immédiat / tontine Achat
+  solo), qui restent inchangés — l'achat direct reste la voie normale
+  pour financer un article par tontine (un plan solo cible un seul
+  article, donc hors panier par nature).
+- **`/marketplace/cart`** (nouveau) : liste des lignes avec quantité
+  +/-, retrait, total, solde wallet affiché, blocage si solde
+  insuffisant. Paiement → boucle séquentielle sur l'API d'achat
+  existante par unité ; les lignes intégralement payées sont retirées
+  du panier, les échecs partiels restent pour un nouvel essai. Écran de
+  résultat détaillé par ligne (façon « Commande confirmée » de la
+  maquette).
+- i18n FR+EN complet (`market.{cart,addToCart,addedToCart,cartTitle,
+  cartSubtitle,cartEmpty,remove,total,payWithWallet,clearCart,
+  orderAllOk,orderPartial,orderLineOk,orderLineFailed,viewPurchases}`).
+- `e2e/marketplace-cart.spec.ts` (nouveau) : dépôt wallet → ajout panier
+  → badge → paiement → confirmation → visible dans « Mes achats ».
+
+### Vérification
+`tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé — aucune
+nouvelle logique pure, panier = état client) + `build` (route
+`/marketplace/cart` compilée) + **E2E complet (42/42, +1)** au vert.
+Vérifié de bout en bout en local (Playwright, wallet réellement débité,
+commande réellement créée côté serveur via l'API existante) : ajout
+panier, badge, quantités, blocage solde insuffisant, paiement réussi
+avec écran de confirmation par ligne.
+
+⚠️ Une exécution isolée a montré un échec ponctuel de
+`support-attachments.spec.ts` (« Maximum 10 pièces jointes par
+ticket ») — **sans rapport avec ce changement** : c'est un
+épuisement de données de test (le même ticket de la base de dev
+partagée a accumulé des pièces jointes au fil des très nombreuses
+exécutions complètes de la suite E2E faites aujourd'hui). En CI
+(`.github/workflows/e2e.yml`), chaque exécution part d'une base neuve
+et ne rencontre pas ce cas. Confirmé sans lien de code en inspectant le
+message d'erreur exact et les fichiers modifiés (aucun ne touche au
+support/tickets).
+
+## Bilan — les 7 items sont livrés
+
+1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·
+3. Panier multi-articles Marketplace · 4. Messagerie + appel vidéo
+(aperçu) Communauté · 5. Certificat de fin de cours Academy ·
+6. Financement participatif (fusionné dans Invest) · 7. Prêts
+coopératifs.
+
+Reste hors de cet ADR : la **refonte visuelle** module par module (4
+phases définies dans le plan de travail partagé avec l'utilisateur,
+non commencée).

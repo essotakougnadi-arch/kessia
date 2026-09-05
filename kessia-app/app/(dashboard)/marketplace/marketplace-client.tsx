@@ -3,11 +3,13 @@
 // KESSIA — Marketplace : catalogue (§16)
 // ============================================================
 
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { useMarketplaceList } from '@/hooks/useMarketplace';
 import { MARKETPLACE_CATEGORIES } from '@/lib/validations/marketplace';
 import { formatNumber } from '@/lib/utils/format';
+import { useCartStore } from '@/store/cartStore';
+import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
 import styles from './marketplace.module.css';
 
@@ -17,6 +19,7 @@ function fcfa(c: string) {
 
 export default function MarketplaceClient() {
   const t = useT();
+  const addToast = useUiStore((s) => s.addToast);
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<string>('');
   const [tontine, setTontine] = useState(false);
@@ -25,6 +28,16 @@ export default function MarketplaceClient() {
     category: category || undefined,
     tontine,
   });
+  const cartLines = useCartStore((s) => s.lines);
+  const addToCart = useCartStore((s) => s.add);
+  const cartCount = cartLines.reduce((sum, l) => sum + l.qty, 0);
+
+  function onAddToCart(e: MouseEvent, it: { id: string; title: string; price: number; currency: string; imageUrl: string | null }) {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(it);
+    addToast({ type: 'success', message: t('market.addedToCart', { title: it.title }) });
+  }
 
   return (
     <div className={styles.page}>
@@ -35,6 +48,10 @@ export default function MarketplaceClient() {
         </div>
         <div className={styles.headerActions}>
           <Link href="/marketplace/mine" className="btn btn-ghost btn-sm">{t('market.mine')}</Link>
+          <Link href="/marketplace/cart" className={`btn btn-ghost btn-sm ${styles.cartBtn}`} id="btn-cart">
+            🛒 {t('market.cart')}
+            {cartCount > 0 && <span className={styles.cartBadge}>{cartCount}</span>}
+          </Link>
           <Link href="/marketplace/sell" className="btn btn-primary btn-sm" id="btn-sell">＋ {t('market.sell')}</Link>
         </div>
       </header>
@@ -90,6 +107,13 @@ export default function MarketplaceClient() {
                   {it.businessName || it.sellerName || t('market.community')}
                   {it.city ? ` · ${it.city}` : ''}
                 </div>
+                <button
+                  className={styles.addToCartBtn}
+                  onClick={(e) => onAddToCart(e, { id: it.id, title: it.title, price: it.price, currency: it.currency, imageUrl: it.imageUrl })}
+                  id={`btn-add-cart-${it.id}`}
+                >
+                  🛒 {t('market.addToCart')}
+                </button>
               </div>
             </Link>
           ))}

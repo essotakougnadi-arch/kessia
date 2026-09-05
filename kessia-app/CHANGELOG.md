@@ -3,6 +3,28 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Panier multi-articles Marketplace (ADR 0041, 3/7 — dernier item)
+
+### Ajouté
+- `store/cartStore.ts` : panier 100 % client (localStorage). Au
+  paiement, chaque unité de chaque ligne appelle **l'API d'achat
+  directe déjà existante** (`POST /marketplace/[id]/order`, mode
+  WALLET) — aucune nouvelle route, aucun nouveau modèle.
+- `/marketplace` : bouton « Ajouter au panier » par carte + icône
+  panier avec badge dans l'en-tête. `/marketplace/[id]` : bouton
+  ajouté à côté des boutons d'achat direct existants (inchangés).
+- **`/marketplace/cart`** (nouveau) : quantités, retrait, total, garde
+  de solde, paiement séquentiel avec écran de résultat détaillé par
+  ligne.
+- `e2e/marketplace-cart.spec.ts` (nouveau, +1 → 42 E2E).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**, inchangé) + `build` +
+  **E2E complet (42/42)** au vert (un échec isolé de
+  `support-attachments.spec.ts` observé sur une exécution — épuisement
+  de données de test sans rapport, cf. ADR 0041).
+- **Les 7 items de la refonte demandée sont livrés.**
+
 ## [Non publié] — Prêts coopératifs (ADR 0041, 7/7)
 
 ### Ajouté

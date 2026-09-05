@@ -13,6 +13,7 @@ import { useMarketplaceItem, useMarketplaceActions } from '@/hooks/useMarketplac
 import { useWallet } from '@/hooks/useWallet';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
+import { useCartStore } from '@/store/cartStore';
 import { installmentAmount } from '@/lib/marketplace/marketplace';
 import { formatNumber } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
@@ -30,6 +31,7 @@ export default function ItemClient({ id }: { id: string }) {
   const userId = useAuthStore((s) => s.user?.id);
   const addToast = useUiStore((s) => s.addToast);
   const { order } = useMarketplaceActions();
+  const addToCart = useCartStore((s) => s.add);
 
   const [mode, setMode] = useState<'WALLET' | 'TONTINE' | null>(null);
   const [installments, setInstallments] = useState(6);
@@ -123,6 +125,16 @@ export default function ItemClient({ id }: { id: string }) {
                   🔄 {t('market.buyTontine')}
                 </button>
               )}
+              <button
+                className="btn btn-ghost btn-lg"
+                id="btn-add-cart-detail"
+                onClick={() => {
+                  addToCart({ id: item.id, title: item.title, price: item.price, currency: item.currency, imageUrl: item.imageUrl });
+                  addToast({ type: 'success', message: t('market.addedToCart', { title: item.title }) });
+                }}
+              >
+                🛒 {t('market.addToCart')}
+              </button>
             </div>
           )}
         </div>
