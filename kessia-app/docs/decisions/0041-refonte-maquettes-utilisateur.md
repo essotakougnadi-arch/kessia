@@ -547,6 +547,13 @@ repliée/dépliée avec les 10 services, icône QR, **upload réel d'une
 photo** (compressée, persistée en base, toujours présente après
 rechargement) puis remise à zéro. `e2e` navigation/auth : 11/11.
 
+**Suivi (2026-09-07)** : sur retour utilisateur (capture desktop), le
+contenu de la carte de solde sur grand écran (`≥900px`) était collé à
+gauche avec un grand vide à droite — désormais **recentré en colonne
+au milieu** (solde, ligne d'actions, « Services rapides », grille,
+chevron), boutons QR/œil alignés sur le bord droit de la colonne.
+Mobile inchangé. `tsc`/`lint`/`build` OK.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·
