@@ -309,13 +309,25 @@
 @media (max-width: 380px) {
   .cardServicesGrid { grid-template-columns: repeat(3, 1fr); }
 }
-/* Sur grand écran, la carte de solde s'étire : on garde les rangées
-   d'actions/services à une largeur lisible plutôt qu'éparpillées. */
+/* Sur grand écran, la carte de solde s'étire sur toute la largeur : on
+   recentre son contenu (solde, actions, services) en une colonne au
+   milieu plutôt que collé à gauche. */
 @media (min-width: 900px) {
-  .cardActions { max-width: 560px; }
-  .cardServices { max-width: 620px; }
+  .balanceInner,
+  .cardActions {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cardServices { max-width: 640px; margin-left: auto; margin-right: auto; }
+  .balanceLabelRow,
+  .balanceAmountRow,
+  .balanceChange { justify-content: center; }
+  .balanceLabelRow { position: relative; }
+  .balanceLabelActions { position: absolute; right: 0; }
+  .cardServicesTitle { text-align: center; }
   .cardServicesGrid { gap: 16px 12px; }
-  .servicesToggle { margin-left: 250px; margin-right: auto; }
+  .servicesToggle { margin-left: auto; margin-right: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .servicesToggle { transition: background 0.2s; }
