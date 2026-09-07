@@ -11,6 +11,7 @@ export const en: Catalog = {
     profile: 'Profile',
     explore: 'Explore',
     support: 'Support',
+    notifications: 'Notifications',
     myProfile: 'My Profile',
     section: 'Main',
     logout: 'Log out',

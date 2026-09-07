@@ -554,6 +554,57 @@ au milieu** (solde, ligne d'actions, « Services rapides », grille,
 chevron), boutons QR/œil alignés sur le bord droit de la colonne.
 Mobile inchangé. `tsc`/`lint`/`build` OK.
 
+### Fait — Jeu d'icônes Lucide (lot 1 : navigation, wallet, accueil, tontines) (2026-09-07)
+
+Sur demande utilisateur (« Remplace toutes les icônes de l'application
+avec de jolies icônes classes et attirantes »). Choix confirmés via
+AskUserQuestion : **Lucide** (trait fin monochrome, teinté à la couleur
+du texte parent, fond pastel conservé) et **remplacement par lots**,
+surfaces clés d'abord.
+
+- **`components/ui/Icon.tsx`** (nouveau) : registre unique nom
+  sémantique → composant Lucide (`home`, `wallet`, `tontines`,
+  `business`, `send`, `receive`, `topup`, `withdraw`, `score`,
+  `growth`, `tontine-rotating`, … ). Les écrans réfèrent une icône par
+  son nom, jamais Lucide directement — un seul point de changement pour
+  la cohérence et les lots suivants. `dep: lucide-react@0.454.0`
+  (tree-shakée, ~1 ko/icône).
+- **Lot 1 câblé** : `BottomNav` (5 onglets + FAB IA), `Sidebar` (7
+  liens + Mon Profil + Déconnexion ; icône blanche sur carré terracotta
+  quand actif), carte de solde accueil (4 actions + QR + cloche
+  notifications), grille de services dépliable de l'accueil (10 tuiles,
+  fond pastel conservé), actions rapides `/wallet` (6), **les 4 types de
+  tontine** (`type-meta.ts` gagne un champ `iconName` — l'emoji `icon`
+  reste pour les contextes texte type notifications) partout où ils
+  s'affichent (liste accueil, liste `/tontine`, sélecteur de création,
+  modale d'explication, en-tête + bloc « comment ça marche » du détail),
+  bouton « Rejoindre par code ».
+- Les CSS des puces d'icône passent de `font-size` à `color` (Lucide
+  hérite `currentColor`).
+- `e2e/tontine.spec.ts` : un sélecteur cherchait le bouton `/🛒 Achat/`
+  → `/^Achat/` (l'emoji n'est plus dans le nom accessible, les SVG sont
+  `aria-hidden`).
+
+**Vérification** : `tsc` + `lint` (0 warning) + `vitest` (**174**,
+inchangé) + `build` OK. E2E production (webServer `next start`) :
+navigation 5/5, tontine 5/5, wallet 3/3, explore-crm 2/2,
+legal-documents 4/4, marketplace-cart 1/1, pin-lock 1/1, +
+auth/onboarding/admin/growth-simulator/trust-fraud-calendar/
+tontine-lifecycle 19/19 — **au vert**. (Le seul rouge,
+`support-attachments`, est l'épuisement connu de données de test sur la
+base de dev partagée, sans rapport.) Vérifié visuellement (Playwright,
+mobile + desktop) : accueil, wallet, tontine, sidebar.
+
+⚠️ Repéré au passage (préexistant, non corrigé — page `/ai`, hors lot 1) :
+un avertissement d'hydratation sur les boutons « Voix » / « Effacer »
+qui ralentit ce test en mode `dev` uniquement ; invisible en
+production.
+
+**Reste (lots suivants)** : icônes des activités/insights, catégories
+marketplace, en-têtes de sections `/profile`, catégories modules
+(`/explore`, `/invest`, `/insurance`, `/loans`), calendrier, admin,
+onboarding/register, support.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

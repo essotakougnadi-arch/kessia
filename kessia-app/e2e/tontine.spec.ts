@@ -24,7 +24,7 @@ test('créer une tontine (type Achat) puis la retrouver dans la liste', async ({
   await page.goto('/tontine?type=PURCHASE');
   const dialog = page.getByRole('dialog');
 
-  await expect(dialog.getByRole('button', { name: /🛒 Achat/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByRole('button', { name: /^Achat/ })).toHaveAttribute('aria-pressed', 'true');
   await dialog.locator('#t-name').fill(name);
   await dialog.locator('#t-amount').fill('2000');
   await dialog.locator('#t-members').fill('4');

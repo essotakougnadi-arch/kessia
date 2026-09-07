@@ -4,23 +4,24 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './Sidebar.module.css';
 import { KessiaLogo, KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { useAuthStore } from '@/store/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { initials } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
 
-const NAV_ITEMS = [
-  { href: '/home',        icon: '🏠', key: 'nav.home'     },
-  { href: '/wallet',      icon: '💰', key: 'nav.wallet'   },
-  { href: '/tontine',     icon: '🔄', key: 'nav.tontines' },
-  { href: '/business',    icon: '🏪', key: 'nav.business' },
-  { href: '/marketplace', icon: '🛒', key: 'nav.marketplace' },
-  { href: '/explore',     icon: '🧭', key: 'nav.explore'  },
-  { href: '/support',     icon: '💬', key: 'nav.support'  },
+const NAV_ITEMS: { href: string; icon: IconName; key: string }[] = [
+  { href: '/home',        icon: 'home',        key: 'nav.home'     },
+  { href: '/wallet',      icon: 'wallet',      key: 'nav.wallet'   },
+  { href: '/tontine',     icon: 'tontines',    key: 'nav.tontines' },
+  { href: '/business',    icon: 'business',    key: 'nav.business' },
+  { href: '/marketplace', icon: 'marketplace', key: 'nav.marketplace' },
+  { href: '/explore',     icon: 'explore',     key: 'nav.explore'  },
+  { href: '/support',     icon: 'support',     key: 'nav.support'  },
 ];
 
-const BOTTOM_ITEMS = [
-  { href: '/profile', icon: '👤', key: 'nav.myProfile' },
+const BOTTOM_ITEMS: { href: string; icon: IconName; key: string }[] = [
+  { href: '/profile', icon: 'profile', key: 'nav.myProfile' },
 ];
 
 const KYC_LABEL: Record<string, string> = {
@@ -79,7 +80,7 @@ export default function Sidebar() {
                 className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <div className={styles.navIcon}>{item.icon}</div>
+                <div className={styles.navIcon}><Icon name={item.icon} size={18} /></div>
                 <span className={styles.navLabel}>{t(item.key)}</span>
                 {isActive && <div className={styles.navActivePip} />}
               </Link>
@@ -111,7 +112,7 @@ export default function Sidebar() {
               href={item.href}
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             >
-              <div className={styles.navIcon}>{item.icon}</div>
+              <div className={styles.navIcon}><Icon name={item.icon} size={18} /></div>
               <span className={styles.navLabel}>{t(item.key)}</span>
             </Link>
           );
@@ -121,7 +122,7 @@ export default function Sidebar() {
           aria-label={t('nav.logout')}
           onClick={() => logout()}
         >
-          <div className={styles.navIcon}>🚪</div>
+          <div className={styles.navIcon}><Icon name="logout" size={18} /></div>
           <span className={styles.navLabel}>{t('nav.logout')}</span>
         </button>
       </div>

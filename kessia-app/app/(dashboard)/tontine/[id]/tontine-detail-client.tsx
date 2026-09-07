@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import styles from './tontine-detail.module.css';
 import { Modal } from '@/components/ui/Modal';
+import { Icon } from '@/components/ui/Icon';
 import { JoinRequestPanel } from '@/components/tontine/JoinRequestPanel';
 import { ManageRequestsPanel } from '@/components/tontine/ManageRequestsPanel';
 import { useUiStore } from '@/store/uiStore';
@@ -150,7 +151,7 @@ export default function TontineDetailClient({ id }: { id: string }) {
           <h1 className={styles.headerTitle}>{td.name}</h1>
           <div className={styles.headerStatus}>
             <span className={styles.statusDot} />
-            {meta.icon}{' '}
+            <Icon name={meta.iconName} size={14} />{' '}
             {t('tontineDetail.typeLine', {
               label: meta.label,
               status: t(`tontineDetail.status.${td.status}`),
@@ -437,7 +438,9 @@ export default function TontineDetailClient({ id }: { id: string }) {
       {/* Comment fonctionne ce type */}
       <section className={styles.section}>
         <div className={styles.rulesCard}>
-          <h3 className={styles.rulesTitle}>{meta.icon} {meta.label}</h3>
+          <h3 className={styles.rulesTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name={meta.iconName} size={18} /> {meta.label}
+          </h3>
           <p className={styles.rulesText}>{meta.description}</p>
           <ol style={{ margin: '10px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {meta.howItWorks.map((s, i) => (

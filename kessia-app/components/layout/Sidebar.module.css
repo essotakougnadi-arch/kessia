@@ -193,13 +193,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   flex-shrink: 0;
   transition: background var(--transition-fast);
 }
 
 .navItemActive .navIcon {
   background: var(--color-primary);
+  color: #fff;
 }
 
 .navLabel { font-size: 14px; flex: 1; }

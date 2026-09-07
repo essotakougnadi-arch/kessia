@@ -8,6 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import styles from './home.module.css';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
 import { MarketplaceRail } from '@/components/discover/MarketplaceRail';
 import { ErrorNote } from '@/components/ui/ErrorNote';
@@ -33,19 +34,19 @@ import {
   initials,
 } from '@/lib/utils/format';
 
-type Service = { id: string; icon: string; labelKey: string; href: string; bg: string; focus?: 'wallet' | 'tontine' | 'business' };
+type Service = { id: string; icon: IconName; labelKey: string; href: string; bg: string; focus?: 'wallet' | 'tontine' | 'business' };
 
 const SERVICES: Service[] = [
-  { id: 'wallet', icon: '💰', labelKey: 'nav.wallet', href: '/wallet', bg: '#FEF0E8', focus: 'wallet' },
-  { id: 'tontines', icon: '🔄', labelKey: 'nav.tontines', href: '/tontine', bg: '#E8F5F0', focus: 'tontine' },
-  { id: 'business', icon: '🏪', labelKey: 'nav.business', href: '/business', bg: '#FDF6E8', focus: 'business' },
-  { id: 'marketplace', icon: '🛒', labelKey: 'nav.marketplace', href: '/marketplace', bg: '#FDF6E8' },
-  { id: 'ai', icon: '✨', labelKey: 'nav.aiLabel', href: '/ai', bg: '#E8F5F0' },
-  { id: 'score', icon: '📊', labelKey: 'home.svcScore', href: '/profile/score', bg: '#FEF0E8' },
-  { id: 'growth', icon: '🌱', labelKey: 'home.svcGrowth', href: '/growth', bg: '#E8F5F0' },
-  { id: 'calendar', icon: '🗓️', labelKey: 'home.svcCalendar', href: '/calendar', bg: '#FEF0E8' },
-  { id: 'simulator', icon: '🧮', labelKey: 'home.svcSimulate', href: '/simulator', bg: '#F1ECFA' },
-  { id: 'explore', icon: '🧭', labelKey: 'nav.explore', href: '/explore', bg: '#F5F4F2' },
+  { id: 'wallet', icon: 'wallet', labelKey: 'nav.wallet', href: '/wallet', bg: '#FEF0E8', focus: 'wallet' },
+  { id: 'tontines', icon: 'tontines', labelKey: 'nav.tontines', href: '/tontine', bg: '#E8F5F0', focus: 'tontine' },
+  { id: 'business', icon: 'business', labelKey: 'nav.business', href: '/business', bg: '#FDF6E8', focus: 'business' },
+  { id: 'marketplace', icon: 'marketplace', labelKey: 'nav.marketplace', href: '/marketplace', bg: '#FDF6E8' },
+  { id: 'ai', icon: 'ai', labelKey: 'nav.aiLabel', href: '/ai', bg: '#E8F5F0' },
+  { id: 'score', icon: 'score', labelKey: 'home.svcScore', href: '/profile/score', bg: '#FEF0E8' },
+  { id: 'growth', icon: 'growth', labelKey: 'home.svcGrowth', href: '/growth', bg: '#E8F5F0' },
+  { id: 'calendar', icon: 'calendar', labelKey: 'home.svcCalendar', href: '/calendar', bg: '#FEF0E8' },
+  { id: 'simulator', icon: 'simulator', labelKey: 'home.svcSimulate', href: '/simulator', bg: '#F1ECFA' },
+  { id: 'explore', icon: 'explore', labelKey: 'nav.explore', href: '/explore', bg: '#F5F4F2' },
 ];
 
 /** Ordonne la grille de services selon le profil déclaré (§4). */
@@ -102,8 +103,8 @@ export default function HomeClient() {
             <div className={styles.greetingSub}>{t('home.greetingSub')}</div>
           </div>
           <div className={styles.headerRight}>
-            <Link href="/notifications" className={styles.notifBtn} id="btn-home-notif">
-              🔔
+            <Link href="/notifications" className={styles.notifBtn} id="btn-home-notif" aria-label={t('nav.notifications')}>
+              <Icon name="bell" size={19} />
               <span className={styles.notifDot} />
             </Link>
             <Link href="/profile" className={styles.avatarLink} id="btn-home-profile">
@@ -178,19 +179,19 @@ export default function HomeClient() {
 
           <div className={styles.cardActions}>
             <Link href="/wallet?action=send" className={styles.cardAction} id="btn-envoyer">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(96,165,250,0.28)' }}>💸</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(96,165,250,0.28)' }}><Icon name="send" size={20} /></div>
               <span>{t('wallet.send')}</span>
             </Link>
             <Link href="/wallet?action=receive" className={styles.cardAction} id="btn-recevoir">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(74,222,128,0.28)' }}>💰</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(74,222,128,0.28)' }}><Icon name="receive" size={20} /></div>
               <span>{t('wallet.receive')}</span>
             </Link>
             <Link href="/wallet?action=deposit" className={styles.cardAction} id="btn-recharger">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(250,204,21,0.28)' }}>💳</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(250,204,21,0.28)' }}><Icon name="topup" size={20} /></div>
               <span>{t('wallet.topUp')}</span>
             </Link>
             <Link href="/tontine" className={styles.cardAction} id="btn-tontine-quick">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(196,181,253,0.32)' }}>🤝</div>
+              <div className={styles.cardActionIcon} style={{ background: 'rgba(196,181,253,0.32)' }}><Icon name="tontines" size={20} /></div>
               <span>{t('nav.tontines')}</span>
             </Link>
           </div>
@@ -201,7 +202,7 @@ export default function HomeClient() {
               <div className={styles.cardServicesGrid}>
                 {services.map((svc) => (
                   <Link key={svc.id} href={svc.href} className={styles.cardService} id={`btn-svc-${svc.id}`}>
-                    <div className={styles.cardServiceIcon}><span>{svc.icon}</span></div>
+                    <div className={styles.cardServiceIcon}><Icon name={svc.icon} size={21} /></div>
                     <span className={styles.cardServiceLabel}>{t(svc.labelKey)}</span>
                   </Link>
                 ))}
@@ -385,7 +386,7 @@ export default function HomeClient() {
             return (
               <Link key={tn.id} href={`/tontine/${tn.id}`} className={styles.tontineCard} id={`btn-tontine-${tn.id}`}>
                 <div className={styles.tontineCardLeft}>
-                  <div className={styles.tontineIcon}>{tontineTypeMeta(tn.type).icon}</div>
+                  <div className={styles.tontineIcon}><Icon name={tontineTypeMeta(tn.type).iconName} size={20} /></div>
                   <div className={styles.tontineInfo}>
                     <div className={styles.tontiName}>{tn.name}</div>
                     <div className={styles.tontiMeta}>

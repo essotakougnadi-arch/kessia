@@ -10,6 +10,7 @@ export const fr = {
     profile: 'Profil',
     explore: 'Explorer',
     support: 'Support',
+    notifications: 'Notifications',
     myProfile: 'Mon Profil',
     section: 'Principal',
     logout: 'Déconnexion',

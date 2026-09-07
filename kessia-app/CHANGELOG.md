@@ -3,6 +3,23 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Jeu d'icônes Lucide, lot 1 (ADR 0041)
+
+### Modifié
+- Remplacement des emoji par un **jeu d'icônes Lucide** (trait fin,
+  teinté marque) sur les surfaces clés : navigation mobile + sidebar,
+  actions de la carte de solde + QR + cloche (accueil), grille de
+  services dépliable, actions rapides du wallet, les 4 types de
+  tontine partout où ils apparaissent.
+- Nouveau composant `components/ui/Icon.tsx` (registre nom → icône) ;
+  `type-meta.ts` gagne un champ `iconName`. `dep: lucide-react`.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**) + `build` OK.
+  E2E production : navigation/tontine/wallet/explore/legal/marketplace/
+  pin-lock + 19 autres au vert (le rouge `support-attachments` =
+  épuisement de données de test connu, sans rapport).
+
 ## [Non publié] — Page publique : navigation + carte de solde dépliable + photo de profil (ADR 0041)
 
 ### Ajouté

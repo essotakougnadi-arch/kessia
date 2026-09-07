@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import QRCode from 'qrcode';
 import styles from './wallet.module.css';
 import { Modal } from '@/components/ui/Modal';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { DraftNotice } from '@/components/ui/DraftNotice';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -28,13 +29,13 @@ import {
 type ActionKey = 'deposit' | 'send' | 'receive' | 'withdraw' | 'airtime' | 'save';
 type TxFilter = 'all' | 'CREDIT' | 'DEBIT';
 
-const QUICK_ACTIONS: { icon: string; labelKey: string; key: ActionKey; id: string }[] = [
-  { icon: '💳', labelKey: 'wallet.topUp', key: 'deposit', id: 'btn-deposit' },
-  { icon: '💸', labelKey: 'wallet.send', key: 'send', id: 'btn-send' },
-  { icon: '💰', labelKey: 'wallet.receive', key: 'receive', id: 'btn-receive' },
-  { icon: '🏧', labelKey: 'wallet.withdraw', key: 'withdraw', id: 'btn-withdraw' },
-  { icon: '📱', labelKey: 'wallet.airtime', key: 'airtime', id: 'btn-airtime' },
-  { icon: '💎', labelKey: 'wallet.savings', key: 'save', id: 'btn-save' },
+const QUICK_ACTIONS: { icon: IconName; labelKey: string; key: ActionKey; id: string }[] = [
+  { icon: 'topup', labelKey: 'wallet.topUp', key: 'deposit', id: 'btn-deposit' },
+  { icon: 'send', labelKey: 'wallet.send', key: 'send', id: 'btn-send' },
+  { icon: 'receive', labelKey: 'wallet.receive', key: 'receive', id: 'btn-receive' },
+  { icon: 'withdraw', labelKey: 'wallet.withdraw', key: 'withdraw', id: 'btn-withdraw' },
+  { icon: 'airtime', labelKey: 'wallet.airtime', key: 'airtime', id: 'btn-airtime' },
+  { icon: 'savings', labelKey: 'wallet.savings', key: 'save', id: 'btn-save' },
 ];
 
 const PRESETS = [5000, 10000, 25000, 50000, 100000];
@@ -178,7 +179,7 @@ export default function WalletClient() {
               className={`${styles.actionItem} ${styles.actionBtn}`}
               id={a.id}
             >
-              <div className={styles.actionIcon}>{a.icon}</div>
+              <div className={styles.actionIcon}><Icon name={a.icon} size={20} /></div>
               <span className={styles.actionLabel}>{t(a.labelKey)}</span>
             </button>
           ))}

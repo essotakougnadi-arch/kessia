@@ -16,7 +16,10 @@ export type TontineTypeMeta = {
   label: string;
   tagline: string;
   description: string;
+  /** emoji — conservé pour les contextes texte (notifications, exports) */
   icon: string;
+  /** nom d'icône du registre `components/ui/Icon` — rendu UI */
+  iconName: 'tontine-rotating' | 'tontine-project' | 'tontine-growth' | 'tontine-purchase';
   /** couleur d'accent (token CSS ou hex) */
   accent: string;
   distribution: DistributionMode;
@@ -31,6 +34,7 @@ export const TONTINE_TYPES: readonly TontineTypeMeta[] = [
     description:
       "La tontine traditionnelle : tous les membres cotisent le même montant à chaque tour, et à chaque tour un membre différent encaisse la totalité de la cagnotte, jusqu'à ce que chacun ait reçu sa part.",
     icon: '🔄',
+    iconName: 'tontine-rotating',
     accent: '#B65A3A',
     distribution: 'rotating',
     howItWorks: [
@@ -47,6 +51,7 @@ export const TONTINE_TYPES: readonly TontineTypeMeta[] = [
     description:
       "Le groupe épargne ensemble vers un projet précis (matériel, événement, stock…). Les cotisations s'accumulent et la totalité est versée à l'organisateur du projet en fin de collecte.",
     icon: '🎯',
+    iconName: 'tontine-project',
     accent: '#1F5D4A',
     distribution: 'project',
     howItWorks: [
@@ -63,6 +68,7 @@ export const TONTINE_TYPES: readonly TontineTypeMeta[] = [
     description:
       "Un club d'épargne : chaque membre cotise à chaque échéance pendant tout le cycle, sans rien retirer entre-temps. En fin de cycle, chacun récupère l'intégralité de ce qu'il a versé. La contrainte de groupe aide à tenir l'objectif.",
     icon: '📈',
+    iconName: 'tontine-growth',
     accent: '#D6A84F',
     distribution: 'growth',
     howItWorks: [
@@ -79,6 +85,7 @@ export const TONTINE_TYPES: readonly TontineTypeMeta[] = [
     description:
       "Tontine orientée achat, en deux formules. En groupe : à chaque tour, le membre bénéficiaire utilise la cagnotte pour un achat (équipement, marchandise en gros, appareil…), chacun son tour. En solo : une personne épargne seule, pour son propre article — l'argent est bloqué en séquestre jusqu'au dernier versement, puis recrédité sur son wallet pour acheter.",
     icon: '🛒',
+    iconName: 'tontine-purchase',
     accent: '#7A5CC0',
     distribution: 'rotating',
     howItWorks: [

@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './tontine.module.css';
 import { Modal } from '@/components/ui/Modal';
+import { Icon } from '@/components/ui/Icon';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
@@ -193,7 +194,7 @@ export default function TontineClient() {
                     className={styles.tontineIcon}
                     style={{ background: `${meta.accent}1F`, color: meta.accent }}
                   >
-                    {meta.icon}
+                    <Icon name={meta.iconName} size={20} />
                   </div>
                   <div className={styles.tontineInfo}>
                     <div className={styles.tontiName}>{tn.name}</div>
@@ -250,7 +251,7 @@ export default function TontineClient() {
           </div>
         </button>
         <button className={styles.joinCard} id="btn-join-tontine" onClick={() => setShowJoin(true)}>
-          <div className={styles.joinCardIcon}>🔗</div>
+          <div className={styles.joinCardIcon}><Icon name="link" size={20} /></div>
           <div>
             <div className={styles.joinCardTitle}>{t('tontine.joinCardTitle')}</div>
             <div className={styles.joinCardSub}>{t('tontine.joinCardSub')}</div>
@@ -266,7 +267,7 @@ export default function TontineClient() {
           {typeList.map((m) => (
             <button key={m.key} className={styles.typeCard} onClick={() => setTypeInfo(m)}>
               <div className={styles.typeCardIcon} style={{ background: `${m.accent}1F`, color: m.accent }}>
-                {m.icon}
+                <Icon name={m.iconName} size={22} />
               </div>
               <div className={styles.typeCardLabel}>Tontine {m.label}</div>
               <div className={styles.typeCardTagline}>{m.tagline}</div>
@@ -297,7 +298,7 @@ export default function TontineClient() {
           <div>
             <div className={styles.typeDetailHead}>
               <div className={styles.typeDetailIcon} style={{ background: `${typeInfo.accent}1F`, color: typeInfo.accent }}>
-                {typeInfo.icon}
+                <Icon name={typeInfo.iconName} size={22} />
               </div>
               <div>
                 <div className={styles.typeDetailTitle}>Tontine {typeInfo.label}</div>
@@ -500,7 +501,7 @@ function CreateTontineForm({
               aria-pressed={type === m.key}
             >
               <div className={styles.typePickTop}>
-                <span style={{ fontSize: 16 }}>{m.icon}</span>
+                <Icon name={m.iconName} size={16} />
                 <span className={styles.typePickLabel}>{m.label}</span>
               </div>
               <span className={styles.typePickTagline}>{m.tagline}</span>

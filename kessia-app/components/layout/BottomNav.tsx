@@ -3,15 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './BottomNav.module.css';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { useT } from '@/lib/i18n';
 
 // Cahier des charges §37 : Accueil | Wallet | Tontines | Business | Profil
-const NAV_ITEMS = [
-  { href: '/home', icon: '🏠', key: 'nav.home' },
-  { href: '/wallet', icon: '💰', key: 'nav.wallet' },
-  { href: '/tontine', icon: '🔄', key: 'nav.tontines' },
-  { href: '/business', icon: '🏪', key: 'nav.business' },
-  { href: '/profile', icon: '👤', key: 'nav.profile' },
+const NAV_ITEMS: { href: string; icon: IconName; key: string }[] = [
+  { href: '/home', icon: 'home', key: 'nav.home' },
+  { href: '/wallet', icon: 'wallet', key: 'nav.wallet' },
+  { href: '/tontine', icon: 'tontines', key: 'nav.tontines' },
+  { href: '/business', icon: 'business', key: 'nav.business' },
+  { href: '/profile', icon: 'profile', key: 'nav.profile' },
 ];
 
 export default function BottomNav() {
@@ -22,7 +23,7 @@ export default function BottomNav() {
     <>
       {/* KESSIA AI — accessible globalement (§10 / §17) */}
       <Link href="/ai" className={styles.aiFab} id="btn-nav-ai" aria-label="KESSIA AI">
-        <span aria-hidden>✨</span>
+        <Icon name="ai" size={24} strokeWidth={2} />
       </Link>
 
       <nav className={styles.nav} aria-label="Navigation mobile">
@@ -40,7 +41,7 @@ export default function BottomNav() {
   );
 }
 
-function NavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
+function NavItem({ href, icon, label, active }: { href: string; icon: IconName; label: string; active: boolean }) {
   return (
     <Link
       href={href}
@@ -48,7 +49,7 @@ function NavItem({ href, icon, label, active }: { href: string; icon: string; la
       aria-current={active ? 'page' : undefined}
     >
       <span className={styles.itemIconWrapper}>
-        <span className={styles.itemIcon}>{icon}</span>
+        <span className={styles.itemIcon}><Icon name={icon} size={22} strokeWidth={active ? 2.1 : 1.8} /></span>
         {active && <span className={styles.itemDot} />}
       </span>
       <span className={styles.itemLabel}>{label}</span>
