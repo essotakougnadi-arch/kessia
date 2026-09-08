@@ -10,24 +10,27 @@
 // Ne JAMAIS retirer ces qualificatifs en modifiant ce fichier.
 // ============================================================
 
+import type { IconName } from '@/components/ui/Icon';
+
 export interface ModuleCategory {
   icon: string;
+  iconName: IconName;
   title: string;
   desc: string;
 }
 
 export const INVEST_CATEGORIES: ModuleCategory[] = [
-  { icon: '🌾', title: 'Projets agricoles', desc: 'Campagnes, matériel, transformation — mis en relation avec des partenaires financiers habilités.' },
-  { icon: '🏪', title: 'Commerce & distribution', desc: 'Stock, points de vente, expansion d’une activité déjà en marche.' },
-  { icon: '🧵', title: 'Artisanat & production', desc: 'Équipement, ateliers, montée en capacité de production.' },
-  { icon: '💻', title: 'Services & numérique', desc: 'Applications, plateformes et services aux entreprises locales.' },
+  { icon: '🌾', iconName: 'agri', title: 'Projets agricoles', desc: 'Campagnes, matériel, transformation — mis en relation avec des partenaires financiers habilités.' },
+  { icon: '🏪', iconName: 'commerce', title: 'Commerce & distribution', desc: 'Stock, points de vente, expansion d’une activité déjà en marche.' },
+  { icon: '🧵', iconName: 'craft', title: 'Artisanat & production', desc: 'Équipement, ateliers, montée en capacité de production.' },
+  { icon: '💻', iconName: 'laptop', title: 'Services & numérique', desc: 'Applications, plateformes et services aux entreprises locales.' },
 ];
 
 export const INSURANCE_CATEGORIES: ModuleCategory[] = [
-  { icon: '🩺', title: 'Santé', desc: 'Couverture individuelle ou familiale, proposée par des assureurs habilités.' },
-  { icon: '🏍️', title: 'Auto & moto', desc: 'Protection du véhicule utilisé pour vos livraisons ou déplacements professionnels.' },
-  { icon: '🏠', title: 'Habitation', desc: 'Logement personnel ou local commercial.' },
-  { icon: '🏢', title: 'Activité professionnelle', desc: 'Stock, matériel, responsabilité civile de votre entreprise.' },
+  { icon: '🩺', iconName: 'health', title: 'Santé', desc: 'Couverture individuelle ou familiale, proposée par des assureurs habilités.' },
+  { icon: '🏍️', iconName: 'moto', title: 'Auto & moto', desc: 'Protection du véhicule utilisé pour vos livraisons ou déplacements professionnels.' },
+  { icon: '🏠', iconName: 'house', title: 'Habitation', desc: 'Logement personnel ou local commercial.' },
+  { icon: '🏢', iconName: 'office', title: 'Activité professionnelle', desc: 'Stock, matériel, responsabilité civile de votre entreprise.' },
 ];
 
 // ── Exemples de projets (Invest) ──────────────────────────────
@@ -39,6 +42,7 @@ export interface ExampleProject {
   title: string;
   category: string; // doit correspondre à un title de INVEST_CATEGORIES
   icon: string;
+  iconName: IconName;
   location: string;
   goalAmount: number; // FCFA — exemple
   fundedPercent: number; // 0-100 — exemple
@@ -52,7 +56,7 @@ export const INVEST_EXAMPLE_PROJECTS: ExampleProject[] = [
     id: 'p-avicole',
     title: 'Ferme avicole — extension du poulailler',
     category: 'Projets agricoles',
-    icon: '🐔',
+    icon: '🐔', iconName: 'poultry',
     location: 'Kara',
     goalAmount: 2_500_000,
     fundedPercent: 62,
@@ -64,7 +68,7 @@ export const INVEST_EXAMPLE_PROJECTS: ExampleProject[] = [
     id: 'p-riz',
     title: 'Coopérative rizicole — matériel de transformation',
     category: 'Projets agricoles',
-    icon: '🌾',
+    icon: '🌾', iconName: 'agri',
     location: 'Vallée du Zio',
     goalAmount: 4_200_000,
     fundedPercent: 38,
@@ -76,7 +80,7 @@ export const INVEST_EXAMPLE_PROJECTS: ExampleProject[] = [
     id: 'p-boutique',
     title: 'Boutique de quartier — second point de vente',
     category: 'Commerce & distribution',
-    icon: '🏪',
+    icon: '🏪', iconName: 'commerce',
     location: 'Lomé, Bè',
     goalAmount: 1_800_000,
     fundedPercent: 81,
@@ -88,7 +92,7 @@ export const INVEST_EXAMPLE_PROJECTS: ExampleProject[] = [
     id: 'p-couture',
     title: 'Atelier de couture — machines industrielles',
     category: 'Artisanat & production',
-    icon: '🧵',
+    icon: '🧵', iconName: 'craft',
     location: 'Kpalimé',
     goalAmount: 1_200_000,
     fundedPercent: 54,
@@ -100,7 +104,7 @@ export const INVEST_EXAMPLE_PROJECTS: ExampleProject[] = [
     id: 'p-app',
     title: 'Plateforme de livraison locale — développement',
     category: 'Services & numérique',
-    icon: '💻',
+    icon: '💻', iconName: 'laptop',
     location: 'Lomé',
     goalAmount: 3_000_000,
     fundedPercent: 21,
@@ -118,6 +122,7 @@ export interface ExamplePlan {
   title: string;
   category: string; // doit correspondre à un title de INSURANCE_CATEGORIES
   icon: string;
+  iconName: IconName;
   coverageHighlights: string[];
   examplePremiumLabel: string;
   description: string;
@@ -131,10 +136,10 @@ export interface ExamplePlan {
 // éviter un module dupliqué (ADR 0041, item 6).
 
 export const CROWDFUNDING_CATEGORIES: ModuleCategory[] = [
-  { icon: '🏥', title: 'Santé communautaire', desc: 'Équipement de dispensaire, campagnes de dépistage, urgences médicales locales.' },
-  { icon: '📚', title: 'Éducation', desc: 'Fournitures, bourses, rénovation de salles de classe pour des écoles de quartier.' },
-  { icon: '🚰', title: 'Infrastructure locale', desc: 'Points d’eau, éclairage, voirie de proximité portés par un collectif d’habitants.' },
-  { icon: '🤲', title: 'Solidarité', desc: 'Soutien ponctuel à une famille ou un commerçant après un coup dur (incendie, maladie, vol).' },
+  { icon: '🏥', iconName: 'hospital', title: 'Santé communautaire', desc: 'Équipement de dispensaire, campagnes de dépistage, urgences médicales locales.' },
+  { icon: '📚', iconName: 'education', title: 'Éducation', desc: 'Fournitures, bourses, rénovation de salles de classe pour des écoles de quartier.' },
+  { icon: '🚰', iconName: 'water', title: 'Infrastructure locale', desc: 'Points d’eau, éclairage, voirie de proximité portés par un collectif d’habitants.' },
+  { icon: '🤲', iconName: 'loans', title: 'Solidarité', desc: 'Soutien ponctuel à une famille ou un commerçant après un coup dur (incendie, maladie, vol).' },
 ];
 
 export interface CrowdfundingCampaign {
@@ -142,6 +147,7 @@ export interface CrowdfundingCampaign {
   title: string;
   category: string; // doit correspondre à un title de CROWDFUNDING_CATEGORIES
   icon: string;
+  iconName: IconName;
   location: string;
   goalAmount: number; // FCFA — exemple
   raisedPercent: number; // 0-100 — exemple
@@ -154,7 +160,7 @@ export const CROWDFUNDING_CAMPAIGNS: CrowdfundingCampaign[] = [
     id: 'cf-dispensaire',
     title: 'Équiper le dispensaire de quartier',
     category: 'Santé communautaire',
-    icon: '🏥',
+    icon: '🏥', iconName: 'hospital',
     location: 'Aného',
     goalAmount: 900_000,
     raisedPercent: 47,
@@ -165,7 +171,7 @@ export const CROWDFUNDING_CAMPAIGNS: CrowdfundingCampaign[] = [
     id: 'cf-fournitures',
     title: 'Fournitures pour la rentrée de 120 élèves',
     category: 'Éducation',
-    icon: '📚',
+    icon: '📚', iconName: 'education',
     location: 'Sokodé',
     goalAmount: 450_000,
     raisedPercent: 72,
@@ -176,7 +182,7 @@ export const CROWDFUNDING_CAMPAIGNS: CrowdfundingCampaign[] = [
     id: 'cf-point-eau',
     title: 'Remettre en service un point d’eau collectif',
     category: 'Infrastructure locale',
-    icon: '🚰',
+    icon: '🚰', iconName: 'water',
     location: 'Kpalimé',
     goalAmount: 650_000,
     raisedPercent: 31,
@@ -187,7 +193,7 @@ export const CROWDFUNDING_CAMPAIGNS: CrowdfundingCampaign[] = [
     id: 'cf-incendie',
     title: 'Aider Afiwa à reconstruire son étal après l’incendie',
     category: 'Solidarité',
-    icon: '🤲',
+    icon: '🤲', iconName: 'loans',
     location: 'Lomé, marché de Bè',
     goalAmount: 300_000,
     raisedPercent: 88,
@@ -198,7 +204,7 @@ export const CROWDFUNDING_CAMPAIGNS: CrowdfundingCampaign[] = [
     id: 'cf-classe',
     title: 'Rénover une salle de classe délabrée',
     category: 'Éducation',
-    icon: '📚',
+    icon: '📚', iconName: 'education',
     location: 'Kara',
     goalAmount: 780_000,
     raisedPercent: 19,
@@ -212,7 +218,7 @@ export const INSURANCE_EXAMPLE_PLANS: ExamplePlan[] = [
     id: 'i-sante-essentielle',
     title: 'Santé Essentielle',
     category: 'Santé',
-    icon: '🩺',
+    icon: '🩺', iconName: 'health',
     coverageHighlights: ['Consultations', 'Pharmacie', 'Hospitalisation de base'],
     examplePremiumLabel: 'À partir de ≈ 2 500 FCFA/mois (exemple, non contractuel)',
     description: 'Couverture individuelle des soins courants, pour un entrepreneur sans mutuelle employeur.',
@@ -221,7 +227,7 @@ export const INSURANCE_EXAMPLE_PLANS: ExamplePlan[] = [
     id: 'i-sante-famille',
     title: 'Santé Famille',
     category: 'Santé',
-    icon: '👨‍👩‍👧',
+    icon: '👨‍👩‍👧', iconName: 'family',
     coverageHighlights: ['Consultations', 'Maternité', 'Hospitalisation', 'Pharmacie'],
     examplePremiumLabel: 'À partir de ≈ 9 000 FCFA/mois pour 4 personnes (exemple, non contractuel)',
     description: 'Couverture familiale élargie incluant le suivi maternité.',
@@ -230,7 +236,7 @@ export const INSURANCE_EXAMPLE_PLANS: ExamplePlan[] = [
     id: 'i-moto-livraison',
     title: 'Moto Livraison',
     category: 'Auto & moto',
-    icon: '🏍️',
+    icon: '🏍️', iconName: 'moto',
     coverageHighlights: ['Dommages', 'Vol', 'Responsabilité civile'],
     examplePremiumLabel: 'À partir de ≈ 3 200 FCFA/mois (exemple, non contractuel)',
     description: 'Protection du deux-roues utilisé pour les livraisons ou déplacements professionnels quotidiens.',
@@ -239,7 +245,7 @@ export const INSURANCE_EXAMPLE_PLANS: ExamplePlan[] = [
     id: 'i-local-commercial',
     title: 'Local Commercial',
     category: 'Activité professionnelle',
-    icon: '🏢',
+    icon: '🏢', iconName: 'office',
     coverageHighlights: ['Incendie', 'Dégât des eaux', 'Vol du stock'],
     examplePremiumLabel: 'À partir de ≈ 5 500 FCFA/mois (exemple, non contractuel)',
     description: 'Protection du local, du matériel et du stock d’une boutique ou d’un atelier.',
@@ -248,7 +254,7 @@ export const INSURANCE_EXAMPLE_PLANS: ExamplePlan[] = [
     id: 'i-habitation',
     title: 'Habitation',
     category: 'Habitation',
-    icon: '🏠',
+    icon: '🏠', iconName: 'house',
     coverageHighlights: ['Incendie', 'Dégât des eaux', 'Responsabilité civile'],
     examplePremiumLabel: 'À partir de ≈ 4 000 FCFA/mois (exemple, non contractuel)',
     description: 'Protection du logement familial et de son contenu.',

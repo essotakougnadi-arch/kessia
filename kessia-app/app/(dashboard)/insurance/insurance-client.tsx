@@ -12,7 +12,7 @@ import { INSURANCE_CATEGORIES, INSURANCE_EXAMPLE_PLANS } from '@/lib/modules/inv
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, iconColor } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 export default function InsuranceClient() {
@@ -65,8 +65,9 @@ export default function InsuranceClient() {
               key={c.title}
               className={`${styles.chip} ${category === c.title ? styles.chipActive : ''}`}
               onClick={() => setCategory(c.title)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              {c.icon} {c.title}
+              <Icon name={c.iconName} size={14} tinted /> {c.title}
             </button>
           ))}
         </div>
@@ -77,7 +78,7 @@ export default function InsuranceClient() {
             return (
               <div key={p.id} className={styles.card} id={`plan-${p.id}`}>
                 <div className={styles.cardTop}>
-                  <span className={styles.cardIcon} style={{ background: 'rgba(214,168,79,0.16)' }}>{p.icon}</span>
+                  <span className={styles.cardIcon} style={{ background: `${iconColor(p.iconName)}16`, color: iconColor(p.iconName) }}><Icon name={p.iconName} size={19} /></span>
                   <div>
                     <div className={styles.cardTitle}>{p.title}</div>
                     <div className={styles.cardMeta}>{p.category}</div>

@@ -15,7 +15,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, iconColor } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 export default function LoansClient() {
@@ -62,7 +62,7 @@ export default function LoansClient() {
         <div className={styles.catGrid} style={{ marginTop: 10 }}>
           {LOAN_CATEGORIES.map((c) => (
             <div key={c.title} className={styles.catCard}>
-              <span className={styles.catIcon} aria-hidden>{c.icon}</span>
+              <span className={styles.catIcon} style={{ color: iconColor(c.iconName) }} aria-hidden><Icon name={c.iconName} size={18} /></span>
               <span className={styles.catTitle}>{c.title}</span>
               <p className={styles.catDesc}>{c.desc}</p>
             </div>
@@ -81,8 +81,9 @@ export default function LoansClient() {
               key={c.title}
               className={`${styles.chip} ${category === c.title ? styles.chipActive : ''}`}
               onClick={() => setCategory(c.title)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              {c.icon} {c.title}
+              <Icon name={c.iconName} size={14} tinted /> {c.title}
             </button>
           ))}
         </div>
@@ -93,7 +94,7 @@ export default function LoansClient() {
             return (
               <div key={r.id} className={styles.card} id={`loan-${r.id}`}>
                 <div className={styles.cardTop}>
-                  <span className={styles.cardIcon} style={{ background: 'rgba(31,93,74,0.12)' }}>{r.icon}</span>
+                  <span className={styles.cardIcon} style={{ background: `${iconColor(r.iconName)}16`, color: iconColor(r.iconName) }}><Icon name={r.iconName} size={19} /></span>
                   <div>
                     <div className={styles.cardTitle}>{r.title}</div>
                     <div className={styles.cardMeta}>{r.category}</div>

@@ -684,6 +684,37 @@ production : navigation/tontine/wallet/explore-crm/trust-fraud-calendar/
 auth/onboarding + admin (isolé) — **32/32 au vert** (un échec en run
 groupé = épuisement connu du pool Supabase, repassé au vert en isolé).
 
+### Fait — Vignettes des pages secondaires colorées aussi (2026-09-08)
+
+Sur relance utilisateur (« La suite ») : plus d'exception, les
+vignettes *illustratives* passent aussi en icône Lucide colorée.
+
+- 16 icônes de contenu ajoutées au registre (`tag`, `laptop`, `agri`
+  = épi de blé, `craft` = ciseaux, `commerce` = panier, `food` =
+  couverts, `health` = stéthoscope, `hospital`, `education` = livre,
+  `water` = gouttes, `moto` = vélo, `poultry` = oiseau, `marketing`
+  = mégaphone, `ledger`, `urgent`, `heart`, `video`, `family`) +
+  leur couleur d'accent.
+- `academy-data.ts` (cours), `community-data.ts` (groupes),
+  `invest-insurance-data.ts` (catégories + projets + campagnes +
+  formules), `loans-data.ts` (motifs + demandes) gagnent un champ
+  `iconName` ; leurs pages (`/academy` `/community` `/invest`
+  `/insurance` `/loans`) rendent l'icône teintée + pastille assortie.
+- En-têtes de page `/jobs` (💼→jobs), `/diaspora` (🌍→diaspora),
+  `/academy` (🎓→learn), `/community` (🤝→community) + carte offre
+  d'emploi (🏢→office). Boutons « cœur » (like), « appel vidéo »,
+  « envoyer » du fil/messagerie Communauté, bouton certificat Academy.
+
+Il ne reste plus d'emoji dans le chrome ni dans les vignettes ; ceux
+qui subsistent sont dans des **chaînes i18n** (libellés de palier de
+score « Très bon 👍 », corps de notification « …la cagnotte 🎉 »),
+laissés tels quels — c'est du texte, pas une icône.
+
+**Vérification** : `tsc` + `lint` (0 warning) + `vitest` (**174**) +
+`build` OK. E2E production : navigation/explore-crm/marketplace/legal/
+auth — **18/18 au vert**. Vérifié visuellement (Playwright) : academy,
+community, invest, loans, jobs.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

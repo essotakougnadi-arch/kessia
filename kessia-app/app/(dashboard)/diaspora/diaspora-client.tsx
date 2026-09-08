@@ -13,6 +13,7 @@ import { DIASPORA_COMMUNITY } from '@/lib/modules/diaspora-data';
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 export default function DiasporaClient() {
@@ -36,7 +37,7 @@ export default function DiasporaClient() {
       <Link href="/explore" className={styles.back}>← {t('common.back')}</Link>
 
       <header className={styles.header}>
-        <span className={styles.headerIcon} style={{ background: 'rgba(182,90,58,0.12)', color: '#B65A3A' }}>🌍</span>
+        <span className={styles.headerIcon} style={{ background: 'rgba(182,90,58,0.12)', color: '#B65A3A' }}><Icon name="diaspora" size={20} /></span>
         <div>
           <h1 className={styles.title}>{t('modulesPages.diaspora.pageTitle')}</h1>
           <p className={styles.sub}>{t('modulesPages.diaspora.pageSub')}</p>

@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { COURSES, COURSE_CATEGORIES } from '@/lib/modules/academy-data';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon, iconColor } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 const PROGRESS_STEP = 24;
@@ -45,7 +46,7 @@ export default function AcademyClient() {
       <Link href="/explore" className={styles.back}>← {t('common.back')}</Link>
 
       <header className={styles.header}>
-        <span className={styles.headerIcon} style={{ background: 'rgba(31,93,74,0.12)', color: '#1F5D4A' }}>🎓</span>
+        <span className={styles.headerIcon} style={{ background: 'rgba(31,93,74,0.12)', color: '#1F5D4A' }}><Icon name="learn" size={20} /></span>
         <div>
           <h1 className={styles.title}>{t('modulesPages.academy.pageTitle')}</h1>
           <p className={styles.sub}>{t('modulesPages.academy.pageSub')}</p>
@@ -75,7 +76,7 @@ export default function AcademyClient() {
           return (
             <div key={c.id} className={styles.card} id={`course-${c.id}`}>
               <div className={styles.cardTop}>
-                <span className={styles.cardIcon} style={{ background: 'rgba(31,93,74,0.1)' }}>{c.icon}</span>
+                <span className={styles.cardIcon} style={{ background: `${iconColor(c.iconName)}16`, color: iconColor(c.iconName) }}><Icon name={c.iconName} size={19} /></span>
                 <div>
                   <div className={styles.cardTitle}>{c.title}</div>
                   <div className={styles.cardMeta}>{c.instructor} · {c.duration}</div>
@@ -113,8 +114,9 @@ export default function AcademyClient() {
                     target="_blank"
                     rel="noreferrer"
                     id={`btn-certificate-${c.id}`}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                   >
-                    🎓 {t('modulesPages.academy.getCertificate')}
+                    <Icon name="learn" size={15} /> {t('modulesPages.academy.getCertificate')}
                   </a>
                 )}
               </div>

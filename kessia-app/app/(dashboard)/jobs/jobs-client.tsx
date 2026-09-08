@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { JOB_LISTINGS, JOB_TYPES, type JobType } from '@/lib/modules/jobs-data';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 export default function JobsClient() {
@@ -29,7 +30,7 @@ export default function JobsClient() {
       <Link href="/explore" className={styles.back}>← {t('common.back')}</Link>
 
       <header className={styles.header}>
-        <span className={styles.headerIcon} style={{ background: 'rgba(122,92,192,0.14)', color: '#7A5CC0' }}>💼</span>
+        <span className={styles.headerIcon} style={{ background: 'rgba(122,92,192,0.14)', color: '#7A5CC0' }}><Icon name="jobs" size={20} /></span>
         <div>
           <h1 className={styles.title}>{t('modulesPages.jobs.pageTitle')}</h1>
           <p className={styles.sub}>{t('modulesPages.jobs.pageSub')}</p>
@@ -57,7 +58,7 @@ export default function JobsClient() {
           return (
             <div key={j.id} className={styles.card} id={`job-${j.id}`}>
               <div className={styles.cardTop}>
-                <span className={styles.cardIcon} style={{ background: 'rgba(122,92,192,0.12)' }}>🏢</span>
+                <span className={styles.cardIcon} style={{ background: 'rgba(122,92,192,0.12)', color: '#7A5CC0' }}><Icon name="office" size={19} /></span>
                 <div>
                   <div className={styles.cardTitle}>{j.title}</div>
                   <div className={styles.cardMeta}>{j.company} · {j.city}</div>

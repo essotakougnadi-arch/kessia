@@ -6,17 +6,20 @@
 // demandes ci-dessous sont des EXEMPLES PÉDAGOGIQUES.
 // ============================================================
 
+import type { IconName } from '@/components/ui/Icon';
+
 export interface LoanCategory {
   icon: string;
+  iconName: IconName;
   title: string;
   desc: string;
 }
 
 export const LOAN_CATEGORIES: LoanCategory[] = [
-  { icon: '🚨', title: 'Besoin urgent', desc: 'Imprévu de santé, réparation essentielle, dépense de première nécessité.' },
-  { icon: '📈', title: 'Développement d’activité', desc: 'Stock, petit équipement, avance de trésorerie pour une activité déjà en marche.' },
-  { icon: '🎓', title: 'Études & formation', desc: 'Frais de scolarité, matériel pédagogique, formation professionnelle.' },
-  { icon: '👨‍👩‍👧', title: 'Famille', desc: 'Événement familial, dépense partagée entre proches membres de la coopérative.' },
+  { icon: '🚨', iconName: 'urgent', title: 'Besoin urgent', desc: 'Imprévu de santé, réparation essentielle, dépense de première nécessité.' },
+  { icon: '📈', iconName: 'trending-up', title: 'Développement d’activité', desc: 'Stock, petit équipement, avance de trésorerie pour une activité déjà en marche.' },
+  { icon: '🎓', iconName: 'learn', title: 'Études & formation', desc: 'Frais de scolarité, matériel pédagogique, formation professionnelle.' },
+  { icon: '👨‍👩‍👧', iconName: 'family', title: 'Famille', desc: 'Événement familial, dépense partagée entre proches membres de la coopérative.' },
 ];
 
 export interface ExampleLoanRequest {
@@ -24,6 +27,7 @@ export interface ExampleLoanRequest {
   title: string;
   category: string; // doit correspondre à un title de LOAN_CATEGORIES
   icon: string;
+  iconName: IconName;
   requestedAmount: number; // FCFA — exemple
   fundedPercent: number; // 0-100 — exemple
   durationMonths: number;
@@ -35,7 +39,7 @@ export const LOAN_EXAMPLE_REQUESTS: ExampleLoanRequest[] = [
     id: 'l-sante',
     title: 'Frais d’hospitalisation d’un enfant',
     category: 'Besoin urgent',
-    icon: '🚨',
+    icon: '🚨', iconName: 'urgent',
     requestedAmount: 250_000,
     fundedPercent: 64,
     durationMonths: 6,
@@ -45,7 +49,7 @@ export const LOAN_EXAMPLE_REQUESTS: ExampleLoanRequest[] = [
     id: 'l-stock',
     title: 'Réassort de stock avant la rentrée',
     category: 'Développement d’activité',
-    icon: '📈',
+    icon: '📈', iconName: 'trending-up',
     requestedAmount: 400_000,
     fundedPercent: 38,
     durationMonths: 8,
@@ -55,7 +59,7 @@ export const LOAN_EXAMPLE_REQUESTS: ExampleLoanRequest[] = [
     id: 'l-etudes',
     title: 'Frais universitaires du 2ᵉ semestre',
     category: 'Études & formation',
-    icon: '🎓',
+    icon: '🎓', iconName: 'learn',
     requestedAmount: 180_000,
     fundedPercent: 82,
     durationMonths: 10,
@@ -65,7 +69,7 @@ export const LOAN_EXAMPLE_REQUESTS: ExampleLoanRequest[] = [
     id: 'l-atelier',
     title: 'Réparation d’un four de boulangerie',
     category: 'Développement d’activité',
-    icon: '📈',
+    icon: '📈', iconName: 'trending-up',
     requestedAmount: 320_000,
     fundedPercent: 21,
     durationMonths: 12,
@@ -75,7 +79,7 @@ export const LOAN_EXAMPLE_REQUESTS: ExampleLoanRequest[] = [
     id: 'l-famille',
     title: 'Frais funéraires — soutien familial',
     category: 'Famille',
-    icon: '👨‍👩‍👧',
+    icon: '👨‍👩‍👧', iconName: 'family',
     requestedAmount: 150_000,
     fundedPercent: 91,
     durationMonths: 4,

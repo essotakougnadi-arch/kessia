@@ -3,6 +3,23 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Vignettes des pages secondaires colorées (ADR 0041)
+
+### Modifié
+- Les vignettes illustratives des listes de cartes passent aussi en
+  icône Lucide colorée : cours Academy, groupes Communauté, catégories
+  et exemples Invest / Insurance / Loans (`iconName` ajouté aux data),
+  en-têtes `/jobs` `/diaspora` `/academy` `/community`, boutons like /
+  appel vidéo / envoyer du fil Communauté.
+- 16 icônes de contenu ajoutées au registre (panier, ciseaux, épi de
+  blé, stéthoscope, mégaphone, oiseau…).
+- Restent en emoji uniquement les chaînes i18n (libellés de score,
+  corps de notification) — c'est du texte, pas une icône.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**) + `build` OK.
+  E2E production 18/18 au vert.
+
 ## [Non publié] — Icônes en couleur (ADR 0041)
 
 ### Modifié

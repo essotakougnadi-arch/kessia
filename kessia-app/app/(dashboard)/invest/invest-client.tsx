@@ -23,7 +23,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, iconColor } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 type Mode = 'invest' | 'crowdfunding';
@@ -101,8 +101,9 @@ export default function InvestClient() {
               key={c.title}
               className={`${styles.chip} ${category === c.title ? styles.chipActive : ''}`}
               onClick={() => setCategory(c.title)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              {c.icon} {c.title}
+              <Icon name={c.iconName} size={14} tinted /> {c.title}
             </button>
           ))}
         </div>
@@ -114,7 +115,7 @@ export default function InvestClient() {
               return (
                 <div key={p.id} className={styles.card} id={`project-${p.id}`}>
                   <div className={styles.cardTop}>
-                    <span className={styles.cardIcon} style={{ background: 'rgba(31,93,74,0.12)' }}>{p.icon}</span>
+                    <span className={styles.cardIcon} style={{ background: `${iconColor(p.iconName)}16`, color: iconColor(p.iconName) }}><Icon name={p.iconName} size={19} /></span>
                     <div>
                       <div className={styles.cardTitle}>{p.title}</div>
                       <div className={styles.cardMeta}>{p.location} · {p.category}</div>
@@ -155,7 +156,7 @@ export default function InvestClient() {
               return (
                 <div key={c.id} className={styles.card} id={`campaign-${c.id}`}>
                   <div className={styles.cardTop}>
-                    <span className={styles.cardIcon} style={{ background: 'rgba(182,90,58,0.12)' }}>{c.icon}</span>
+                    <span className={styles.cardIcon} style={{ background: `${iconColor(c.iconName)}16`, color: iconColor(c.iconName) }}><Icon name={c.iconName} size={19} /></span>
                     <div>
                       <div className={styles.cardTitle}>{c.title}</div>
                       <div className={styles.cardMeta}>{c.location} · {c.category}</div>

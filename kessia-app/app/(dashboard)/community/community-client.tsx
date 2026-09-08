@@ -18,6 +18,7 @@ import {
 } from '@/lib/modules/community-data';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon, iconColor } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 type Tab = 'groups' | 'feed' | 'messages';
@@ -106,7 +107,7 @@ export default function CommunityClient() {
       <Link href="/explore" className={styles.back}>← {t('common.back')}</Link>
 
       <header className={styles.header}>
-        <span className={styles.headerIcon} style={{ background: 'rgba(214,168,79,0.18)', color: '#9a7326' }}>🤝</span>
+        <span className={styles.headerIcon} style={{ background: 'rgba(214,168,79,0.18)', color: '#9a7326' }}><Icon name="community" size={20} /></span>
         <div>
           <h1 className={styles.title}>{t('modulesPages.community.pageTitle')}</h1>
           <p className={styles.sub}>{t('modulesPages.community.pageSub')}</p>
@@ -137,7 +138,7 @@ export default function CommunityClient() {
             return (
               <div key={g.id} className={styles.card} id={`group-${g.id}`}>
                 <div className={styles.cardTop}>
-                  <span className={styles.cardIcon} style={{ background: 'rgba(214,168,79,0.14)' }}>{g.icon}</span>
+                  <span className={styles.cardIcon} style={{ background: `${iconColor(g.iconName)}16`, color: iconColor(g.iconName) }}><Icon name={g.iconName} size={19} /></span>
                   <div>
                     <div className={styles.cardTitle}>{g.name}</div>
                     <div className={styles.cardMeta}>{g.sector} · {g.city}</div>
@@ -176,8 +177,8 @@ export default function CommunityClient() {
                       <span className={styles.feedTime}>{p.time}</span>
                     </div>
                     <p className={styles.feedText}>{p.text}</p>
-                    <button className={`${styles.likeBtn} ${isLiked ? styles.likeBtnOn : ''}`} onClick={() => toggleLike(p.id)}>
-                      {isLiked ? '❤️' : '🤍'} {p.likes + (isLiked ? 1 : 0)}
+                    <button className={`${styles.likeBtn} ${isLiked ? styles.likeBtnOn : ''}`} onClick={() => toggleLike(p.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <Icon name="heart" size={14} style={isLiked ? { fill: 'currentColor' } : undefined} /> {p.likes + (isLiked ? 1 : 0)}
                     </button>
                   </div>
                 </div>
@@ -223,8 +224,8 @@ export default function CommunityClient() {
               <div className={styles.threadName}>{convo.withName}</div>
               <div className={styles.threadGroup}>{convo.group}</div>
             </div>
-            <button className={styles.videoCallBtn} onClick={onVideoCall} id="btn-video-call">
-              🎥 {t('modulesPages.community.videoCall')}
+            <button className={styles.videoCallBtn} onClick={onVideoCall} id="btn-video-call" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="video" size={15} /> {t('modulesPages.community.videoCall')}
             </button>
           </div>
 
@@ -247,7 +248,7 @@ export default function CommunityClient() {
               id="msg-input"
             />
             <button className={styles.msgSendBtn} onClick={sendMessage} disabled={!draft.trim()} id="btn-send-message" aria-label={t('modulesPages.community.send')}>
-              ➤
+              <Icon name="send" size={16} />
             </button>
           </div>
         </div>

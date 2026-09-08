@@ -4,6 +4,8 @@
 // simulés côté client (pas de messagerie ni de modération réelle).
 // ============================================================
 
+import type { IconName } from '@/components/ui/Icon';
+
 export interface CommunityGroup {
   id: string;
   name: string;
@@ -11,16 +13,17 @@ export interface CommunityGroup {
   city: string;
   members: number;
   icon: string;
+  iconName: IconName;
   description: string;
 }
 
 export const COMMUNITY_GROUPS: CommunityGroup[] = [
-  { id: 'g1', name: 'Commerçantes de Lomé', sector: 'Commerce', city: 'Lomé', members: 1240, icon: '🧺', description: 'Entraide entre commerçantes des grands marchés — prix, fournisseurs, tontines.' },
-  { id: 'g2', name: 'Agripreneurs du Togo', sector: 'Agriculture', city: 'Kara', members: 860, icon: '🌾', description: 'Techniques, intrants, écoulement des récoltes et accès aux tontines Projet.' },
-  { id: 'g3', name: 'Artisans & Créateurs', sector: 'Artisanat', city: 'Lomé', members: 512, icon: '🧵', description: 'Couture, menuiserie, bijouterie — partager clients et bonnes pratiques.' },
-  { id: 'g4', name: 'Tech & Digital Togo', sector: 'Numérique', city: 'Lomé', members: 398, icon: '💻', description: 'Freelances et petites structures du numérique, veille et missions partagées.' },
-  { id: 'g5', name: 'Restauratrices & Traiteurs', sector: 'Restauration', city: 'Lomé', members: 674, icon: '🍲', description: 'Recettes, hygiène, gestion des commandes en période de forte demande.' },
-  { id: 'g6', name: 'Jeunes Entrepreneurs Kara', sector: 'Entrepreneuriat', city: 'Kara', members: 305, icon: '🚀', description: 'Un groupe pour se lancer, trouver un mentor et une première tontine.' },
+  { id: 'g1', name: 'Commerçantes de Lomé', sector: 'Commerce', city: 'Lomé', members: 1240, icon: '🧺', iconName: 'commerce', description: 'Entraide entre commerçantes des grands marchés — prix, fournisseurs, tontines.' },
+  { id: 'g2', name: 'Agripreneurs du Togo', sector: 'Agriculture', city: 'Kara', members: 860, icon: '🌾', iconName: 'agri', description: 'Techniques, intrants, écoulement des récoltes et accès aux tontines Projet.' },
+  { id: 'g3', name: 'Artisans & Créateurs', sector: 'Artisanat', city: 'Lomé', members: 512, icon: '🧵', iconName: 'craft', description: 'Couture, menuiserie, bijouterie — partager clients et bonnes pratiques.' },
+  { id: 'g4', name: 'Tech & Digital Togo', sector: 'Numérique', city: 'Lomé', members: 398, icon: '💻', iconName: 'laptop', description: 'Freelances et petites structures du numérique, veille et missions partagées.' },
+  { id: 'g5', name: 'Restauratrices & Traiteurs', sector: 'Restauration', city: 'Lomé', members: 674, icon: '🍲', iconName: 'food', description: 'Recettes, hygiène, gestion des commandes en période de forte demande.' },
+  { id: 'g6', name: 'Jeunes Entrepreneurs Kara', sector: 'Entrepreneuriat', city: 'Kara', members: 305, icon: '🚀', iconName: 'rocket', description: 'Un groupe pour se lancer, trouver un mentor et une première tontine.' },
 ];
 
 export interface CommunityPost {
