@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './ai.module.css';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { insightIconName, opportunityIconName } from '@/lib/ui/entry-icons';
 import { useAiChat } from '@/hooks/useAiChat';
 import { useInsights } from '@/hooks/useInsights';
@@ -136,7 +136,7 @@ export default function AiClient() {
           <div className={styles.capGrid}>
             {CAPABILITY_KEYS.map((c) => (
               <div key={c.key} className={styles.capItem}>
-                <span style={{ display: 'flex', color: 'var(--color-primary)' }}><Icon name={c.icon} size={16} /></span>
+                <span style={{ display: 'flex' }}><Icon name={c.icon} size={16} tinted /></span>
                 <span>{t(c.key)}</span>
               </div>
             ))}
@@ -152,7 +152,7 @@ export default function AiClient() {
                 href={op.actionUrl}
                 style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: '1px solid var(--color-border)', textDecoration: 'none', color: 'inherit' }}
               >
-                <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={opportunityIconName(op.id)} size={17} /></span>
+                <span style={{ display: 'flex', paddingTop: 1 }}><Icon name={opportunityIconName(op.id)} size={17} tinted /></span>
                 <span style={{ flex: 1 }}>
                   <strong style={{ display: 'block', fontSize: 13 }}>{op.title}</strong>
                   <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{op.rationale}</span>
@@ -169,7 +169,7 @@ export default function AiClient() {
             {insights.slice(0, 4).map((it) => {
               const row = (
                 <>
-                  <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={insightIconName(it.id)} size={17} /></span>
+                  <span style={{ display: 'flex', paddingTop: 1 }}><Icon name={insightIconName(it.id)} size={17} tinted /></span>
                   <span style={{ flex: 1 }}>
                     <strong style={{ display: 'block', fontSize: 13 }}>{it.title}</strong>
                     <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{it.body}</span>

@@ -7,6 +7,7 @@
 // ============================================================
 
 import type { CSSProperties } from 'react';
+import { iconColor } from '@/lib/ui/icon-colors';
 import {
   AlarmClock,
   ArrowDownLeft,
@@ -159,13 +160,20 @@ export function Icon({
   strokeWidth = 1.75,
   className,
   style,
+  tinted = false,
 }: {
   name: IconName;
   size?: number;
   strokeWidth?: number;
   className?: string;
   style?: CSSProperties;
+  /** applique la couleur d'accent sémantique de l'icône (sinon héritée) */
+  tinted?: boolean;
 }) {
   const Glyph = REGISTRY[name];
-  return <Glyph size={size} strokeWidth={strokeWidth} className={className} style={style} aria-hidden />;
+  const resolved = tinted ? { color: iconColor(name), ...style } : style;
+  return <Glyph size={size} strokeWidth={strokeWidth} className={className} style={resolved} aria-hidden />;
 }
+
+/** Couleur d'accent d'une icône — pour teinter un fond/chip côté appelant. */
+export { iconColor } from '@/lib/ui/icon-colors';

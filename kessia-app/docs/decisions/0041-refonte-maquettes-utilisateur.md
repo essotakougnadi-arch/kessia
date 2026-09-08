@@ -652,6 +652,38 @@ auth, onboarding, pin-lock, trust-fraud-calendar, growth-simulator,
 admin). Vérifié visuellement (Playwright) : profil, notifications,
 agenda, explore, support, admin, page publique.
 
+### Fait — Icônes en couleur (2026-09-08)
+
+Sur retour utilisateur (« Mettre ces icônes en couleurs. Les autres
+aussi ») : le trait fin monochrome devient un **trait fin coloré**,
+une teinte sémantique par icône.
+
+- `lib/ui/icon-colors.ts` : palette de 8 accents (terracotta, bleu,
+  vert, ambre, violet, sarcelle, rose, ardoise) + `ICON_COLOR:
+  Record<IconName, string>` (exhaustif) + `iconColor(name)`.
+- `<Icon … tinted />` applique la couleur d'accent ; sinon `iconColor(name)`
+  sert à teinter aussi le fond pastel de la pastille côté appelant.
+- **Carte de solde accueil** : les pastilles passent de translucide-
+  blanc à **blanc plein** (légère ombre) et les icônes prennent leur
+  couleur — bien plus lisibles sur le dégradé terracotta.
+- Teinté partout où l'icône est décorative : grille de services,
+  4 actions de la carte, activités « Pour vous »/opportunités/
+  transactions (pastille + trait assortis), actions rapides `/wallet`
+  + historique, menu et stats du `/profile`, modale type de profil +
+  `/register`, `/calendar`, actions business, canaux + FAQ du
+  `/support`, bandeau capacités + insights `/ai`, préférences de
+  notification, priorités admin, **les deux barres de navigation**
+  (chaque onglet sa couleur ; l'onglet actif de la sidebar garde son
+  icône blanche sur carré terracotta).
+- Inchangé : `/explore` et les 4 types de tontine (déjà colorés via
+  l'accent du module/type), features de la page publique (schéma
+  3 couleurs volontaire), FAB IA (blanc sur terracotta).
+
+**Vérification** : `tsc` + `lint` (0 warning) + `build` OK. E2E
+production : navigation/tontine/wallet/explore-crm/trust-fraud-calendar/
+auth/onboarding + admin (isolé) — **32/32 au vert** (un échec en run
+groupé = épuisement connu du pool Supabase, repassé au vert en isolé).
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

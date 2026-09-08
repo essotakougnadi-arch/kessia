@@ -9,7 +9,7 @@ import Link from 'next/link';
 import styles from './support.module.css';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorNote } from '@/components/ui/ErrorNote';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSupport, useTicketThread, type SupportTicket } from '@/hooks/useSupport';
@@ -67,7 +67,7 @@ export default function SupportClient() {
         <div className={styles.channelGrid}>
           {CONTACT_CHANNELS.map((ch) => (
             <Link key={ch.label} href={ch.href} className={styles.channelCard}>
-              <div className={styles.channelIcon}><Icon name={ch.icon} size={20} /></div>
+              <div className={styles.channelIcon} style={{ color: iconColor(ch.icon) }}><Icon name={ch.icon} size={20} /></div>
               <div className={styles.channelLabel}>{ch.label}</div>
               <div className={styles.channelSub}>{ch.subKey ? t(ch.subKey) : ch.sub}</div>
             </Link>
@@ -145,7 +145,7 @@ export default function SupportClient() {
           {FAQ_ITEMS.map((faq) => (
             <Link key={faq.id} href={`/ai?q=${encodeURIComponent(t(faq.qKey))}`} className={styles.faqItem}>
               <div className={styles.faqLeft}>
-                <span className={styles.faqIcon}><Icon name={faq.icon} size={17} /></span>
+                <span className={styles.faqIcon} style={{ color: iconColor(faq.icon) }}><Icon name={faq.icon} size={17} /></span>
                 <div>
                   <div className={styles.faqQuestion}>{t(faq.qKey)}</div>
                   <div className={styles.faqCategory}>{t(faq.catKey)}</div>

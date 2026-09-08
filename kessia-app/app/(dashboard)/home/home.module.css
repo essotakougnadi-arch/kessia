@@ -291,12 +291,12 @@
   width: 44px;
   height: 44px;
   border-radius: 13px;
-  background: rgba(255,255,255,0.16);
-  border: 1px solid rgba(255,255,255,0.14);
+  background: #fff;
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 8px rgba(60,30,10,0.16);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
 }
 .cardServiceLabel {
   font-size: 10.5px;
@@ -348,12 +348,12 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.22);
+  background: #fff;
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 8px rgba(60,30,10,0.16);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
 }
 
 .cardAction span {

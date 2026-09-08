@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import QRCode from 'qrcode';
 import styles from './wallet.module.css';
 import { Modal } from '@/components/ui/Modal';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { transactionIconName } from '@/lib/ui/entry-icons';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { DraftNotice } from '@/components/ui/DraftNotice';
@@ -180,7 +180,7 @@ export default function WalletClient() {
               className={`${styles.actionItem} ${styles.actionBtn}`}
               id={a.id}
             >
-              <div className={styles.actionIcon}><Icon name={a.icon} size={20} /></div>
+              <div className={styles.actionIcon} style={{ background: `${iconColor(a.icon)}16`, color: iconColor(a.icon) }}><Icon name={a.icon} size={20} /></div>
               <span className={styles.actionLabel}>{t(a.labelKey)}</span>
             </button>
           ))}
@@ -239,7 +239,7 @@ export default function WalletClient() {
                   style={{ textDecoration: 'none', color: 'inherit' }}
                   title={t('wallet.viewReceipt')}
                 >
-                  <div className={styles.txIcon}><Icon name={transactionIconName(tx.type)} size={19} /></div>
+                  <div className={styles.txIcon} style={{ background: `${iconColor(transactionIconName(tx.type))}16`, color: iconColor(transactionIconName(tx.type)) }}><Icon name={transactionIconName(tx.type)} size={19} /></div>
                   <div className={styles.txInfo}>
                     <div className={styles.txTitle}>{label}</div>
                     <div className={styles.txSub}>

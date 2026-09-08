@@ -3,6 +3,24 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Icônes en couleur (ADR 0041)
+
+### Modifié
+- Les icônes Lucide passent du trait monochrome au **trait coloré**,
+  une teinte sémantique par icône (`lib/ui/icon-colors.ts`, palette de
+  8 accents). `<Icon … tinted />` + `iconColor(name)` pour teinter la
+  pastille assortie.
+- Carte de solde de l'accueil : pastilles blanches + icônes colorées
+  (bien plus lisibles sur le dégradé). Teinté aussi : services,
+  actions wallet + historique, activités « Pour vous », menu/stats du
+  profil, agenda, business, support, AI, notifications, priorités
+  admin, les deux barres de navigation.
+- Inchangé : `/explore` et types de tontine (déjà colorés), features
+  de la page publique, FAB IA.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `build` OK. E2E production 32/32 au vert.
+
 ## [Non publié] — Jeu d'icônes Lucide, lot 2 (ADR 0041)
 
 ### Modifié

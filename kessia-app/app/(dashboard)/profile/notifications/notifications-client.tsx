@@ -10,7 +10,7 @@ import styles from './notifications.module.css';
 import { useUiStore } from '@/store/uiStore';
 import { useProfile, type NotificationPrefs } from '@/hooks/useProfile';
 import { ErrorNote } from '@/components/ui/ErrorNote';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { useT } from '@/lib/i18n';
 
 type PrefKey = keyof NotificationPrefs;
@@ -69,7 +69,7 @@ export default function NotificationsPrefsClient() {
       <div className={styles.section}>
         {ITEMS.map((it) => (
           <div key={it.key} className={styles.row}>
-            <span className={styles.rowIcon}><Icon name={it.icon} size={18} /></span>
+            <span className={styles.rowIcon} style={{ color: iconColor(it.icon) }}><Icon name={it.icon} size={18} /></span>
             <div className={styles.rowText}>
               <div className={styles.rowLabel}>{t(`notifPrefs.items.${it.tk}.label`)}</div>
               <div className={styles.rowDesc}>{t(`notifPrefs.items.${it.tk}.desc`)}</div>

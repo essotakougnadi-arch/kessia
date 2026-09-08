@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './profile.module.css';
 import { compressImage } from '@/lib/files/compress-image';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { Modal } from '@/components/ui/Modal';
@@ -250,7 +250,7 @@ export default function ProfileClient() {
             { label: t('profile.statMemberSince'), value: memberSince, icon: 'calendar' },
           ] as const).map((s) => (
             <div key={s.label} className={styles.statCard}>
-              <div className={styles.statIcon}><Icon name={s.icon} size={18} /></div>
+              <div className={styles.statIcon} style={{ color: iconColor(s.icon) }}><Icon name={s.icon} size={18} /></div>
               <div className={styles.statValue}>{s.value}</div>
               <div className={styles.statLabel}>{s.label}</div>
             </div>
@@ -274,7 +274,7 @@ export default function ProfileClient() {
       <section className={styles.section}>
         <div className={styles.accentCard} id="accent-picker">
           <div className={styles.accentHead}>
-            <span className={styles.accentTitle} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="palette" size={15} /> {t('profile.accentCardTitle')}</span>
+            <span className={styles.accentTitle} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="palette" size={15} tinted /> {t('profile.accentCardTitle')}</span>
             <span className={styles.accentSub}>{t('profile.accentCardSub')}</span>
           </div>
           <div className={styles.accentTiles}>
@@ -309,7 +309,7 @@ export default function ProfileClient() {
               onClick={() => goTo(item)}
               style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', font: 'inherit', cursor: 'pointer' }}
             >
-              <div className={styles.menuIcon}><Icon name={item.icon} size={18} /></div>
+              <div className={styles.menuIcon} style={{ background: `${iconColor(item.icon)}16`, color: iconColor(item.icon) }}><Icon name={item.icon} size={18} /></div>
               <span className={styles.menuLabel}>{t(item.labelKey)}</span>
               {item.action === 'locale' && (
                 <span className={`${styles.menuBadge} ${styles.menuBadge_warning}`}>{LOCALE_META[locale].native}</span>
@@ -354,7 +354,7 @@ export default function ProfileClient() {
                 font: 'inherit', textAlign: 'left',
               }}
             >
-              <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={m.iconName} size={18} /></span>
+              <span style={{ display: 'flex', paddingTop: 1 }}><Icon name={m.iconName} size={18} tinted /></span>
               <span style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: 14 }}>{m.label}</strong>
                 <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{m.hint}</span>

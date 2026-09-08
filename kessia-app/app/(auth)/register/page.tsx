@@ -204,7 +204,7 @@ export default function RegisterPage() {
                   onChange={() => setProfileType(type.id)}
                   className={styles.profileTypeRadio}
                 />
-                <span className={styles.profileTypeIcon}><Icon name={type.icon} size={20} /></span>
+                <span className={styles.profileTypeIcon}><Icon name={type.icon} size={20} tinted /></span>
                 <div>
                   <div className={styles.profileTypeLabel}>{t(`auth.register.profiles.${type.id}.label`)}</div>
                   <div className={styles.profileTypeSub}>{t(`auth.register.profiles.${type.id}.sub`)}</div>

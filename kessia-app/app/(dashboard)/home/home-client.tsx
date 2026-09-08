@@ -8,7 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import styles from './home.module.css';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { insightIconName, opportunityIconName, transactionIconName } from '@/lib/ui/entry-icons';
 import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
 import { MarketplaceRail } from '@/components/discover/MarketplaceRail';
@@ -49,6 +49,15 @@ const SERVICES: Service[] = [
   { id: 'simulator', icon: 'simulator', labelKey: 'home.svcSimulate', href: '/simulator', bg: '#F1ECFA' },
   { id: 'explore', icon: 'explore', labelKey: 'nav.explore', href: '/explore', bg: '#F5F4F2' },
 ];
+
+/** Pastille d'activité : icône teintée sur fond pastel assorti. */
+function ActivityIcon({ name }: { name: IconName }) {
+  return (
+    <div className={styles.activityIcon} style={{ background: `${iconColor(name)}16`, color: iconColor(name) }}>
+      <Icon name={name} size={18} />
+    </div>
+  );
+}
 
 /** Ordonne la grille de services selon le profil déclaré (§4). */
 function orderServices(focus: readonly ('wallet' | 'tontine' | 'business')[]): Service[] {
@@ -180,19 +189,19 @@ export default function HomeClient() {
 
           <div className={styles.cardActions}>
             <Link href="/wallet?action=send" className={styles.cardAction} id="btn-envoyer">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(96,165,250,0.28)' }}><Icon name="send" size={20} /></div>
+              <div className={styles.cardActionIcon}><Icon name="send" size={20} tinted /></div>
               <span>{t('wallet.send')}</span>
             </Link>
             <Link href="/wallet?action=receive" className={styles.cardAction} id="btn-recevoir">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(74,222,128,0.28)' }}><Icon name="receive" size={20} /></div>
+              <div className={styles.cardActionIcon}><Icon name="receive" size={20} tinted /></div>
               <span>{t('wallet.receive')}</span>
             </Link>
             <Link href="/wallet?action=deposit" className={styles.cardAction} id="btn-recharger">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(250,204,21,0.28)' }}><Icon name="topup" size={20} /></div>
+              <div className={styles.cardActionIcon}><Icon name="topup" size={20} tinted /></div>
               <span>{t('wallet.topUp')}</span>
             </Link>
             <Link href="/tontine" className={styles.cardAction} id="btn-tontine-quick">
-              <div className={styles.cardActionIcon} style={{ background: 'rgba(196,181,253,0.32)' }}><Icon name="tontines" size={20} /></div>
+              <div className={styles.cardActionIcon}><Icon name="tontines" size={20} tinted /></div>
               <span>{t('nav.tontines')}</span>
             </Link>
           </div>
@@ -203,7 +212,7 @@ export default function HomeClient() {
               <div className={styles.cardServicesGrid}>
                 {services.map((svc) => (
                   <Link key={svc.id} href={svc.href} className={styles.cardService} id={`btn-svc-${svc.id}`}>
-                    <div className={styles.cardServiceIcon}><Icon name={svc.icon} size={21} /></div>
+                    <div className={styles.cardServiceIcon}><Icon name={svc.icon} size={21} tinted /></div>
                     <span className={styles.cardServiceLabel}>{t(svc.labelKey)}</span>
                   </Link>
                 ))}
@@ -237,7 +246,7 @@ export default function HomeClient() {
             {insights.map((it) => {
               const inner = (
                 <>
-                  <div className={styles.activityIcon}><Icon name={insightIconName(it.id)} size={18} /></div>
+                  <ActivityIcon name={insightIconName(it.id)} />
                   <div className={styles.activityInfo}>
                     <div className={styles.activityTitle}>{it.title}</div>
                     <div className={styles.activitySub}>{it.body}</div>
@@ -320,7 +329,7 @@ export default function HomeClient() {
           <div className={styles.activityCard}>
             {growthNext.map((step) => (
               <Link key={step.key} href={step.actionUrl} className={styles.activityItem} id={`growth-${step.key}`}>
-                <div className={styles.activityIcon}><Icon name={step.status === 'DOING' ? 'clock' : 'growth'} size={18} /></div>
+                <ActivityIcon name={step.status === 'DOING' ? 'clock' : 'growth'} />
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{step.title}</div>
                   <div className={styles.activitySub}>{step.metricLabel} : {step.targetHint}</div>
@@ -342,7 +351,7 @@ export default function HomeClient() {
           <div className={styles.activityCard}>
             {opportunities.slice(0, 3).map((op) => (
               <Link key={op.id} href={op.actionUrl} className={styles.activityItem} id={`opp-${op.id}`}>
-                <div className={styles.activityIcon}><Icon name={opportunityIconName(op.id)} size={18} /></div>
+                <ActivityIcon name={opportunityIconName(op.id)} />
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{op.title}</div>
                   <div className={styles.activitySub}>{op.rationale}</div>
@@ -440,7 +449,7 @@ export default function HomeClient() {
           {walletLoading && (
             [0, 1, 2].map((i) => (
               <div key={i} className={styles.activityItem}>
-                <div className={styles.activityIcon}><Icon name="wallet" size={18} /></div>
+                <ActivityIcon name="wallet" />
                 <div className={styles.activityInfo}>
                   <div className={`${styles.activityTitle} ${styles.skeleton} ${styles.skeletonDark}`}>{t('common.loading')}</div>
                   <div className={`${styles.activitySub} ${styles.skeleton} ${styles.skeletonDark}`}>·</div>
@@ -457,7 +466,7 @@ export default function HomeClient() {
             const { label } = describeTransaction(tx.type, tx.description);
             return (
               <div key={tx.id} className={styles.activityItem}>
-                <div className={styles.activityIcon}><Icon name={transactionIconName(tx.type)} size={18} /></div>
+                <ActivityIcon name={transactionIconName(tx.type)} />
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{label}</div>
                   <div className={styles.activitySub}>{formatRelativeDate(tx.createdAt)}</div>

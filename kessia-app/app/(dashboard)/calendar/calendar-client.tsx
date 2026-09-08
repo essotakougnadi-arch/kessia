@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import styles from './calendar.module.css';
 import { ErrorNote } from '@/components/ui/ErrorNote';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon, iconColor, type IconName } from '@/components/ui/Icon';
 import { useCalendar } from '@/hooks/useCalendar';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
@@ -94,7 +94,7 @@ export default function CalendarClient() {
                 <div className={`${styles.dayLabel} ${key === todayKey ? styles.today : ''}`}>{dayLabel(key)}</div>
                 {events.map((e) => (
                   <Link key={e.id} href={e.href} className={`${styles.event} ${e.overdue ? styles.eventOverdue : ''}`}>
-                    <span className={styles.icon}><Icon name={TYPE_ICON[e.type]} size={17} /></span>
+                    <span className={styles.icon} style={{ background: `${iconColor(TYPE_ICON[e.type])}16`, color: iconColor(TYPE_ICON[e.type]) }}><Icon name={TYPE_ICON[e.type]} size={17} /></span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className={styles.eventTitle}>{e.title}</div>
                       <div className={styles.eventDetail}>

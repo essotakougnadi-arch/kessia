@@ -80,7 +80,7 @@ export default function Sidebar() {
                 className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <div className={styles.navIcon}><Icon name={item.icon} size={18} /></div>
+                <div className={styles.navIcon}><Icon name={item.icon} size={18} tinted={!isActive} /></div>
                 <span className={styles.navLabel}>{t(item.key)}</span>
                 {isActive && <div className={styles.navActivePip} />}
               </Link>
@@ -112,7 +112,7 @@ export default function Sidebar() {
               href={item.href}
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             >
-              <div className={styles.navIcon}><Icon name={item.icon} size={18} /></div>
+              <div className={styles.navIcon}><Icon name={item.icon} size={18} tinted={!isActive} /></div>
               <span className={styles.navLabel}>{t(item.key)}</span>
             </Link>
           );
@@ -122,7 +122,7 @@ export default function Sidebar() {
           aria-label={t('nav.logout')}
           onClick={() => logout()}
         >
-          <div className={styles.navIcon}><Icon name="logout" size={18} /></div>
+          <div className={styles.navIcon}><Icon name="logout" size={18} tinted /></div>
           <span className={styles.navLabel}>{t('nav.logout')}</span>
         </button>
       </div>

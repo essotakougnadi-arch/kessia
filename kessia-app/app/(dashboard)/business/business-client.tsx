@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import styles from './business.module.css';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorNote } from '@/components/ui/ErrorNote';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, iconColor } from '@/components/ui/Icon';
 import { useUiStore } from '@/store/uiStore';
 import { useBusinesses, type Business } from '@/hooks/useBusinesses';
 import { initials } from '@/lib/utils/format';
@@ -92,7 +92,7 @@ export default function BusinessClient() {
             onClick={() => quickAction(a.action)}
             id={`btn-${a.key}`}
           >
-            <div className={styles.quickActionIcon}><Icon name={a.icon} size={18} /></div>
+            <div className={styles.quickActionIcon} style={{ color: iconColor(a.icon) }}><Icon name={a.icon} size={18} /></div>
             <span className={styles.quickActionLabel}>{t(`business.${a.key}`)}</span>
           </button>
         ))}

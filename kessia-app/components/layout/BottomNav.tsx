@@ -49,7 +49,7 @@ function NavItem({ href, icon, label, active }: { href: string; icon: IconName; 
       aria-current={active ? 'page' : undefined}
     >
       <span className={styles.itemIconWrapper}>
-        <span className={styles.itemIcon}><Icon name={icon} size={22} strokeWidth={active ? 2.1 : 1.8} /></span>
+        <span className={styles.itemIcon}><Icon name={icon} size={22} strokeWidth={active ? 2.1 : 1.8} tinted /></span>
         {active && <span className={styles.itemDot} />}
       </span>
       <span className={styles.itemLabel}>{label}</span>
