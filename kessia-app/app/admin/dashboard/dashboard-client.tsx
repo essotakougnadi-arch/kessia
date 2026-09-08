@@ -4,6 +4,8 @@
 // ============================================================
 
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/ui/Icon';
+import { adminPriorityIconName } from '@/lib/ui/entry-icons';
 import { useAdminOverview, useAdminAnalytics } from '@/hooks/useAdmin';
 import { formatCurrency, formatRelativeDate } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
@@ -60,12 +62,12 @@ export default function AdminDashboardClient() {
     );
   }
 
-  const kpis = [
-    { icon: '👥', label: t('admin.dashboard.kpiUsers'), value: overview?.users.total, sub: t('admin.dashboard.kpiUsersSub', { n: overview?.users.thisMonth ?? 0 }), color: '#B65A3A' },
-    { icon: '🛡️', label: t('admin.dashboard.kpiKyc'), value: overview?.kyc.pending, sub: t('admin.dashboard.kpiKycSub'), color: '#EF4444' },
-    { icon: '🔄', label: t('admin.dashboard.kpiTontines'), value: overview?.tontines.active, sub: t('admin.dashboard.kpiTontinesSub'), color: '#1F5D4A' },
-    { icon: '💳', label: t('admin.dashboard.kpiVolume'), value: overview ? formatCurrency(overview.transactions.volume, overview.transactions.currency) : undefined, sub: t('admin.dashboard.kpiVolumeSub', { n: overview?.transactions.count ?? 0 }), color: '#D6A84F' },
-    { icon: '🎧', label: t('admin.dashboard.kpiTickets'), value: overview?.support.open, sub: t('admin.dashboard.kpiTicketsSub'), color: '#8B5CF6' },
+  const kpis: { icon: IconName; label: string; value: string | number | undefined; sub: string; color: string }[] = [
+    { icon: 'community', label: t('admin.dashboard.kpiUsers'), value: overview?.users.total, sub: t('admin.dashboard.kpiUsersSub', { n: overview?.users.thisMonth ?? 0 }), color: '#B65A3A' },
+    { icon: 'shield', label: t('admin.dashboard.kpiKyc'), value: overview?.kyc.pending, sub: t('admin.dashboard.kpiKycSub'), color: '#EF4444' },
+    { icon: 'tontines', label: t('admin.dashboard.kpiTontines'), value: overview?.tontines.active, sub: t('admin.dashboard.kpiTontinesSub'), color: '#1F5D4A' },
+    { icon: 'topup', label: t('admin.dashboard.kpiVolume'), value: overview ? formatCurrency(overview.transactions.volume, overview.transactions.currency) : undefined, sub: t('admin.dashboard.kpiVolumeSub', { n: overview?.transactions.count ?? 0 }), color: '#D6A84F' },
+    { icon: 'message', label: t('admin.dashboard.kpiTickets'), value: overview?.support.open, sub: t('admin.dashboard.kpiTicketsSub'), color: '#8B5CF6' },
   ];
 
   return (
@@ -81,7 +83,7 @@ export default function AdminDashboardClient() {
         {kpis.map((k) => (
           <div key={k.label} style={{ ...card, borderLeft: `3px solid ${k.color}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 38, height: 38, background: `${k.color}18`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>{k.icon}</div>
+              <div style={{ width: 38, height: 38, background: `${k.color}18`, color: k.color, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={k.icon} size={18} /></div>
               <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 600 }}>{k.label}</span>
             </div>
             <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-text)', marginBottom: 3 }}>
@@ -101,7 +103,7 @@ export default function AdminDashboardClient() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {analytics.priorities.map((p) => (
               <Link key={p.id} href={p.href} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textDecoration: 'none', color: 'inherit', padding: '8px 0', borderTop: '1px solid var(--color-border)' }}>
-                <span style={{ fontSize: 18 }}>{p.icon}</span>
+                <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={adminPriorityIconName(p.id)} size={17} /></span>
                 <span style={{ flex: 1 }}>
                   <strong style={{ display: 'block', fontSize: 13 }}>{p.title}</strong>
                   <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{p.detail}</span>

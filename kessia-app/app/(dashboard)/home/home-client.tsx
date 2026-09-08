@@ -9,6 +9,7 @@ import Link from 'next/link';
 import styles from './home.module.css';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { insightIconName, opportunityIconName, transactionIconName } from '@/lib/ui/entry-icons';
 import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
 import { MarketplaceRail } from '@/components/discover/MarketplaceRail';
 import { ErrorNote } from '@/components/ui/ErrorNote';
@@ -236,7 +237,7 @@ export default function HomeClient() {
             {insights.map((it) => {
               const inner = (
                 <>
-                  <div className={styles.activityIcon}>{it.icon}</div>
+                  <div className={styles.activityIcon}><Icon name={insightIconName(it.id)} size={18} /></div>
                   <div className={styles.activityInfo}>
                     <div className={styles.activityTitle}>{it.title}</div>
                     <div className={styles.activitySub}>{it.body}</div>
@@ -267,7 +268,7 @@ export default function HomeClient() {
           <div className={styles.activityCard}>
             {meta.firstSteps.map((step, i) => (
               <Link key={step.href + i} href={step.href} className={styles.activityItem} id={`firststep-${i}`}>
-                <div className={styles.activityIcon}>{['1️⃣', '2️⃣', '3️⃣', '4️⃣'][i] ?? '•'}</div>
+                <div className={`${styles.activityIcon} ${styles.stepNum}`}>{i + 1}</div>
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{step.label}</div>
                 </div>
@@ -319,7 +320,7 @@ export default function HomeClient() {
           <div className={styles.activityCard}>
             {growthNext.map((step) => (
               <Link key={step.key} href={step.actionUrl} className={styles.activityItem} id={`growth-${step.key}`}>
-                <div className={styles.activityIcon}>{step.status === 'DOING' ? '⏳' : '🌱'}</div>
+                <div className={styles.activityIcon}><Icon name={step.status === 'DOING' ? 'clock' : 'growth'} size={18} /></div>
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{step.title}</div>
                   <div className={styles.activitySub}>{step.metricLabel} : {step.targetHint}</div>
@@ -341,7 +342,7 @@ export default function HomeClient() {
           <div className={styles.activityCard}>
             {opportunities.slice(0, 3).map((op) => (
               <Link key={op.id} href={op.actionUrl} className={styles.activityItem} id={`opp-${op.id}`}>
-                <div className={styles.activityIcon}>{op.icon}</div>
+                <div className={styles.activityIcon}><Icon name={opportunityIconName(op.id)} size={18} /></div>
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{op.title}</div>
                   <div className={styles.activitySub}>{op.rationale}</div>
@@ -439,7 +440,7 @@ export default function HomeClient() {
           {walletLoading && (
             [0, 1, 2].map((i) => (
               <div key={i} className={styles.activityItem}>
-                <div className={styles.activityIcon}>💰</div>
+                <div className={styles.activityIcon}><Icon name="wallet" size={18} /></div>
                 <div className={styles.activityInfo}>
                   <div className={`${styles.activityTitle} ${styles.skeleton} ${styles.skeletonDark}`}>{t('common.loading')}</div>
                   <div className={`${styles.activitySub} ${styles.skeleton} ${styles.skeletonDark}`}>·</div>
@@ -453,10 +454,10 @@ export default function HomeClient() {
           )}
 
           {!walletLoading && recent.map((tx) => {
-            const { icon, label } = describeTransaction(tx.type, tx.description);
+            const { label } = describeTransaction(tx.type, tx.description);
             return (
               <div key={tx.id} className={styles.activityItem}>
-                <div className={styles.activityIcon}>{icon}</div>
+                <div className={styles.activityIcon}><Icon name={transactionIconName(tx.type)} size={18} /></div>
                 <div className={styles.activityInfo}>
                   <div className={styles.activityTitle}>{label}</div>
                   <div className={styles.activitySub}>{formatRelativeDate(tx.createdAt)}</div>

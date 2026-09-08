@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 export default function LoansClient() {
@@ -140,8 +141,8 @@ export default function LoansClient() {
       <div>
         <h2 className={styles.sectionTitle}>{t('modulesPages.loans.bridgeTitle')}</h2>
         <div className={styles.bridgeRow} style={{ marginTop: 10 }}>
-          <Link href="/tontine/garantie" className={styles.bridgeLink}>🛟 {t('modulesPages.loans.bridgeGuarantee')}</Link>
-          <Link href="/tontine?type=growth" className={styles.bridgeLink}>🔄 {t('modulesPages.loans.bridgeTontine')}</Link>
+          <Link href="/tontine/garantie" className={styles.bridgeLink}><Icon name="support" size={15} /> {t('modulesPages.loans.bridgeGuarantee')}</Link>
+          <Link href="/tontine?type=growth" className={styles.bridgeLink}><Icon name="tontines" size={15} /> {t('modulesPages.loans.bridgeTontine')}</Link>
         </div>
       </div>
     </div>

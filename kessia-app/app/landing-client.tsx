@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
+import { Icon } from '@/components/ui/Icon';
 import { DiscoveryRail } from '@/components/discover/DiscoveryRail';
 import { MarketplaceRail } from '@/components/discover/MarketplaceRail';
 import { useT } from '@/lib/i18n';
@@ -42,19 +43,19 @@ export default function LandingClient() {
   ];
 
   const features = [
-    { icon: '💰', title: t('landing.feat1Title'), color: 'primary', desc: t('landing.feat1Desc') },
-    { icon: '🏪', title: t('landing.feat2Title'), color: 'green', desc: t('landing.feat2Desc') },
-    { icon: '🛒', title: t('landing.feat3Title'), color: 'gold', desc: t('landing.feat3Desc') },
-    { icon: '🎓', title: t('landing.feat4Title'), color: 'green', desc: t('landing.feat4Desc') },
-    { icon: '🤝', title: t('landing.feat5Title'), color: 'primary', desc: t('landing.feat5Desc') },
-    { icon: '📈', title: t('landing.feat6Title'), color: 'gold', desc: t('landing.feat6Desc') },
-  ];
+    { icon: 'wallet', title: t('landing.feat1Title'), color: 'primary', desc: t('landing.feat1Desc') },
+    { icon: 'business', title: t('landing.feat2Title'), color: 'green', desc: t('landing.feat2Desc') },
+    { icon: 'marketplace', title: t('landing.feat3Title'), color: 'gold', desc: t('landing.feat3Desc') },
+    { icon: 'learn', title: t('landing.feat4Title'), color: 'green', desc: t('landing.feat4Desc') },
+    { icon: 'handshake', title: t('landing.feat5Title'), color: 'primary', desc: t('landing.feat5Desc') },
+    { icon: 'trending-up', title: t('landing.feat6Title'), color: 'gold', desc: t('landing.feat6Desc') },
+  ] as const;
 
   const steps = [
-    { n: '01', icon: '📱', title: t('landing.step1Title'), desc: t('landing.step1Desc') },
-    { n: '02', icon: '🛡️', title: t('landing.step2Title'), desc: t('landing.step2Desc') },
-    { n: '03', icon: '🚀', title: t('landing.step3Title'), desc: t('landing.step3Desc') },
-  ];
+    { n: '01', icon: 'mobile', title: t('landing.step1Title'), desc: t('landing.step1Desc') },
+    { n: '02', icon: 'shield', title: t('landing.step2Title'), desc: t('landing.step2Desc') },
+    { n: '03', icon: 'rocket', title: t('landing.step3Title'), desc: t('landing.step3Desc') },
+  ] as const;
 
   const footerCols = [
     {
@@ -266,7 +267,7 @@ export default function LandingClient() {
           <div className={styles.featuresGrid}>
             {features.map((f) => (
               <div key={f.title} className={`${styles.featureCard} ${styles[`featureCard_${f.color}`]}`}>
-                <div className={styles.featureIcon}>{f.icon}</div>
+                <div className={styles.featureIcon}><Icon name={f.icon} size={24} strokeWidth={1.9} /></div>
                 <h3 className={styles.featureTitle}>{f.title}</h3>
                 <p className={styles.featureDesc}>{f.desc}</p>
               </div>
@@ -284,7 +285,7 @@ export default function LandingClient() {
             {steps.map((s) => (
               <div key={s.n} className={styles.step}>
                 <div className={styles.stepNum}>{s.n}</div>
-                <div className={styles.stepIcon}>{s.icon}</div>
+                <div className={styles.stepIcon}><Icon name={s.icon} size={22} strokeWidth={1.9} /></div>
                 <h3 className={styles.stepTitle}>{s.title}</h3>
                 <p className={styles.stepDesc}>{s.desc}</p>
               </div>

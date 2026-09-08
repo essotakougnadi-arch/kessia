@@ -1,19 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { useT } from '@/lib/i18n';
 
-const NAV_ITEMS = [
-  { href: '/admin/dashboard', icon: '📊', key: 'dashboard' },
-  { href: '/admin/users', icon: '👥', key: 'users' },
-  { href: '/admin/kyc', icon: '🛡️', key: 'kyc' },
-  { href: '/admin/tontines', icon: '🔄', key: 'tontines' },
-  { href: '/admin/guarantee', icon: '🛟', key: 'guarantee' },
-  { href: '/admin/fraud', icon: '🛡️', key: 'fraud' },
-  { href: '/admin/analytics', icon: '📈', key: 'analytics' },
-  { href: '/admin/transactions', icon: '💳', key: 'transactions' },
-  { href: '/admin/support', icon: '🎧', key: 'support' },
-  { href: '/admin/modules', icon: '🧩', key: 'modules' },
+const NAV_ITEMS: { href: string; icon: IconName; key: string }[] = [
+  { href: '/admin/dashboard', icon: 'dashboard', key: 'dashboard' },
+  { href: '/admin/users', icon: 'community', key: 'users' },
+  { href: '/admin/kyc', icon: 'shield', key: 'kyc' },
+  { href: '/admin/tontines', icon: 'tontines', key: 'tontines' },
+  { href: '/admin/guarantee', icon: 'support', key: 'guarantee' },
+  { href: '/admin/fraud', icon: 'shield-alert', key: 'fraud' },
+  { href: '/admin/analytics', icon: 'chart', key: 'analytics' },
+  { href: '/admin/transactions', icon: 'topup', key: 'transactions' },
+  { href: '/admin/support', icon: 'message', key: 'support' },
+  { href: '/admin/modules', icon: 'explore', key: 'modules' },
 ];
 
 export default function AdminSidebar() {
@@ -62,7 +63,7 @@ export default function AdminSidebar() {
               transition: 'all 0.2s',
             }}
           >
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <span style={{ display: 'flex' }}><Icon name={item.icon} size={16} /></span>
             {t(`admin.nav.${item.key}`)}
           </Link>
         ))}

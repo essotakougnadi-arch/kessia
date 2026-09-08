@@ -8,7 +8,7 @@
 
 .row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--color-border); }
 .row:last-child { border-bottom: none; }
-.rowIcon { font-size: 20px; }
+.rowIcon { display: flex; align-items: center; color: var(--color-primary); }
 .rowText { flex: 1; }
 .rowLabel { font-size: 14px; font-weight: 600; color: var(--color-text); }
 .rowDesc { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }

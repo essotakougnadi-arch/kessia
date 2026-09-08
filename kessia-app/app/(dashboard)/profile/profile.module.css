@@ -53,7 +53,7 @@
 /* STATS GRID */
 .statsGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .statCard { background: var(--color-surface); border-radius: 16px; padding: 16px; text-align: center; border: 1px solid var(--color-border); box-shadow: var(--shadow-card); }
-.statIcon { font-size: 24px; margin-bottom: 8px; }
+.statIcon { display: flex; justify-content: center; color: var(--color-primary); margin-bottom: 8px; }
 .statValue { font-size: 16px; font-weight: 900; color: var(--color-primary); letter-spacing: -0.3px; }
 .statLabel { font-size: 11px; color: var(--color-text-tertiary); margin-top: 3px; }
 
@@ -70,7 +70,7 @@
 .menuItem { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--color-border); text-decoration: none; transition: background 0.15s; }
 .menuItem:last-child { border-bottom: none; }
 .menuItem:hover { background: var(--color-surface-hover); }
-.menuIcon { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.menuIcon { width: 36px; height: 36px; border-radius: 10px; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .menuLabel { flex: 1; font-size: 14px; font-weight: 600; color: var(--color-text); }
 .menuBadge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 100px; }
 .menuBadge_warning { background: var(--color-warning-light); color: var(--color-warning); }

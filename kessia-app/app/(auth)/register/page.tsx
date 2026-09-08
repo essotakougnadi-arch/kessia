@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './auth.module.css';
 import { KessiaLogo } from '@/components/design-system/ui/KessiaLogo';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { CountryPhoneField, PhoneValue } from '@/components/auth/CountryPhoneField';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,12 +17,12 @@ import { useT } from '@/lib/i18n';
 import { toE164, readStoredCountryIso } from '@/lib/constants/countries';
 import { LEGAL_VERSION, LEGAL_VERSION_LABEL } from '@/lib/legal/versions';
 
-const PROFILE_TYPES = [
-  { id: 'INDIVIDUAL', icon: '👤' },
-  { id: 'BEGINNER_ENTREPRENEUR', icon: '🚀' },
-  { id: 'MICRO_ENTERPRISE', icon: '🏪' },
-  { id: 'SME', icon: '🏢' },
-  { id: 'COOPERATIVE', icon: '🤝' },
+const PROFILE_TYPES: { id: string; icon: IconName }[] = [
+  { id: 'INDIVIDUAL', icon: 'profile' },
+  { id: 'BEGINNER_ENTREPRENEUR', icon: 'rocket' },
+  { id: 'MICRO_ENTERPRISE', icon: 'business' },
+  { id: 'SME', icon: 'building' },
+  { id: 'COOPERATIVE', icon: 'handshake' },
 ] as const;
 
 const STEP_KEYS = ['account', 'verification', 'profile', 'kyc'] as const;
@@ -203,7 +204,7 @@ export default function RegisterPage() {
                   onChange={() => setProfileType(type.id)}
                   className={styles.profileTypeRadio}
                 />
-                <span className={styles.profileTypeIcon}>{type.icon}</span>
+                <span className={styles.profileTypeIcon}><Icon name={type.icon} size={20} /></span>
                 <div>
                   <div className={styles.profileTypeLabel}>{t(`auth.register.profiles.${type.id}.label`)}</div>
                   <div className={styles.profileTypeSub}>{t(`auth.register.profiles.${type.id}.sub`)}</div>

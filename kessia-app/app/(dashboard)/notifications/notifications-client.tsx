@@ -7,18 +7,20 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './notifications.module.css';
 import { ErrorNote } from '@/components/ui/ErrorNote';
+import { Icon } from '@/components/ui/Icon';
+import { notificationIconName } from '@/lib/ui/entry-icons';
 import { useNotifications, type KessiaNotification } from '@/hooks/useNotifications';
 import { formatRelativeDate } from '@/lib/utils/format';
 import type { NotificationCategory } from '@prisma/client';
 
-const CAT_META: Record<NotificationCategory, { css: string; label: string; icon: string }> = {
-  SECURITY: { css: 'security', label: 'Sécurité', icon: '🛡️' },
-  PAYMENT: { css: 'payment', label: 'Paiement', icon: '✅' },
-  TONTINE: { css: 'tontine', label: 'Tontine', icon: '🔄' },
-  BUSINESS: { css: 'business', label: 'Business', icon: '📊' },
-  SUPPORT: { css: 'system', label: 'Support', icon: '💬' },
-  SYSTEM: { css: 'system', label: 'Système', icon: '✨' },
-  PROMOTION: { css: 'system', label: 'Offre', icon: '🎁' },
+const CAT_META: Record<NotificationCategory, { css: string; label: string }> = {
+  SECURITY: { css: 'security', label: 'Sécurité' },
+  PAYMENT: { css: 'payment', label: 'Paiement' },
+  TONTINE: { css: 'tontine', label: 'Tontine' },
+  BUSINESS: { css: 'business', label: 'Business' },
+  SUPPORT: { css: 'system', label: 'Support' },
+  SYSTEM: { css: 'system', label: 'Système' },
+  PROMOTION: { css: 'system', label: 'Offre' },
 };
 
 const FILTERS = [
@@ -112,7 +114,7 @@ export default function NotificationsClient() {
                 onClick={() => handleClick(n)}
               >
                 <div className={styles.notifIconWrap}>
-                  <div className={`${styles.notifIcon} ${styles[`notifIcon_${meta.css}`]}`}>{meta.icon}</div>
+                  <div className={`${styles.notifIcon} ${styles[`notifIcon_${meta.css}`]}`}><Icon name={notificationIconName(n.category)} size={17} /></div>
                 </div>
                 <div className={styles.notifContent}>
                   <div className={styles.notifHeader}>

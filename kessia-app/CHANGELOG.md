@@ -3,6 +3,28 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Jeu d'icônes Lucide, lot 2 (ADR 0041)
+
+### Modifié
+- Suite du remplacement des emoji par des icônes Lucide : catalogue de
+  modules (`/explore` + ponts invest/insurance/loans), profils
+  utilisateur (modale + inscription), `/profile` (stats, menu,
+  déconnexion), accueil (« Pour vous », opportunités, premiers pas,
+  activités), historique wallet, notifications (les deux écrans),
+  agenda, actions rapides business, support (canaux + FAQ), KESSIA AI,
+  admin (sidebar, KPI, priorités), page publique (fonctionnalités +
+  étapes).
+- Nouveau `lib/ui/entry-icons.ts` : mappeurs id/catégorie → icône pour
+  les entrées dérivées de données. `components/ui/Icon.tsx` étendu.
+- Restent en emoji, volontairement : les vignettes illustratives des
+  listes de cartes (cours Academy, groupes Communauté, projets
+  invest/insurance/loans/jobs, diaspora) et les emoji dans les chaînes
+  i18n.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**174**) + `build` OK.
+  E2E production : **38/38 au vert**.
+
 ## [Non publié] — Jeu d'icônes Lucide, lot 1 (ADR 0041)
 
 ### Modifié

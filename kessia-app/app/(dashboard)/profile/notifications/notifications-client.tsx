@@ -10,17 +10,18 @@ import styles from './notifications.module.css';
 import { useUiStore } from '@/store/uiStore';
 import { useProfile, type NotificationPrefs } from '@/hooks/useProfile';
 import { ErrorNote } from '@/components/ui/ErrorNote';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { useT } from '@/lib/i18n';
 
 type PrefKey = keyof NotificationPrefs;
 
-const ITEMS: { key: PrefKey; icon: string; tk: string }[] = [
-  { key: 'notifyPayment', icon: '💳', tk: 'notifPayment' },
-  { key: 'notifyTontine', icon: '🔄', tk: 'notifTontine' },
-  { key: 'notifyBusiness', icon: '🏪', tk: 'notifBusiness' },
-  { key: 'notifySupport', icon: '💬', tk: 'notifSupport' },
-  { key: 'notifySystem', icon: 'ℹ️', tk: 'notifSystem' },
-  { key: 'notifyPromotion', icon: '🎁', tk: 'notifPromotion' },
+const ITEMS: { key: PrefKey; icon: IconName; tk: string }[] = [
+  { key: 'notifyPayment', icon: 'topup', tk: 'notifPayment' },
+  { key: 'notifyTontine', icon: 'tontines', tk: 'notifTontine' },
+  { key: 'notifyBusiness', icon: 'business', tk: 'notifBusiness' },
+  { key: 'notifySupport', icon: 'message', tk: 'notifSupport' },
+  { key: 'notifySystem', icon: 'ai', tk: 'notifSystem' },
+  { key: 'notifyPromotion', icon: 'gift', tk: 'notifPromotion' },
 ];
 
 export default function NotificationsPrefsClient() {
@@ -68,7 +69,7 @@ export default function NotificationsPrefsClient() {
       <div className={styles.section}>
         {ITEMS.map((it) => (
           <div key={it.key} className={styles.row}>
-            <span className={styles.rowIcon}>{it.icon}</span>
+            <span className={styles.rowIcon}><Icon name={it.icon} size={18} /></span>
             <div className={styles.rowText}>
               <div className={styles.rowLabel}>{t(`notifPrefs.items.${it.tk}.label`)}</div>
               <div className={styles.rowDesc}>{t(`notifPrefs.items.${it.tk}.desc`)}</div>

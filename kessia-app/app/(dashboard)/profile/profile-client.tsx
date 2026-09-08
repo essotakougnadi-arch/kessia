@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './profile.module.css';
 import { compressImage } from '@/lib/files/compress-image';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { KessiaMobileIcon } from '@/components/design-system/ui/KessiaLogo';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { Modal } from '@/components/ui/Modal';
@@ -34,16 +35,16 @@ function scoreRatingKey(score: number): string {
 }
 
 type MenuAction = 'locale' | 'theme' | 'usertype';
-const MENU_ITEMS: { icon: string; labelKey: string; href: string; ready: boolean; action?: MenuAction }[] = [
-  { icon: '🧭', labelKey: 'profile.menu.usertype', href: '', ready: true, action: 'usertype' },
-  { icon: '🛡️', labelKey: 'profile.menu.kyc', href: '/profile/kyc', ready: true },
-  { icon: '🌍', labelKey: 'profile.menu.locale', href: '', ready: true, action: 'locale' },
-  { icon: '🎨', labelKey: 'profile.menu.theme', href: '', ready: true, action: 'theme' },
-  { icon: '🔒', labelKey: 'profile.menu.security', href: '/profile/security', ready: true },
-  { icon: '🛡️', labelKey: 'profile.menu.privacy', href: '/profile/privacy', ready: true },
-  { icon: '⚖️', labelKey: 'profile.menu.trust', href: '/trust', ready: true },
-  { icon: '💬', labelKey: 'profile.menu.support', href: '/support', ready: true },
-  { icon: '🔔', labelKey: 'profile.menu.notifications', href: '/profile/notifications', ready: true },
+const MENU_ITEMS: { icon: IconName; labelKey: string; href: string; ready: boolean; action?: MenuAction }[] = [
+  { icon: 'user-type', labelKey: 'profile.menu.usertype', href: '', ready: true, action: 'usertype' },
+  { icon: 'shield', labelKey: 'profile.menu.kyc', href: '/profile/kyc', ready: true },
+  { icon: 'languages', labelKey: 'profile.menu.locale', href: '', ready: true, action: 'locale' },
+  { icon: 'palette', labelKey: 'profile.menu.theme', href: '', ready: true, action: 'theme' },
+  { icon: 'lock', labelKey: 'profile.menu.security', href: '/profile/security', ready: true },
+  { icon: 'shield', labelKey: 'profile.menu.privacy', href: '/profile/privacy', ready: true },
+  { icon: 'scale', labelKey: 'profile.menu.trust', href: '/trust', ready: true },
+  { icon: 'message', labelKey: 'profile.menu.support', href: '/support', ready: true },
+  { icon: 'bell', labelKey: 'profile.menu.notifications', href: '/profile/notifications', ready: true },
 ];
 
 export default function ProfileClient() {
@@ -242,14 +243,14 @@ export default function ProfileClient() {
       {/* ═══ STATS ═══ */}
       <section className={styles.section}>
         <div className={styles.statsGrid}>
-          {[
-            { label: t('profile.statActiveTontines'), value: String(activeTontines), icon: '🔄' },
-            { label: t('wallet.transactions'), value: String(stats?.totalTransactions ?? 0), icon: '📊' },
-            { label: 'KESSIA Score', value: formatNumber(score), icon: '⭐' },
-            { label: t('profile.statMemberSince'), value: memberSince, icon: '📅' },
-          ].map((s) => (
+          {([
+            { label: t('profile.statActiveTontines'), value: String(activeTontines), icon: 'tontines' },
+            { label: t('wallet.transactions'), value: String(stats?.totalTransactions ?? 0), icon: 'chart' },
+            { label: 'KESSIA Score', value: formatNumber(score), icon: 'star' },
+            { label: t('profile.statMemberSince'), value: memberSince, icon: 'calendar' },
+          ] as const).map((s) => (
             <div key={s.label} className={styles.statCard}>
-              <div className={styles.statIcon}>{s.icon}</div>
+              <div className={styles.statIcon}><Icon name={s.icon} size={18} /></div>
               <div className={styles.statValue}>{s.value}</div>
               <div className={styles.statLabel}>{s.label}</div>
             </div>
@@ -273,7 +274,7 @@ export default function ProfileClient() {
       <section className={styles.section}>
         <div className={styles.accentCard} id="accent-picker">
           <div className={styles.accentHead}>
-            <span className={styles.accentTitle}>🎨 {t('profile.accentCardTitle')}</span>
+            <span className={styles.accentTitle} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="palette" size={15} /> {t('profile.accentCardTitle')}</span>
             <span className={styles.accentSub}>{t('profile.accentCardSub')}</span>
           </div>
           <div className={styles.accentTiles}>
@@ -308,7 +309,7 @@ export default function ProfileClient() {
               onClick={() => goTo(item)}
               style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', font: 'inherit', cursor: 'pointer' }}
             >
-              <div className={styles.menuIcon}>{item.icon}</div>
+              <div className={styles.menuIcon}><Icon name={item.icon} size={18} /></div>
               <span className={styles.menuLabel}>{t(item.labelKey)}</span>
               {item.action === 'locale' && (
                 <span className={`${styles.menuBadge} ${styles.menuBadge_warning}`}>{LOCALE_META[locale].native}</span>
@@ -330,8 +331,8 @@ export default function ProfileClient() {
 
       {/* ═══ DÉCONNEXION ═══ */}
       <section className={styles.section}>
-        <button className={styles.logoutBtn} id="btn-logout" onClick={() => logout()}>
-          🚪 {t('profile.logout')}
+        <button className={styles.logoutBtn} id="btn-logout" onClick={() => logout()} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Icon name="logout" size={16} /> {t('profile.logout')}
         </button>
         <p className={styles.versionText}>KESSIA v1.0.0-beta · Togo 🇹🇬</p>
       </section>
@@ -353,7 +354,7 @@ export default function ProfileClient() {
                 font: 'inherit', textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: 18 }}>{m.icon}</span>
+              <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={m.iconName} size={18} /></span>
               <span style={{ flex: 1 }}>
                 <strong style={{ display: 'block', fontSize: 14 }}>{m.label}</strong>
                 <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{m.hint}</span>

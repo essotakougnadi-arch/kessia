@@ -605,6 +605,53 @@ marketplace, en-têtes de sections `/profile`, catégories modules
 (`/explore`, `/invest`, `/insurance`, `/loans`), calendrier, admin,
 onboarding/register, support.
 
+### Fait — Jeu d'icônes Lucide (lot 2 : le reste du chrome) (2026-09-08)
+
+Suite du lot 1. Registre `components/ui/Icon.tsx` étendu (~70 noms).
+Nouveau `lib/ui/entry-icons.ts` : mappeurs purs id/catégorie → nom
+d'icône pour les « entrées » posées par les services (insights,
+opportunités, transactions wallet, notifications, priorités admin).
+
+- **Catalogue de modules** (`catalog.ts` +`iconName`) : `/explore`
+  (disponibles + feuille de route) et les ponts `/invest` `/insurance`
+  `/loans`.
+- **Profils utilisateur** (`user-type.ts` +`iconName`) : modale « Type
+  de profil » du profil + sélecteur à l'inscription (`/register`).
+- **`/profile`** : les 4 tuiles de stats, les 9 entrées de menu, le
+  titre « Couleur de l'application », le bouton « Se déconnecter ».
+- **Accueil** : « Pour vous » (insights), « Opportunités », « Premiers
+  pas » (numéros stylés au lieu des emoji 1️⃣), plan de croissance,
+  activités récentes + skeletons. **`/wallet`** : historique des
+  transactions + skeletons.
+- **Notifications** (`/notifications` + `/profile/notifications`) :
+  icône par catégorie, teinte assortie.
+- **Agenda** (`/calendar`), **Business** (4 actions rapides),
+  **Support** (canaux de contact + FAQ + « Ouvrir un ticket »),
+  **KESSIA AI** (bandeau capacités, opportunités, insights, micro).
+- **Admin** : barre latérale (10 liens), KPI du tableau de bord,
+  « Priorités du jour » (dashboard + `/admin/analytics`).
+- **Page publique** : 6 cartes « fonctionnalités » + 3 étapes
+  « Comment ça marche ».
+- **Simulateur** : emoji retiré des `<option>` du sélecteur de type
+  (un `<option>` ne peut pas contenir de SVG).
+
+**Périmètre — ce qui reste volontairement en emoji** : les vignettes
+*illustratives* dans les listes de cartes des pages secondaires —
+cours Academy, groupes Communauté, projets `/invest` `/insurance`
+`/loans` `/jobs`, cartes `/diaspora`. Ce sont de petites images de
+contenu (un poulailler, une machine à coudre, une marmite…) ; un
+pictogramme Lucide monochrome y serait générique et moins parlant.
+Idem pour les emoji présents dans des chaînes i18n (libellés de
+palier de score, corps de notification).
+
+**Vérification** : `tsc` + `lint` (0 warning) + `vitest` (**174**,
+inchangé) + `build` OK (First Load JS partagé inchangé à 87,5 ko —
+`lucide-react` tree-shake bien). **E2E production : 38/38 au vert**
+(navigation, tontine, wallet, explore-crm, marketplace, legal,
+auth, onboarding, pin-lock, trust-fraud-calendar, growth-simulator,
+admin). Vérifié visuellement (Playwright) : profil, notifications,
+agenda, explore, support, admin, page publique.
+
 ## Bilan — les 7 items sont livrés
 
 1. Code PIN de déverrouillage · 2. Objectif d'épargne (Wallet) ·

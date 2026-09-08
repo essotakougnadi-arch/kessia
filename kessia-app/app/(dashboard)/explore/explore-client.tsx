@@ -5,6 +5,7 @@
 
 import Link from 'next/link';
 import styles from './explore.module.css';
+import { Icon } from '@/components/ui/Icon';
 import type { ModuleEntry } from '@/lib/modules/catalog';
 import { useModuleCatalog } from '@/lib/modules/i18n';
 import { useExplore } from '@/hooks/useExplore';
@@ -42,7 +43,7 @@ export default function ExploreClient() {
           {live.map((m) => (
             <Link key={m.key} href={m.href!} className={`${styles.card} ${styles.cardLink}`}>
               <div className={styles.cardTop}>
-                <span className={styles.icon} style={{ background: `${m.accent}1F`, color: m.accent }}>{m.icon}</span>
+                <span className={styles.icon} style={{ background: `${m.accent}1F`, color: m.accent }}><Icon name={m.iconName} size={20} /></span>
                 <div>
                   <div className={styles.name}>{m.name}</div>
                   <div className={styles.tagline}>{m.tagline}</div>
@@ -64,7 +65,7 @@ export default function ExploreClient() {
             return (
               <div key={m.key} className={styles.card}>
                 <div className={styles.cardTop}>
-                  <span className={styles.icon} style={{ background: `${m.accent}1F`, color: m.accent }}>{m.icon}</span>
+                  <span className={styles.icon} style={{ background: `${m.accent}1F`, color: m.accent }}><Icon name={m.iconName} size={20} /></span>
                   <div>
                     <div className={styles.name}>{m.name}</div>
                     <div className={styles.tagline}>{m.tagline}</div>

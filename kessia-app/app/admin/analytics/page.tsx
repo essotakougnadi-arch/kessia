@@ -5,6 +5,8 @@
 // ============================================================
 
 import styles from '../admin.module.css';
+import { Icon } from '@/components/ui/Icon';
+import { adminPriorityIconName } from '@/lib/ui/entry-icons';
 import { useAdminAnalytics } from '@/hooks/useAdmin';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
@@ -39,7 +41,7 @@ export default function AdminAnalyticsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {data.priorities.map((p) => (
               <a key={p.id} href={p.href} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textDecoration: 'none', color: 'inherit', padding: '8px 0', borderTop: '1px solid var(--color-border)' }}>
-                <span style={{ fontSize: 18 }}>{p.icon}</span>
+                <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={adminPriorityIconName(p.id)} size={17} /></span>
                 <span style={{ flex: 1 }}>
                   <strong style={{ display: 'block', fontSize: 13 }}>{p.title}</strong>
                   <span className={styles.muted}>{p.detail}</span>

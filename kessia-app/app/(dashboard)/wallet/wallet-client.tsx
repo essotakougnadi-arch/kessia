@@ -11,6 +11,7 @@ import QRCode from 'qrcode';
 import styles from './wallet.module.css';
 import { Modal } from '@/components/ui/Modal';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { transactionIconName } from '@/lib/ui/entry-icons';
 import { ErrorNote } from '@/components/ui/ErrorNote';
 import { DraftNotice } from '@/components/ui/DraftNotice';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -211,7 +212,7 @@ export default function WalletClient() {
           {isLoading &&
             [0, 1, 2, 3].map((i) => (
               <div key={i} className={styles.txItem}>
-                <div className={styles.txIcon}>💰</div>
+                <div className={styles.txIcon}><Icon name="wallet" size={19} /></div>
                 <div className={styles.txInfo}>
                   <div className={`${styles.txTitle} ${styles.skeleton}`}>{t('common.loading')}</div>
                   <div className={`${styles.txSub} ${styles.skeleton}`}>·</div>
@@ -229,7 +230,7 @@ export default function WalletClient() {
 
           {!isLoading &&
             filteredTx.map((tx) => {
-              const { icon, label } = describeTransaction(tx.type, tx.description);
+              const { label } = describeTransaction(tx.type, tx.description);
               return (
                 <Link
                   key={tx.id}
@@ -238,7 +239,7 @@ export default function WalletClient() {
                   style={{ textDecoration: 'none', color: 'inherit' }}
                   title={t('wallet.viewReceipt')}
                 >
-                  <div className={styles.txIcon}>{icon}</div>
+                  <div className={styles.txIcon}><Icon name={transactionIconName(tx.type)} size={19} /></div>
                   <div className={styles.txInfo}>
                     <div className={styles.txTitle}>{label}</div>
                     <div className={styles.txSub}>

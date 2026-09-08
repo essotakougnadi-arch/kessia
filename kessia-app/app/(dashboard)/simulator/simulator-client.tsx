@@ -181,7 +181,7 @@ function TontineSim() {
         <div className={styles.field}>
           <span className={styles.fieldLabel}>{t('simulator.type')}</span>
           <select className="input" value={type} onChange={(e) => setType(e.target.value as TontineType)}>
-            {typeList.map((m) => <option key={m.key} value={m.key}>{m.icon} {m.label}</option>)}
+            {typeList.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
         </div>
         <div className={styles.field}>

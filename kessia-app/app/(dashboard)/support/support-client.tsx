@@ -9,6 +9,7 @@ import Link from 'next/link';
 import styles from './support.module.css';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorNote } from '@/components/ui/ErrorNote';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSupport, useTicketThread, type SupportTicket } from '@/hooks/useSupport';
@@ -17,18 +18,18 @@ import { useT } from '@/lib/i18n';
 import { formatRelativeDate } from '@/lib/utils/format';
 import type { TicketCategory, TicketStatus } from '@prisma/client';
 
-const FAQ_ITEMS = [
-  { id: '1', qKey: 'support.faqItems.q1', catKey: 'support.cat.WALLET', icon: '💰' },
-  { id: '2', qKey: 'support.faqItems.q2', catKey: 'support.cat.WALLET', icon: '⏱️' },
-  { id: '3', qKey: 'support.faqItems.q3', catKey: 'support.cat.KYC', icon: '🔐' },
-  { id: '4', qKey: 'support.faqItems.q4', catKey: 'support.cat.TONTINE', icon: '🔄' },
-  { id: '5', qKey: 'support.faqItems.q5', catKey: 'support.cat.PAYMENT', icon: '❌' },
+const FAQ_ITEMS: { id: string; qKey: string; catKey: string; icon: IconName }[] = [
+  { id: '1', qKey: 'support.faqItems.q1', catKey: 'support.cat.WALLET', icon: 'wallet' },
+  { id: '2', qKey: 'support.faqItems.q2', catKey: 'support.cat.WALLET', icon: 'clock' },
+  { id: '3', qKey: 'support.faqItems.q3', catKey: 'support.cat.KYC', icon: 'shield' },
+  { id: '4', qKey: 'support.faqItems.q4', catKey: 'support.cat.TONTINE', icon: 'tontines' },
+  { id: '5', qKey: 'support.faqItems.q5', catKey: 'support.cat.PAYMENT', icon: 'cross' },
 ];
 
-const CONTACT_CHANNELS = [
-  { icon: '💬', label: 'KESSIA AI', subKey: 'support.channelAiSub', sub: '', href: '/ai' },
-  { icon: '📱', label: 'WhatsApp', subKey: '', sub: '+228 90 00 00 00', href: 'https://wa.me/22890000000' },
-  { icon: '📧', label: 'Email', subKey: '', sub: 'support@kessia.app', href: 'mailto:support@kessia.app' },
+const CONTACT_CHANNELS: { icon: IconName; label: string; subKey: string; sub: string; href: string }[] = [
+  { icon: 'ai', label: 'KESSIA AI', subKey: 'support.channelAiSub', sub: '', href: '/ai' },
+  { icon: 'phone', label: 'WhatsApp', subKey: '', sub: '+228 90 00 00 00', href: 'https://wa.me/22890000000' },
+  { icon: 'mail', label: 'Email', subKey: '', sub: 'support@kessia.app', href: 'mailto:support@kessia.app' },
 ];
 
 const STATUS_COLOR: Record<TicketStatus, string> = {
@@ -66,7 +67,7 @@ export default function SupportClient() {
         <div className={styles.channelGrid}>
           {CONTACT_CHANNELS.map((ch) => (
             <Link key={ch.label} href={ch.href} className={styles.channelCard}>
-              <div className={styles.channelIcon}>{ch.icon}</div>
+              <div className={styles.channelIcon}><Icon name={ch.icon} size={20} /></div>
               <div className={styles.channelLabel}>{ch.label}</div>
               <div className={styles.channelSub}>{ch.subKey ? t(ch.subKey) : ch.sub}</div>
             </Link>
@@ -77,7 +78,7 @@ export default function SupportClient() {
       {/* Nouveau ticket */}
       <div className={styles.section}>
         <button className={styles.newTicketBtn} id="btn-new-ticket" onClick={() => setShowCreate(true)}>
-          <span className={styles.newTicketIcon}>✉️</span>
+          <span className={styles.newTicketIcon}><Icon name="mail" size={20} /></span>
           <div className={styles.newTicketText}>
             <div className={styles.newTicketTitle}>{t('support.openTicket')}</div>
             <div className={styles.newTicketSub}>{t('support.openTicketSub')}</div>
@@ -144,7 +145,7 @@ export default function SupportClient() {
           {FAQ_ITEMS.map((faq) => (
             <Link key={faq.id} href={`/ai?q=${encodeURIComponent(t(faq.qKey))}`} className={styles.faqItem}>
               <div className={styles.faqLeft}>
-                <span className={styles.faqIcon}>{faq.icon}</span>
+                <span className={styles.faqIcon}><Icon name={faq.icon} size={17} /></span>
                 <div>
                   <div className={styles.faqQuestion}>{t(faq.qKey)}</div>
                   <div className={styles.faqCategory}>{t(faq.catKey)}</div>

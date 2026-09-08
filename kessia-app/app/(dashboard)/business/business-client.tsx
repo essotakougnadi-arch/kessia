@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import styles from './business.module.css';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorNote } from '@/components/ui/ErrorNote';
+import { Icon } from '@/components/ui/Icon';
 import { useUiStore } from '@/store/uiStore';
 import { useBusinesses, type Business } from '@/hooks/useBusinesses';
 import { initials } from '@/lib/utils/format';
@@ -80,10 +81,10 @@ export default function BusinessClient() {
       {/* Actions rapides — ciblent la 1ère entreprise, ou proposent d'en créer une */}
       <div className={styles.quickActions}>
         {([
-          { icon: '➕', key: 'quickNewSale', color: 'green', action: 'sale' },
-          { icon: '📦', key: 'quickAddProduct', color: 'primary', action: 'product' },
-          { icon: '💸', key: 'quickExpense', color: 'gold', action: 'expense' },
-          { icon: '🧾', key: 'quickInvoice', color: 'primary', action: 'invoice' },
+          { icon: 'add', key: 'quickNewSale', color: 'green', action: 'sale' },
+          { icon: 'package', key: 'quickAddProduct', color: 'primary', action: 'product' },
+          { icon: 'trending-down', key: 'quickExpense', color: 'gold', action: 'expense' },
+          { icon: 'receipt', key: 'quickInvoice', color: 'primary', action: 'invoice' },
         ] as const).map((a) => (
           <button
             key={a.key}
@@ -91,7 +92,7 @@ export default function BusinessClient() {
             onClick={() => quickAction(a.action)}
             id={`btn-${a.key}`}
           >
-            <div className={styles.quickActionIcon}>{a.icon}</div>
+            <div className={styles.quickActionIcon}><Icon name={a.icon} size={18} /></div>
             <span className={styles.quickActionLabel}>{t(`business.${a.key}`)}</span>
           </button>
         ))}

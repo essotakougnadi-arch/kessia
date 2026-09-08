@@ -593,12 +593,14 @@
   height: 40px;
   border-radius: 12px;
   background: var(--color-primary-light);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
 }
+.stepNum { font-size: 15px; font-weight: 800; }
 
 .activityInfo { flex: 1; min-width: 0; }
 .activityTitle { font-size: 14px; font-weight: 600; color: var(--color-text); }

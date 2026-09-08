@@ -12,6 +12,7 @@ import { INSURANCE_CATEGORIES, INSURANCE_EXAMPLE_PLANS } from '@/lib/modules/inv
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 export default function InsuranceClient() {
@@ -118,7 +119,7 @@ export default function InsuranceClient() {
       <div>
         <h2 className={styles.sectionTitle}>{t('modulesPages.insurance.bridgeTitle')}</h2>
         <div className={styles.bridgeRow} style={{ marginTop: 10 }}>
-          <Link href="/tontine/garantie" className={styles.bridgeLink}>🛟 {t('modulesPages.insurance.bridgeGuarantee')}</Link>
+          <Link href="/tontine/garantie" className={styles.bridgeLink}><Icon name="support" size={15} /> {t('modulesPages.insurance.bridgeGuarantee')}</Link>
         </div>
       </div>
     </div>

@@ -117,7 +117,7 @@
   cursor: not-allowed;
 }
 
-.channelIcon { font-size: 24px; margin-bottom: 4px; }
+.channelIcon { display: flex; align-items: center; justify-content: center; color: var(--color-primary); margin-bottom: 6px; }
 
 .channelLabel {
   font-size: 13px;
@@ -160,7 +160,7 @@
   box-shadow: var(--shadow-md);
 }
 
-.newTicketIcon { font-size: 24px; }
+.newTicketIcon { display: flex; align-items: center; color: var(--color-primary); }
 
 .newTicketText { flex: 1; }
 
@@ -306,7 +306,7 @@
   flex: 1;
 }
 
-.faqIcon { font-size: 18px; }
+.faqIcon { display: flex; align-items: center; color: var(--color-primary); }
 
 .faqQuestion {
   font-size: 13px;

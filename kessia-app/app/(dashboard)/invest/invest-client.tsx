@@ -23,6 +23,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { useExplore } from '@/hooks/useExplore';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
+import { Icon } from '@/components/ui/Icon';
 import styles from '@/components/modules/module-page.module.css';
 
 type Mode = 'invest' | 'crowdfunding';
@@ -203,8 +204,8 @@ export default function InvestClient() {
       <div>
         <h2 className={styles.sectionTitle}>{t('modulesPages.invest.bridgeTitle')}</h2>
         <div className={styles.bridgeRow} style={{ marginTop: 10 }}>
-          <Link href="/growth" className={styles.bridgeLink}>🌱 {t('modulesPages.invest.bridgeGrowth')}</Link>
-          <Link href="/simulator" className={styles.bridgeLink}>🧮 {t('modulesPages.invest.bridgeSimulator')}</Link>
+          <Link href="/growth" className={styles.bridgeLink}><Icon name="growth" size={15} /> {t('modulesPages.invest.bridgeGrowth')}</Link>
+          <Link href="/simulator" className={styles.bridgeLink}><Icon name="simulator" size={15} /> {t('modulesPages.invest.bridgeSimulator')}</Link>
         </div>
       </div>
     </div>

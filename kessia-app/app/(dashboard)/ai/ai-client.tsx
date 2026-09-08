@@ -7,6 +7,8 @@ import { useEffect, useRef, useState, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './ai.module.css';
+import { Icon, type IconName } from '@/components/ui/Icon';
+import { insightIconName, opportunityIconName } from '@/lib/ui/entry-icons';
 import { useAiChat } from '@/hooks/useAiChat';
 import { useInsights } from '@/hooks/useInsights';
 import { useOpportunities } from '@/hooks/useOpportunities';
@@ -19,13 +21,13 @@ import { useT } from '@/lib/i18n';
 
 const DEFAULT_QUESTION_KEYS = ['ai.q1', 'ai.q2', 'ai.q3', 'ai.q4'];
 
-const CAPABILITY_KEYS = [
-  { icon: '💰', key: 'ai.cap1' },
-  { icon: '🔄', key: 'ai.cap2' },
-  { icon: '🏪', key: 'ai.cap3' },
-  { icon: '📊', key: 'ai.cap4' },
-  { icon: '🔐', key: 'ai.cap5' },
-  { icon: '🎯', key: 'ai.cap6' },
+const CAPABILITY_KEYS: { icon: IconName; key: string }[] = [
+  { icon: 'wallet', key: 'ai.cap1' },
+  { icon: 'tontines', key: 'ai.cap2' },
+  { icon: 'business', key: 'ai.cap3' },
+  { icon: 'chart', key: 'ai.cap4' },
+  { icon: 'shield', key: 'ai.cap5' },
+  { icon: 'target', key: 'ai.cap6' },
 ];
 
 function hhmm(iso: string) {
@@ -134,7 +136,7 @@ export default function AiClient() {
           <div className={styles.capGrid}>
             {CAPABILITY_KEYS.map((c) => (
               <div key={c.key} className={styles.capItem}>
-                <span>{c.icon}</span>
+                <span style={{ display: 'flex', color: 'var(--color-primary)' }}><Icon name={c.icon} size={16} /></span>
                 <span>{t(c.key)}</span>
               </div>
             ))}
@@ -150,7 +152,7 @@ export default function AiClient() {
                 href={op.actionUrl}
                 style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: '1px solid var(--color-border)', textDecoration: 'none', color: 'inherit' }}
               >
-                <span style={{ fontSize: 18 }}>{op.icon}</span>
+                <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={opportunityIconName(op.id)} size={17} /></span>
                 <span style={{ flex: 1 }}>
                   <strong style={{ display: 'block', fontSize: 13 }}>{op.title}</strong>
                   <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{op.rationale}</span>
@@ -167,7 +169,7 @@ export default function AiClient() {
             {insights.slice(0, 4).map((it) => {
               const row = (
                 <>
-                  <span style={{ fontSize: 18 }}>{it.icon}</span>
+                  <span style={{ display: 'flex', paddingTop: 1, color: 'var(--color-primary)' }}><Icon name={insightIconName(it.id)} size={17} /></span>
                   <span style={{ flex: 1 }}>
                     <strong style={{ display: 'block', fontSize: 13 }}>{it.title}</strong>
                     <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{it.body}</span>
@@ -265,7 +267,7 @@ export default function AiClient() {
               style={voice.listening ? { background: 'var(--color-danger)' } : { background: 'var(--color-surface)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
               onClick={() => (voice.listening ? voice.stopListening() : voice.startListening())}
             >
-              <span>{voice.listening ? '■' : '🎤'}</span>
+              <span style={{ display: 'flex' }}>{voice.listening ? '■' : <Icon name="mic" size={17} />}</span>
             </button>
           )}
           <textarea
