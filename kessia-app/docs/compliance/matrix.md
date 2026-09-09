@@ -7,7 +7,7 @@
 >
 > Légende : ✅ en place · 🟡 partiel / posture MVP · ⛔ bloquant avant prod · 📋 à rédiger
 
-_Dernière revue technique : 2026-08-31 (audit complet post-ADR 0028). Depuis ADR 0017 : pièces jointes de ticket (0018), tests d'intégration (0019), internationalisation FR/EN de tout l'espace membre et de la prose serveur (0020→0028) — sans impact sur les bloquants réglementaires ci-dessous._
+_Dernière revue technique : 2026-09-09 (post-ADR 0043 — effacement RGPD encadré + purge de rétention automatique). Depuis ADR 0017 : pièces jointes de ticket (0018), tests d'intégration (0019), internationalisation FR/EN de tout l'espace membre et de la prose serveur (0020→0028), livraison marketplace (0042) — sans impact sur les bloquants réglementaires ci-dessous._
 
 ---
 
@@ -28,9 +28,9 @@ _Dernière revue technique : 2026-08-31 (audit complet post-ADR 0028). Depuis AD
 | Minimisation | ✅ | Inscription : téléphone + nom + prénom + mot de passe uniquement. KYC demandé seulement au moment utile. |
 | Consentement séparé (données ≠ CGU) | ✅ | Deux cases distinctes. |
 | Droit d'accès / portabilité | ✅ | `POST /api/v1/profile/privacy {action:'export'}` génère **immédiatement** une archive JSON (identité, wallet + ledger, paiements, tontines, business, métadonnées KYC sans les pièces, notifications, tickets) et horodate la demande (ADR 0006). |
-| Droit à l'effacement | 🟡 | `POST /api/v1/profile/privacy {action:'delete-request'}` enregistre la demande (annulable via `{action:'cancel-delete'}`) + audit `privacy.deletion_request` ; état exposé dans le Trust Center. **Procédure d'effacement/anonymisation effective (obligations de conservation AML) : à définir avec compliance** — aujourd'hui manuelle. |
-| Durées de conservation | 📋 | Voir §9. À arrêter (KYC, transactions, logs, audit). |
-| Chiffrement au repos | 🟡 | Base Supabase chiffrée côté hébergeur. **Documents KYC : Supabase Storage (bucket privé) + URL signées 5 min** dès que configuré, repli data-URI sinon (ADR 0014). Reste : nettoyage du bucket à la suppression RGPD. |
+| Droit à l'effacement | 🟡 | `POST /api/v1/profile/privacy {action:'delete-request'}` enregistre la demande (annulable via `{action:'cancel-delete'}`) + audit `privacy.deletion_request` ; état exposé dans le Trust Center. **Effacement effectif** : `PATCH /api/v1/admin/users/[id] {action:'erase'}` (rôles conformité, exige `deletionRequestedAt` posé) → `lib/privacy/erasure.ts` : purge des pièces KYC (bucket + lignes), conversations IA, notifications, empreintes d'appareil, plans de croissance, pièces jointes support ; anonymisation de `User`/`UserProfile` (pierre tombale, téléphone `deleted:<id>`, e-mail/hashes/PIN effacés) ; **conservés** : ledger, `audit_logs`, dossier KYC sans les pièces (preuve LCB-FT). Audit `admin.user_erased`. Bouton dédié dans `/admin/users` (ADR 0043). Reste : fenêtre de rétractation formelle + délai cible à arrêter avec compliance. |
+| Durées de conservation | 🟡 | §9 arrêté (valeurs à confirmer juridiquement). **Purge automatique** branchée sur le tick horaire (`lib/privacy/retention.ts` → `runRetentionPurge`) : OTP > 7 j, sessions expirées > 1 j, notifications lues > 12 mois, `audit_logs` > 5 ans. Script manuel : `npm run privacy:purge`. |
+| Chiffrement au repos | 🟡 | Base Supabase chiffrée côté hébergeur. **Documents KYC : Supabase Storage (bucket privé) + URL signées 5 min** dès que configuré, repli data-URI sinon (ADR 0014). Nettoyage du bucket à l'effacement RGPD : **fait** (`removeKycDocuments` appelé par `eraseUserData`, ADR 0043). |
 | Chiffrement en transit | ✅ | TLS (hébergeur). |
 | Sous-traitants (Supabase, Vercel, Resend, Upstash…) | 📋 | Cartographie + DPA à établir. |
 | Transferts hors zone | 📋 | Supabase région `eu-west-1` → à documenter. |
@@ -94,15 +94,20 @@ _Dernière revue technique : 2026-08-31 (audit complet post-ADR 0028). Depuis AD
 
 ## 9. Conservation des données
 
-| Donnée | Durée proposée (à valider ⛔) |
-|---|---|
-| Compte utilisateur actif | Durée de la relation |
-| Données KYC | 5 à 10 ans après clôture (obligation AML — **à confirmer**) |
-| Écritures ledger / transactions | 10 ans (obligation comptable — **à confirmer**) |
-| `audit_logs` | 5 ans |
-| Logs techniques applicatifs | 6 à 12 mois |
-| OTP | Purge après expiration (déjà : usage unique + expiration 10 min) |
-| Sessions | Purge après expiration (30 j) |
+| Donnée | Durée proposée (à valider ⛔) | Purge |
+|---|---|---|
+| Compte utilisateur actif | Durée de la relation | Anonymisation via `eraseUserData` (ADR 0043) |
+| Données KYC | 5 à 10 ans après clôture (obligation AML — **à confirmer**) | Pièces effacées à l'effacement RGPD ; dossier (métadonnées) conservé |
+| Écritures ledger / transactions | 10 ans (obligation comptable — **à confirmer**) | Jamais purgé automatiquement |
+| `audit_logs` | 5 ans | `runRetentionPurge` (tick horaire) |
+| Logs techniques applicatifs | 6 à 12 mois | Hébergeur / plateforme de logs |
+| Notifications lues | 12 mois | `runRetentionPurge` (les non lues sont conservées) |
+| OTP | 7 j après expiration (usage unique + expiration 10 min) | `runRetentionPurge` |
+| Sessions | 1 j après expiration (expiration 30 j) | `runRetentionPurge` |
+
+> Implémentation : `lib/privacy/retention.ts` (`RETENTION_DAYS`), exécutée à chaque tick
+> (`/api/v1/cron/tontine-tick`) et disponible en script (`npm run privacy:purge`).
+> L'effacement d'un compte est distinct et encadré : `lib/privacy/erasure.ts`.
 
 ## 10. Sécurité
 
@@ -130,5 +135,5 @@ _Dernière revue technique : 2026-08-31 (audit complet post-ADR 0028). Depuis AD
 3. KYC : liveness/prestataire IDV + screening sanctions/PPE habilité (stub local + plafonds serveur déjà en place — ADR 0013) + calage des plafonds sur la réglementation.
 4. Procédures : déclaration de soupçon, gel des avoirs (runbook incident + DR ébauchés — ADR 0013, à formaliser).
 5. Pages légales : **brouillons publiés** (CGU, confidentialité, mentions légales — ADR 0015 ; tarifs dans le Trust Center). Restent la validation par un conseil juridique togolais et les informations de l'entité.
-6. ~~Migration du stockage des documents KYC hors base~~ → **fait** (Supabase Storage, ADR 0014) ; reste le nettoyage du bucket à la suppression RGPD.
+6. ~~Migration du stockage des documents KYC hors base~~ → **fait** (Supabase Storage, ADR 0014). ~~Nettoyage du bucket à la suppression RGPD~~ → **fait** (`eraseUserData`, ADR 0043). Reste : validation de la fenêtre de rétractation / du délai d'effacement par un conseil.
 7. Infrastructure : APM/alertes branchés (endpoint `/api/metrics` prêt), gestionnaire de secrets. Rate-limit distribué et ordonnanceur du tick tontine = **faits** (ADR 0014, à activer via variables d'env). Reste : rétention 30 j + copie de sauvegarde hors-hébergeur + premier test DR consigné.

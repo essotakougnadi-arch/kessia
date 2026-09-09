@@ -10,13 +10,14 @@ import { z } from 'zod';
 import { requireAdmin, COMPLIANCE_ROLES } from '@/lib/auth/admin';
 import prisma from '@/lib/db/prisma';
 import { recordAudit } from '@/lib/audit/audit.service';
+import { eraseUserData } from '@/lib/privacy/erasure';
 import { ok, badRequest, notFound, forbidden, validationError, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 const patchSchema = z.object({
-  action: z.enum(['suspend', 'reactivate']),
+  action: z.enum(['suspend', 'reactivate', 'erase']),
   reason: z.string().max(500).optional(),
 });
 
@@ -63,11 +64,32 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const target = await prisma.user.findUnique({
       where: { id: params.id },
-      select: { id: true, isActive: true, role: true },
+      select: { id: true, isActive: true, role: true, deletionRequestedAt: true },
     });
     if (!target) return notFound('Utilisateur introuvable.');
     if (target.role !== 'USER' && target.role !== 'BUSINESS_OWNER' && target.role !== 'TONTINE_MANAGER') {
       return forbidden("Ce compte a un rôle privilégié — modération manuelle requise.");
+    }
+
+    // ── Effacement RGPD (art. 17) ──────────────────────────────
+    // Irréversible. On exige que la demande de suppression ait été
+    // formulée par l'utilisateur et instruite (fenêtre de rétractation).
+    if (action === 'erase') {
+      if (!target.deletionRequestedAt) {
+        return badRequest(
+          "Aucune demande de suppression instruite pour ce compte. L'utilisateur doit d'abord la formuler.",
+        );
+      }
+      const result = await eraseUserData(target.id);
+      void recordAudit({
+        userId: context.userId,
+        action: 'admin.user_erased',
+        entity: 'User',
+        entityId: target.id,
+        metadata: { ...result, reason: reason ?? null },
+        request,
+      });
+      return ok(result, 'Données du compte effacées et anonymisées.');
     }
 
     const suspend = action === 'suspend';

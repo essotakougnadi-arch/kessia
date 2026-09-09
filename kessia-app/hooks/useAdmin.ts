@@ -76,6 +76,7 @@ export type AdminUserRow = {
   id: string; firstName: string; lastName: string; phone: string; email: string | null;
   role: UserRole; kycStatus: KycStatus; kycLevel: number; isActive: boolean;
   balance: number; createdAt: string; lastLoginAt: string | null;
+  deletionRequestedAt: string | null;
 };
 export function useAdminUsers(q: string, kyc: string) {
   const params = new URLSearchParams();
@@ -85,7 +86,7 @@ export function useAdminUsers(q: string, kyc: string) {
     `/api/v1/admin/users${params.toString() ? `?${params}` : ''}`
   );
 
-  async function moderate(id: string, action: 'suspend' | 'reactivate', reason?: string) {
+  async function moderate(id: string, action: 'suspend' | 'reactivate' | 'erase', reason?: string) {
     const r = toActionResult(await apiSend(`/api/v1/admin/users/${id}`, 'PATCH', { action, reason }));
     if (r.success) list.refresh();
     return r;

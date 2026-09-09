@@ -2222,6 +2222,14 @@ export const fr = {
       reasonPlaceholder: 'Motif (communiqué à l’utilisateur, facultatif)',
       confirmSuspend: 'Confirmer la suspension',
       confirmReactivate: 'Confirmer la réactivation',
+      deletionRequested: 'Suppression demandée',
+      erase: 'Effacer (RGPD)',
+      modalEraseTitle: 'Effacer les données du compte',
+      eraseWarning:
+        'Action irréversible. Les pièces KYC, conversations IA, notifications et appareils sont supprimés ; le compte et son profil sont anonymisés. Le grand livre et le journal d’audit sont conservés (obligation comptable et LCB-FT).',
+      eraseNoRequest: 'Aucune demande de suppression n’a été instruite pour ce compte.',
+      eraseReasonPlaceholder: 'Référence du dossier / motif (journalisé, facultatif)',
+      confirmErase: 'Effacer définitivement',
     },
     kyc: {
       title: 'Dossiers KYC',

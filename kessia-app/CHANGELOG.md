@@ -3,6 +3,31 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Effacement RGPD + purge de rétention (ADR 0043)
+
+### Ajouté
+- **Effacement d'un compte (RGPD art. 17)** — `lib/privacy/erasure.ts` :
+  purge des pièces KYC (bucket + base), conversations IA, notifications,
+  appareils, plan de croissance, pièces jointes support ; anonymisation
+  de `User`/`UserProfile` (pierre tombale). **Conservés** : grand livre,
+  journal d'audit, dossier KYC sans les pièces (obligation LCB-FT).
+  Point d'entrée `PATCH /api/v1/admin/users/[id] {action:'erase'}`
+  (rôles conformité, exige une demande de suppression instruite), audit
+  `admin.user_erased`, bouton dédié dans `/admin/users`.
+- **Purge de rétention automatique** — `lib/privacy/retention.ts` :
+  OTP > 7 j, sessions expirées > 1 j, notifications lues > 12 mois,
+  `audit_logs` > 5 ans. Branchée sur le tick horaire ; script manuel
+  `npm run privacy:purge`.
+
+### Modifié
+- `docs/compliance/matrix.md` §2, §9 et bloquant §6 : effacement et
+  durées de conservation passent de « à faire » à « fait, reste la
+  validation du délai par un conseil ».
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**178**) + `build` OK.
+  `test/integration/privacy-erasure.itest.ts` (3 tests) au vert.
+
 ## [Non publié] — Livraison Marketplace via Miaride (ADR 0042)
 
 ### Ajouté

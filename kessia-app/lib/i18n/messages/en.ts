@@ -2198,6 +2198,14 @@ export const en: Catalog = {
       reasonPlaceholder: 'Reason (shared with the user, optional)',
       confirmSuspend: 'Confirm suspension',
       confirmReactivate: 'Confirm reactivation',
+      deletionRequested: 'Deletion requested',
+      erase: 'Erase (GDPR)',
+      modalEraseTitle: 'Erase account data',
+      eraseWarning:
+        'Irreversible. KYC documents, AI conversations, notifications and devices are deleted; the account and its profile are anonymised. The ledger and audit log are retained (accounting and AML obligations).',
+      eraseNoRequest: 'No deletion request has been processed for this account.',
+      eraseReasonPlaceholder: 'Case reference / reason (logged, optional)',
+      confirmErase: 'Erase permanently',
     },
     kyc: {
       title: 'KYC cases',

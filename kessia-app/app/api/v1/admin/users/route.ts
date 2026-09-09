@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true, firstName: true, lastName: true, phone: true, email: true,
           role: true, kycStatus: true, kycLevel: true, isActive: true,
-          createdAt: true, lastLoginAt: true,
+          createdAt: true, lastLoginAt: true, deletionRequestedAt: true,
           wallet: { select: { balance: true } },
         },
       }),

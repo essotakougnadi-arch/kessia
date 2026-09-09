@@ -19,13 +19,18 @@ export default function AdminUsersPage() {
   const addToast = useUiStore((s) => s.addToast);
 
   const [target, setTarget] = useState<AdminUserRow | null>(null);
+  const [mode, setMode] = useState<'moderate' | 'erase'>('moderate');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+
+  function openModeration(u: AdminUserRow) { setTarget(u); setMode('moderate'); setReason(''); }
+  function openErase(u: AdminUserRow) { setTarget(u); setMode('erase'); setReason(''); }
 
   async function confirmModeration() {
     if (!target) return;
     setBusy(true);
-    const r = await moderate(target.id, target.isActive ? 'suspend' : 'reactivate', reason.trim() || undefined);
+    const action = mode === 'erase' ? 'erase' : target.isActive ? 'suspend' : 'reactivate';
+    const r = await moderate(target.id, action, reason.trim() || undefined);
     setBusy(false);
     addToast({ type: r.success ? 'success' : 'error', message: r.message });
     if (r.success) { setTarget(null); setReason(''); }
@@ -64,6 +69,7 @@ export default function AdminUsersPage() {
                   <td>
                     {u.firstName} {u.lastName}
                     {!u.isActive && <span className={`${styles.pill} ${styles.p_red}`} style={{ marginLeft: 6 }}>{t('admin.users.suspended')}</span>}
+                    {u.deletionRequestedAt && <span className={`${styles.pill} ${styles.p_amber}`} style={{ marginLeft: 6 }}>{t('admin.users.deletionRequested')}</span>}
                     {u.email && <div className={styles.muted}>{u.email}</div>}
                   </td>
                   <td className={styles.mono}>{u.phone}</td>
@@ -73,13 +79,24 @@ export default function AdminUsersPage() {
                   <td className={styles.muted}>{formatRelativeDate(u.createdAt)}</td>
                   <td className={styles.right}>
                     {MODERATABLE.has(u.role) ? (
-                      <button
-                        className={`${styles.pill} ${u.isActive ? styles.p_red : styles.p_green}`}
-                        style={{ border: 'none', cursor: 'pointer' }}
-                        onClick={() => { setTarget(u); setReason(''); }}
-                      >
-                        {u.isActive ? t('admin.users.suspend') : t('admin.users.reactivate')}
-                      </button>
+                      <span style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <button
+                          className={`${styles.pill} ${u.isActive ? styles.p_red : styles.p_green}`}
+                          style={{ border: 'none', cursor: 'pointer' }}
+                          onClick={() => openModeration(u)}
+                        >
+                          {u.isActive ? t('admin.users.suspend') : t('admin.users.reactivate')}
+                        </button>
+                        {u.deletionRequestedAt && (
+                          <button
+                            className={`${styles.pill} ${styles.p_amber}`}
+                            style={{ border: 'none', cursor: 'pointer' }}
+                            onClick={() => openErase(u)}
+                          >
+                            {t('admin.users.erase')}
+                          </button>
+                        )}
+                      </span>
                     ) : <span className={styles.muted}>—</span>}
                   </td>
                 </tr>
@@ -92,14 +109,24 @@ export default function AdminUsersPage() {
       <Modal
         open={target !== null}
         onClose={() => setTarget(null)}
-        title={target?.isActive ? t('admin.users.modalSuspendTitle') : t('admin.users.modalReactivateTitle')}
+        title={
+          mode === 'erase'
+            ? t('admin.users.modalEraseTitle')
+            : target?.isActive
+              ? t('admin.users.modalSuspendTitle')
+              : t('admin.users.modalReactivateTitle')
+        }
       >
         {target && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={{ fontSize: 13, margin: 0 }}>
               {target.firstName} {target.lastName} · <span className={styles.mono}>{target.phone}</span>
             </p>
-            {target.isActive ? (
+            {mode === 'erase' ? (
+              <p style={{ fontSize: 12, color: 'var(--color-danger)', margin: 0 }}>
+                {t('admin.users.eraseWarning')}
+              </p>
+            ) : target.isActive ? (
               <p style={{ fontSize: 12, color: 'var(--color-text-tertiary)', margin: 0 }}>
                 {t('admin.users.suspendWarning')}
               </p>
@@ -108,21 +135,31 @@ export default function AdminUsersPage() {
                 {t('admin.users.reactivateNote')}
               </p>
             )}
-            {target.isActive && (
+            {(target.isActive || mode === 'erase') && (
               <textarea
                 className={styles.textarea}
-                placeholder={t('admin.users.reasonPlaceholder')}
+                placeholder={
+                  mode === 'erase'
+                    ? t('admin.users.eraseReasonPlaceholder')
+                    : t('admin.users.reasonPlaceholder')
+                }
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 maxLength={500}
               />
             )}
             <button
-              className={`btn btn-full ${target.isActive ? 'btn-danger' : 'btn-primary'}`}
+              className={`btn btn-full ${target.isActive || mode === 'erase' ? 'btn-danger' : 'btn-primary'}`}
               disabled={busy}
               onClick={confirmModeration}
             >
-              {busy ? '…' : target.isActive ? t('admin.users.confirmSuspend') : t('admin.users.confirmReactivate')}
+              {busy
+                ? '…'
+                : mode === 'erase'
+                  ? t('admin.users.confirmErase')
+                  : target.isActive
+                    ? t('admin.users.confirmSuspend')
+                    : t('admin.users.confirmReactivate')}
             </button>
           </div>
         )}
