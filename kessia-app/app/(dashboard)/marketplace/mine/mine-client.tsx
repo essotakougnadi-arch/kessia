@@ -5,6 +5,8 @@
 
 import Link from 'next/link';
 import { useMyMarketplace, useMarketplaceActions } from '@/hooks/useMarketplace';
+import { BuyerDelivery, SellerDeliveries } from '@/components/marketplace/DeliveryPanel';
+import { Icon } from '@/components/ui/Icon';
 import { useUiStore } from '@/store/uiStore';
 import { formatNumber, formatRelativeDate } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
@@ -16,7 +18,7 @@ function fcfa(c: string) {
 
 export default function MineClient() {
   const t = useT();
-  const { items, purchases, isLoading, refresh } = useMyMarketplace();
+  const { items, purchases, sales, isLoading, refresh } = useMyMarketplace();
   const { archiveItem } = useMarketplaceActions();
   const addToast = useUiStore((s) => s.addToast);
 
@@ -48,7 +50,7 @@ export default function MineClient() {
                   {it.imageUrl
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={it.imageUrl} alt="" />
-                    : <span>🛍️</span>}
+                    : <Icon name="marketplace" size={18} tinted />}
                 </div>
                 <div>
                   <div className={styles.mineRowTitle}>{it.title}</div>
@@ -62,6 +64,7 @@ export default function MineClient() {
             </div>
           ))}
         </div>
+        <SellerDeliveries sales={sales} onChange={refresh} />
       </section>
 
       {/* Mes achats */}
@@ -70,19 +73,22 @@ export default function MineClient() {
         {!isLoading && purchases.length === 0 && <p className={styles.mineEmpty}>{t('market.noPurchases')}</p>}
         <div className={styles.mineList}>
           {purchases.map((o) => (
-            <div key={o.id} className={styles.mineRow}>
-              <div className={styles.mineRowMain}>
-                <div className={styles.mineThumb}><span>{o.mode === 'TONTINE' ? '🔄' : '💰'}</span></div>
-                <div>
-                  <div className={styles.mineRowTitle}>{o.item.title}</div>
-                  <div className={styles.mineRowMeta}>
-                    {formatNumber(o.amount)} {fcfa(o.currency)} · {t(`market.orderStatus.${o.status}`, o.status)} · {formatRelativeDate(o.createdAt)}
+            <div key={o.id} className={styles.mineRow} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                <div className={styles.mineRowMain}>
+                  <div className={styles.mineThumb}><Icon name={o.mode === 'TONTINE' ? 'tontines' : 'wallet'} size={18} tinted /></div>
+                  <div>
+                    <div className={styles.mineRowTitle}>{o.item.title}</div>
+                    <div className={styles.mineRowMeta}>
+                      {formatNumber(o.amount)} {fcfa(o.currency)} · {t(`market.orderStatus.${o.status}`, o.status)} · {formatRelativeDate(o.createdAt)}
+                    </div>
                   </div>
                 </div>
+                {o.tontineId && (
+                  <Link href={`/tontine/${o.tontineId}`} className="btn btn-ghost btn-sm">{t('market.openPlan')}</Link>
+                )}
               </div>
-              {o.tontineId && (
-                <Link href={`/tontine/${o.tontineId}`} className="btn btn-ghost btn-sm">{t('market.openPlan')}</Link>
-              )}
+              <BuyerDelivery purchase={o} onChange={refresh} />
             </div>
           ))}
         </div>

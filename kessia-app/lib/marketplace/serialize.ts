@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { MarketplaceItem } from '@prisma/client';
+import { findZone } from '@/lib/delivery/zones';
 
 type ItemWithSeller = MarketplaceItem & {
   seller: { id: string; firstName: string; lastName: string } | null;
@@ -24,6 +25,8 @@ export function serializeItem(it: ItemWithSeller, opts?: { includeImage?: boolea
     tontineInstallments: it.tontineInstallments,
     stock: it.stock,
     status: it.status,
+    pickupZone: it.pickupZone,
+    pickupZoneLabel: findZone(it.pickupZone)?.label ?? null,
     createdAt: it.createdAt,
     sellerId: it.sellerId,
     sellerName: it.seller ? `${it.seller.firstName} ${it.seller.lastName}` : null,

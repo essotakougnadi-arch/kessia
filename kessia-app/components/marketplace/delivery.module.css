@@ -1,0 +1,147 @@
+/* KESSIA — Livraison Miaride (ADR 0042) */
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 6px;
+}
+.hintText { display: block; font-size: 11.5px; color: var(--color-text-tertiary); }
+
+.requestBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-light);
+  border-radius: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.requestBtn:hover { background: rgba(182, 90, 58, 0.16); }
+
+/* ── Formulaire de demande ── */
+.form { display: flex; flex-direction: column; gap: 8px; }
+.preview {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-warning-light, #f3ebd8);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 4px;
+}
+.quote {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-surface-hover);
+}
+.quoteWarn { display: inline-flex; align-items: center; gap: 6px; color: var(--color-danger); }
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--color-border-medium);
+  font-size: 13px;
+}
+.total strong { font-size: 15px; font-weight: 900; }
+.totalNote { width: 100%; font-size: 11px; color: var(--color-text-tertiary); }
+
+.handoffToggle {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--color-border-medium);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.handoffToggle input { margin-top: 3px; }
+
+/* ── Timeline de suivi ── */
+.timeline {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+.tlHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tlBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #2563EB;
+  background: rgba(37, 99, 235, 0.12);
+  padding: 3px 9px;
+  border-radius: 100px;
+}
+.tlCourier { font-size: 12px; color: var(--color-text-secondary); font-weight: 600; }
+.tlTrack { font-size: 12px; font-weight: 700; color: var(--color-primary); text-decoration: none; margin-left: auto; }
+
+.tlSteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tlStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+}
+.tlDot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--color-border-medium);
+  flex-shrink: 0;
+}
+.tlDone { color: var(--color-text); }
+.tlDone .tlDot { background: #15803D; }
+.tlCurrent { font-weight: 800; }
+.tlCurrent .tlDot { box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.16); }
+.tlCancelled {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-danger);
+  padding: 4px 0;
+}
+.tlNote { font-size: 12px; color: var(--color-text-secondary); margin: 10px 0 0; }
+.tlActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+
+.tracking { display: flex; gap: 8px; flex: 1; min-width: 200px; }
+.tracking .input { flex: 1; }
+
+/* ── Bloc vendeur ── */
+.sellerBlock { margin-top: 20px; }
+.sellerTitle { font-size: 15px; font-weight: 800; margin: 0 0 10px; }
+.sellerList { display: flex; flex-direction: column; gap: 12px; }
+.sellerRow {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+.sellerRowTitle { font-size: 14px; font-weight: 700; }
+.sellerRow .timeline { border: none; padding: 8px 0 0; background: transparent; }

@@ -15,6 +15,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
 import { useCartStore } from '@/store/cartStore';
 import { installmentAmount } from '@/lib/marketplace/marketplace';
+import { Icon } from '@/components/ui/Icon';
 import { formatNumber } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
 import styles from '../marketplace.module.css';
@@ -104,6 +105,13 @@ export default function ItemClient({ id }: { id: string }) {
                 amount: formatNumber(item.tontineInstallmentAmount ?? installmentAmount(item.price, item.tontineInstallments ?? 6)),
                 cur: fcfa(item.currency),
               })}
+            </div>
+          )}
+
+          {item.pickupZone && !isSeller && (
+            <div className={styles.deliveryHint}>
+              <Icon name="mobile" size={14} tinted />
+              {t('market.delivery.availableHint', { zone: item.pickupZoneLabel ?? '' })}
             </div>
           )}
 

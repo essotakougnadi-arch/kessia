@@ -228,6 +228,17 @@
   padding: 10px 12px;
 }
 
+.deliveryHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+
 .ownNote {
   font-size: 13.5px;
   color: var(--color-text-secondary);

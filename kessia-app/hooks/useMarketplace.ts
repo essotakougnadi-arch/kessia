@@ -24,10 +24,31 @@ export type MarketItem = {
   tontineInstallmentAmount?: number | null;
   stock: number;
   status: string;
+  pickupZone: string | null;
+  pickupZoneLabel: string | null;
   createdAt: string;
   sellerId: string;
   sellerName: string | null;
   businessName: string | null;
+};
+
+export type DeliveryStatus = 'REQUESTED' | 'COURIER_ASSIGNED' | 'PICKED_UP' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
+
+export type DeliveryInfo = {
+  id: string;
+  status: DeliveryStatus;
+  mode: 'SIMULATED' | 'HANDOFF';
+  simulated: boolean;
+  feeAmount: number;
+  feeCurrency: string;
+  etaMinutes: number | null;
+  courierName: string | null;
+  trackingUrl: string | null;
+  providerRef: string | null;
+  dropoffAddress: string;
+  pickupLabel: string;
+  sellerReadyAt: string | null;
+  deliveredAt: string | null;
 };
 
 export type MyPurchase = {
@@ -39,7 +60,12 @@ export type MyPurchase = {
   tontineId: string | null;
   createdAt: string;
   item: { id: string; title: string; hasImage: boolean };
+  deliverable: boolean;
+  pickupMissing: boolean;
+  delivery: DeliveryInfo | null;
 };
+
+export type MySale = { id: string; item: { title: string }; delivery: DeliveryInfo };
 
 export type ActionResult = { success: boolean; message: string; data?: unknown };
 
@@ -88,7 +114,11 @@ export function useMarketplaceItem(id: string) {
 // ── Mes articles / achats ──────────────────────────────────
 export function useMyMarketplace() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const { data, error, isLoading, mutate } = useSWR<{ items: (MarketItem & { orderCount: number })[]; purchases: MyPurchase[] }>(
+  const { data, error, isLoading, mutate } = useSWR<{
+    items: (MarketItem & { orderCount: number })[];
+    purchases: MyPurchase[];
+    sales: MySale[];
+  }>(
     accessToken ? ['/api/v1/marketplace/mine', accessToken] : null,
     ([url]: [string, string]) => apiGet(url),
     { revalidateOnFocus: false }
@@ -96,10 +126,44 @@ export function useMyMarketplace() {
   return {
     items: data?.items ?? [],
     purchases: data?.purchases ?? [],
+    sales: data?.sales ?? [],
     isLoading,
     error: error as Error | undefined,
     refresh: () => mutate(),
   };
+}
+
+// ── Livraison (ADR 0042) ───────────────────────────────────
+export type DeliveryQuote = {
+  enabled: boolean;
+  alreadyRequested: boolean;
+  pickupLabel: string | null;
+  pickupMissing: boolean;
+  covered: boolean;
+  amount: number;
+  currency: string;
+  etaMinutes: number;
+  toLabel: string;
+};
+
+export function useDeliveryActions() {
+  async function quote(orderId: string, dropoffZone: string): Promise<DeliveryQuote | null> {
+    const r = await apiSend('/api/v1/marketplace/deliveries/quote', 'POST', { orderId, dropoffZone });
+    return r.success ? (r.data as DeliveryQuote) : null;
+  }
+  async function request(payload: {
+    orderId: string;
+    mode: 'SIMULATED' | 'HANDOFF';
+    dropoffZone: string;
+    dropoffAddress: string;
+    recipientPhone: string;
+  }): Promise<ActionResult> {
+    return toResult(await apiSend('/api/v1/marketplace/deliveries', 'POST', payload));
+  }
+  async function act(deliveryId: string, body: Record<string, unknown>): Promise<ActionResult> {
+    return toResult(await apiSend(`/api/v1/marketplace/deliveries/${deliveryId}`, 'POST', body));
+  }
+  return { quote, request, act };
 }
 
 // ── Actions ────────────────────────────────────────────────

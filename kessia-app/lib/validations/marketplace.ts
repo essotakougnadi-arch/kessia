@@ -3,6 +3,9 @@
 // ============================================================
 
 import { z } from 'zod';
+import { LOME_ZONES } from '@/lib/delivery/zones';
+
+const ZONE_KEYS = LOME_ZONES.map((z) => z.key) as [string, ...string[]];
 
 export const MARKETPLACE_CATEGORIES = [
   'EQUIPEMENT',
@@ -32,6 +35,7 @@ export const createItemSchema = z.object({
   tontineInstallments: z.number().int().min(2).max(24).optional(),
   stock: z.number().int().min(1).max(9999).default(1),
   businessId: z.string().cuid().optional(),
+  pickupZone: z.enum(ZONE_KEYS).optional(),
 });
 
 export type CreateItemInput = z.infer<typeof createItemSchema>;
@@ -47,6 +51,7 @@ export const updateItemSchema = z.object({
   tontineInstallments: z.number().int().min(2).max(24).nullable().optional(),
   stock: z.number().int().min(0).max(9999).optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  pickupZone: z.enum(ZONE_KEYS).nullable().optional(),
 });
 
 export const orderSchema = z.discriminatedUnion('mode', [
@@ -58,3 +63,21 @@ export const orderSchema = z.discriminatedUnion('mode', [
 ]);
 
 export type OrderInput = z.infer<typeof orderSchema>;
+
+// ── Livraison (ADR 0042) ─────────────────────────────────────
+export const deliveryQuoteSchema = z.object({
+  orderId: z.string().cuid(),
+  dropoffZone: z.enum(ZONE_KEYS),
+});
+
+export const requestDeliverySchema = z.object({
+  orderId: z.string().cuid(),
+  mode: z.enum(['SIMULATED', 'HANDOFF']),
+  dropoffZone: z.enum(ZONE_KEYS),
+  dropoffAddress: z.string().trim().min(5, 'Adresse trop courte').max(240),
+  recipientPhone: z.string().trim().min(8, 'Téléphone invalide').max(20),
+});
+
+export const trackingCodeSchema = z.object({
+  code: z.string().trim().min(3).max(40),
+});

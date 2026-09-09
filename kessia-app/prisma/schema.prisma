@@ -399,31 +399,32 @@ model User {
   updatedAt             DateTime  @updatedAt
 
   // Relations
-  profile              UserProfile?
-  wallet               Wallet?
-  kycCases             KycCase[]
-  tontinesCreated      Tontine[]            @relation("TontineCreator")
-  tontineMembers       TontineMember[]
-  joinRequests         TontineJoinRequest[] @relation("JoinRequestUser")
-  joinRequestDecisions TontineJoinRequest[] @relation("JoinRequestDecider")
-  marketplaceItems     MarketplaceItem[]    @relation("MarketplaceSeller")
-  marketplaceOrders    MarketplaceOrder[]   @relation("MarketplaceBuyer")
-  businesses           Business[]
-  notifications        Notification[]
-  supportTickets       SupportTicket[]      @relation("TicketUser")
-  assignedTickets      SupportTicket[]      @relation("TicketAssignee")
-  auditLogs            AuditLog[]
-  aiConversations      AiConversation[]
-  sessions             Session[]
-  otps                 OtpCode[]
-  paymentTransactions  PaymentTransaction[]
-  guaranteeClaims      GuaranteeClaim[]     @relation("GuaranteeClaimant")
-  guaranteeReviews     GuaranteeClaim[]     @relation("GuaranteeReviewer")
-  moduleInterests      ModuleInterest[]
-  growthStepStates     GrowthStepState[]
-  devices              Device[]
-  fraudAlerts          FraudAlert[]         @relation("FraudSubject")
-  fraudReviews         FraudAlert[]         @relation("FraudReviewer")
+  profile               UserProfile?
+  wallet                Wallet?
+  kycCases              KycCase[]
+  tontinesCreated       Tontine[]             @relation("TontineCreator")
+  tontineMembers        TontineMember[]
+  joinRequests          TontineJoinRequest[]  @relation("JoinRequestUser")
+  joinRequestDecisions  TontineJoinRequest[]  @relation("JoinRequestDecider")
+  marketplaceItems      MarketplaceItem[]     @relation("MarketplaceSeller")
+  marketplaceOrders     MarketplaceOrder[]    @relation("MarketplaceBuyer")
+  marketplaceDeliveries MarketplaceDelivery[] @relation("MarketplaceDeliveryBuyer")
+  businesses            Business[]
+  notifications         Notification[]
+  supportTickets        SupportTicket[]       @relation("TicketUser")
+  assignedTickets       SupportTicket[]       @relation("TicketAssignee")
+  auditLogs             AuditLog[]
+  aiConversations       AiConversation[]
+  sessions              Session[]
+  otps                  OtpCode[]
+  paymentTransactions   PaymentTransaction[]
+  guaranteeClaims       GuaranteeClaim[]      @relation("GuaranteeClaimant")
+  guaranteeReviews      GuaranteeClaim[]      @relation("GuaranteeReviewer")
+  moduleInterests       ModuleInterest[]
+  growthStepStates      GrowthStepState[]
+  devices               Device[]
+  fraudAlerts           FraudAlert[]          @relation("FraudSubject")
+  fraudReviews          FraudAlert[]          @relation("FraudReviewer")
 
   @@index([phone])
   @@index([email])
@@ -814,6 +815,8 @@ model MarketplaceItem {
   // Photo : data-URI compressée côté client (comme le KYC en MVP).
   imageUrl            String?
   city                String?
+  // Quartier d'enlèvement pour la livraison (clé LOME_ZONES, ADR 0042).
+  pickupZone          String?
   // Achat possible via une tontine Achat individuelle (SOLO) ?
   payableByTontine    Boolean               @default(false)
   // Nombre de versements suggéré pour l'achat par tontine.
@@ -847,12 +850,79 @@ model MarketplaceOrder {
   createdAt DateTime               @default(now())
   updatedAt DateTime               @updatedAt
 
-  item  MarketplaceItem @relation(fields: [itemId], references: [id])
-  buyer User            @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
+  item     MarketplaceItem      @relation(fields: [itemId], references: [id])
+  buyer    User                 @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
+  delivery MarketplaceDelivery?
 
   @@index([buyerId])
   @@index([itemId])
   @@map("marketplace_orders")
+}
+
+// ── Livraison d'une commande via un partenaire coursier (§16, ADR 0042)
+// v1 : partenaire Miaride (moto/voiture, Grand Lomé). Deux modes :
+//   SIMULATED — expérience de démonstration, statuts qui avancent tout
+//               seuls, aucun vrai coursier (bandeau explicite côté UI).
+//   HANDOFF   — KESSIA prépare le bon puis renvoie vers Miaride ;
+//               l'acheteur colle son code de suivi. 100 % réel.
+// Le règlement du vendeur reste immédiat (à l'achat) ; la livraison
+// est un service en plus, payé séparément par l'acheteur.
+enum DeliveryProviderKind {
+  MIARIDE
+}
+
+enum DeliveryMode {
+  SIMULATED
+  HANDOFF
+}
+
+enum DeliveryStatus {
+  REQUESTED
+  COURIER_ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+model MarketplaceDelivery {
+  id       String               @id @default(cuid())
+  orderId  String               @unique
+  buyerId  String
+  provider DeliveryProviderKind @default(MIARIDE)
+  mode     DeliveryMode
+  status   DeliveryStatus       @default(REQUESTED)
+
+  // Enlèvement (vendeur) → dépôt (acheteur)
+  pickupLabel    String
+  dropoffAddress String
+  dropoffArea    String
+  recipientPhone String
+
+  // Tarif — estimation d'après la zone (jamais présenté comme ferme)
+  feeAmount    Decimal @db.Decimal(18, 2)
+  feeCurrency  String  @default("XOF")
+  feeLedgerRef String? // idempotence du débit wallet des frais
+  etaMinutes   Int?
+
+  // Côté partenaire
+  providerRef String? // code de suivi Miaride
+  trackingUrl String?
+  courierName String?
+  simulated   Boolean @default(true)
+
+  requestedAt   DateTime  @default(now())
+  sellerReadyAt DateTime?
+  deliveredAt   DateTime?
+  cancelledAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  order MarketplaceOrder @relation(fields: [orderId], references: [id])
+  buyer User             @relation("MarketplaceDeliveryBuyer", fields: [buyerId], references: [id])
+
+  @@index([buyerId])
+  @@index([status])
+  @@map("marketplace_deliveries")
 }
 
 model Supplier {

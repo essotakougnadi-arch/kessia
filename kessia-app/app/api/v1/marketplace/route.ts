@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
         category: d.category ?? null,
         price: d.price,
         city: d.city ?? null,
+        pickupZone: d.pickupZone ?? null,
         imageUrl: d.imageUrl ?? null,
         payableByTontine: d.payableByTontine,
         tontineInstallments: installments,

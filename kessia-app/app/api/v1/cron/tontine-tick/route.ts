@@ -13,6 +13,7 @@
 import { NextRequest } from 'next/server';
 import { runTontineTick } from '@/lib/tontine/orchestrator';
 import { runCustomerReminders } from '@/lib/reminders/customer-reminders';
+import { runDeliveryTick } from '@/lib/delivery';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { ok, unauthorized, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
@@ -31,14 +32,18 @@ async function handle(request: NextRequest) {
   try {
     if (!authorized(request)) return unauthorized('Secret cron invalide ou absent.');
 
-    const [tontine, reminders] = await Promise.all([
+    const [tontine, reminders, deliveries] = await Promise.all([
       runTontineTick(),
       runCustomerReminders().catch((e) => {
         logApiError('/v1/cron/tontine-tick:reminders', e);
         return { checked: 0, notified: 0 };
       }),
+      runDeliveryTick().catch((e) => {
+        logApiError('/v1/cron/tontine-tick:deliveries', e);
+        return { advanced: 0 };
+      }),
     ]);
-    const result = { tontine, reminders };
+    const result = { tontine, reminders, deliveries };
 
     void recordAudit({
       action: 'cron.tontine_tick',
@@ -47,7 +52,7 @@ async function handle(request: NextRequest) {
       request,
     });
 
-    return ok(result, 'Tick exécuté (tontines + relances clients).');
+    return ok(result, 'Tick exécuté (tontines + relances clients + livraisons).');
   } catch (e) {
     logApiError('/v1/cron/tontine-tick', e);
     return serverError();

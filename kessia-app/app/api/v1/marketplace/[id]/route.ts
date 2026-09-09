@@ -68,6 +68,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(d.category !== undefined ? { category: d.category } : {}),
         ...(d.price !== undefined ? { price: d.price } : {}),
         ...(d.city !== undefined ? { city: d.city } : {}),
+        ...(d.pickupZone !== undefined ? { pickupZone: d.pickupZone } : {}),
         ...(d.imageUrl !== undefined ? { imageUrl: d.imageUrl } : {}),
         ...(d.stock !== undefined ? { stock: d.stock, status: d.stock > 0 ? 'ACTIVE' : 'SOLD_OUT' } : {}),
         ...(d.status !== undefined ? { status: d.status } : {}),

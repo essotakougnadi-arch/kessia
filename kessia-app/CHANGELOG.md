@@ -3,6 +3,26 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Livraison Marketplace via Miaride (ADR 0042)
+
+### Ajouté
+- **Livraison des achats Marketplace** via Miaride (coursier moto/
+  voiture, Grand Lomé). Deux modes : **simulé** (démo honnête, statuts
+  qui avancent, bandeau aperçu) et **hand-off réel** (KESSIA prépare le
+  bon et ouvre Miaride ; l'acheteur colle son code de suivi).
+- v1 : fiche produit, achat wallet. Règlement du vendeur inchangé ;
+  les frais de livraison sont un débit séparé (remboursable si annulé
+  avant enlèvement). Devis à la zone (23 quartiers de Lomé, estimation).
+- `MarketplaceItem.pickupZone` + modèle `MarketplaceDelivery`.
+  `lib/delivery/` (fournisseur abstrait + adaptateur Miaride), API
+  `…/deliveries/*` + webhook HMAC prêt pour le vrai partenariat.
+  Suivi sur `/marketplace/mine` : timeline acheteur, « colis prêt »
+  vendeur.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**178**) + `build` OK.
+  `e2e/marketplace-delivery.spec.ts` + suite au vert.
+
 ## [Non publié] — Vignettes des pages secondaires colorées (ADR 0041)
 
 ### Modifié

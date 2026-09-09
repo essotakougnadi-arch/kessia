@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMarketplaceActions } from '@/hooks/useMarketplace';
 import { MARKETPLACE_CATEGORIES } from '@/lib/validations/marketplace';
+import { LOME_ZONES } from '@/lib/delivery/zones';
 import { compressImage } from '@/lib/files/compress-image';
 import { useUiStore } from '@/store/uiStore';
 import { useT } from '@/lib/i18n';
@@ -47,6 +48,7 @@ export default function SellClient() {
       category: (f.get('category') as string) || undefined,
       price,
       city: (f.get('city') as string).trim() || undefined,
+      pickupZone: (f.get('pickupZone') as string) || undefined,
       stock: Math.max(1, Number(f.get('stock')) || 1),
       payableByTontine,
       ...(payableByTontine ? { tontineInstallments: Math.max(2, Math.min(24, Number(f.get('installments')) || 6)) } : {}),
@@ -103,6 +105,17 @@ export default function SellClient() {
             <label className="label" htmlFor="stock">{t('market.fieldStock')}</label>
             <input id="stock" name="stock" type="number" className="input" min={1} defaultValue={1} />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label" htmlFor="pickupZone">{t('market.fieldPickupZone')}</label>
+          <select id="pickupZone" name="pickupZone" className="input" defaultValue="">
+            <option value="">{t('market.pickupZoneNone')}</option>
+            {LOME_ZONES.map((z) => (
+              <option key={z.key} value={z.key}>{z.label}</option>
+            ))}
+          </select>
+          <span className={styles.toggleHint}>{t('market.fieldPickupZoneHint')}</span>
         </div>
 
         <div className="form-group">
