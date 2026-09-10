@@ -109,7 +109,7 @@
 .dotActive {
   width: 20px;
   border-radius: 3px;
-  background: #D6A84F;
+  background: var(--color-gold);
 }
 
 /* AI Prompt */
@@ -128,7 +128,7 @@
 .aiPromptIcon {
   width: 36px; height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #B65A3A, #D6A84F);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
@@ -137,7 +137,7 @@
 .aiPromptLabel {
   font-size: 11px;
   font-weight: 700;
-  color: #D6A84F;
+  color: var(--color-gold);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -488,12 +488,12 @@
 
 /* Message d'erreur formulaire */
 .errorMessage {
-  background: rgba(239, 68, 68, 0.08);
+  background: var(--color-danger-light);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 13px;
-  color: #EF4444;
+  color: var(--color-danger);
   margin-bottom: 4px;
 }
 

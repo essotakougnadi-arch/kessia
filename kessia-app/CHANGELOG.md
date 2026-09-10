@@ -3,6 +3,31 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — KESSIA AI : LLM optionnel + finitions (ADR 0046)
+
+### Ajouté
+- **Branchement optionnel d'un vrai LLM** pour l'assistant (`lib/ai/llm.ts`).
+  Reste OFF par défaut : ne s'active qu'avec `ANTHROPIC_API_KEY` +
+  `KESSIA_AI_LLM="1"`. Traite uniquement la « longue traîne » (questions
+  non couvertes par les données ni la base de connaissances), fortement
+  cadré (pas de chiffre inventé, pas de promesse de rendement, français,
+  4 phrases). Source `llm` tracée dans les KPI §54. `@anthropic-ai/sdk`
+  ajouté (dormant). Voir `.env.example` pour le compromis de coût.
+- Specs E2E des zones peu couvertes : `e2e/kyc-pin-admin.spec.ts`
+  (upload KYC, cas limites du PIN, écritures back-office + garde-fou
+  `erase`).
+
+### Corrigé
+- `/ai` : avertissement d'hydratation sur les boutons Voix / Effacer
+  (`hooks/useVoice.ts` — détection de fonctionnalité après montage).
+- Dette CSS : couleurs sémantiques (erreur, or) des pages d'auth passées
+  sur jetons `--color-*` (l'identité visuelle des dégradés de marque est
+  conservée volontairement).
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**182**) + `build` OK ;
+  `kyc-pin-admin.spec.ts` (4) + `navigation.spec.ts` au vert.
+
 ## [Non publié] — Livraison marketplace : extensions (ADR 0045)
 
 ### Ajouté

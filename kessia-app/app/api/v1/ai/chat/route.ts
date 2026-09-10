@@ -12,6 +12,7 @@ import { ok, validationError, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { answerFromData } from '@/lib/ai/data-answers';
+import { llmConfigured, llmAnswer } from '@/lib/ai/llm';
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message vide').max(1000, 'Message trop long'),
@@ -108,7 +109,7 @@ const KESSIA_AI_KB: Record<string, { keywords: string[]; response: string; sugge
   },
 };
 
-type AiSource = 'data' | 'kb' | 'fallback';
+type AiSource = 'data' | 'kb' | 'fallback' | 'llm';
 
 function generateAIResponse(message: string, context: string): {
   content: string;
@@ -195,14 +196,29 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Générer la réponse AI — d'abord une réponse factuelle sur les
-    // données réelles de l'utilisateur, sinon la base de connaissances.
+    // Génération de la réponse, dans cet ordre :
+    //   1. réponse factuelle sur les données réelles (exact, gratuit) ;
+    //   2. si un vrai LLM est branché (ADR 0046), il traite la « longue
+    //      traîne » — les questions que ni les données ni la base de
+    //      connaissances ne couvrent — en s'appuyant sur le contexte ;
+    //   3. sinon, base de connaissances puis repli générique.
     let aiResponse: { content: string; suggestions: string[]; source: AiSource };
     try {
       const dataAnswer = await answerFromData(message, context.userId);
-      aiResponse = dataAnswer
-        ? { content: dataAnswer.content, suggestions: dataAnswer.suggestions, source: 'data' }
-        : generateAIResponse(message, aiContext);
+      if (dataAnswer) {
+        aiResponse = { content: dataAnswer.content, suggestions: dataAnswer.suggestions, source: 'data' };
+      } else {
+        const kb = generateAIResponse(message, aiContext);
+        if (llmConfigured()) {
+          const grounding = kb.source === 'kb' ? kb.content : null;
+          const llm = await llmAnswer({ message, aiContext, grounding }).catch(() => null);
+          aiResponse = llm
+            ? { content: llm.content, suggestions: kb.suggestions, source: 'llm' }
+            : kb;
+        } else {
+          aiResponse = kb;
+        }
+      }
     } catch (e) {
       logApiError('/v1/ai/chat:data-answer', e);
       aiResponse = generateAIResponse(message, aiContext);

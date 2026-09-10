@@ -32,12 +32,17 @@ function getRecognitionCtor(): (new () => RecognitionLike) | null {
 export function useVoice(onTranscript: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  // Détection de fonctionnalité après montage uniquement : le premier
+  // rendu client doit être identique au rendu serveur (pas d'hydratation
+  // divergente sur les boutons Voix / micro).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
 
-  const sttSupported = typeof window !== 'undefined' && getRecognitionCtor() !== null;
-  const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const sttSupported = mounted && getRecognitionCtor() !== null;
+  const ttsSupported = mounted && typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
