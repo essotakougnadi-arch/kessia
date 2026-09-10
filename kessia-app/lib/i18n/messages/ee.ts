@@ -3,17 +3,20 @@
 // locuteur·rice natif·ve avant d'être présentée comme finalisée.
 // `LOCALE_META.ee.ready` reste `false`.
 //
-// Couvert (ADR 0047, puis élargi module par module) : le vocabulaire
-// d'interface de l'espace membre — navigation, actions, libellés de
-// sections, boutons, états, champs de formulaire courts — pour :
-// accueil, wallet, tontines, support, profil, connexion.
+// Couvert (ADR 0047, élargi module par module) : le vocabulaire
+// d'interface de l'espace membre — navigation, actions, titres de
+// sections, boutons, états, statuts, onglets, champs courts — pour :
+// accueil, wallet, tontines (+ détail, découverte, adhésion),
+// marketplace, agenda, plan de croissance, simulateurs, score,
+// préférences de notification, support, profil, connexion.
 //
 // PAS traduit ici (retombe automatiquement sur le Français, cf. lib/i18n)
 // tant qu'un·e professionnel·le ne l'a pas fait/relu :
-//   • statuts KYC, instructions de vérification d'identité ;
+//   • statuts KYC détaillés, instructions de vérification d'identité ;
 //   • prose juridique (CGU, confidentialité, mentions) ;
-//   • mécanique financière détaillée (séquestre, contrat de tontine,
-//     plafonds, calculs de versements) et messages d'erreur nuancés ;
+//   • mécanique financière (séquestre, contrat de tontine, plafonds,
+//     calculs de versements, cagnotte) et messages d'erreur nuancés ;
+//   • descriptions, placeholders, avertissements longs ;
 //   • réponses de l'assistant IA ; back-office.
 //
 // Orthographe : standard Eʋegbe — ɖ ƒ ŋ ɔ ɛ ʋ.
@@ -111,6 +114,8 @@ export const ee: Catalog = {
     member: 'ame',
     members: 'amewo',
     round: 'Zɔzɔ {current}/{total}',
+    opportunities: 'Mɔnukpɔkpɔwo',
+    growthPlan: 'Dziƒoƒo ɖoɖo',
   },
   wallet: {
     title: 'Nye Gakotoku',
@@ -123,6 +128,9 @@ export const ee: Catalog = {
     copy: 'Kɔpi',
     share: 'Mã',
     amount: 'Home',
+    savings: 'Nudzɔdzɔ',
+    savingsTitle: 'Wò nudzɔdzɔ ƒe taɖodzinuwo',
+    savingsNewGoal: 'Taɖodzinu yeye',
   },
   tontine: {
     createShort: '+ Wɔ',
@@ -138,6 +146,152 @@ export const ee: Catalog = {
     nameLabel: 'Tontine la ƒe ŋkɔ',
     membersLabel: 'Ame nenie',
     inviteCode: 'Amekpekpe ƒe kɔd',
+    summaryActive: 'Le edzi yim',
+    goal: 'Taɖodzinu',
+  },
+  tontineDetail: {
+    back: 'Trɔ',
+    loading: 'Le tsɔtsɔm…',
+    backToMine: '← Trɔ yi nye tontinewo gbɔ',
+    status: {
+      PENDING: 'Le lalam',
+      ACTIVE: 'Le edzi yim',
+      COMPLETED: 'Wowu enu',
+      SUSPENDED: 'Wotsi tsitre nɛ',
+      CANCELLED: 'Wote fli ɖe eme',
+    },
+    copy: 'Kɔpi',
+    members: 'Amewo',
+    round: 'Zɔzɔ',
+    invite: 'Kpe ame',
+    share: 'Mã',
+    you: 'Wò',
+    contractJournal: 'Nubabla kple ŋlɔɖi',
+    guaranteeFund: 'Kpeɖeŋugadzraɖoƒe',
+    cyclesHistory: 'Zɔzɔwo ƒe ŋlɔɖi',
+    beneficiary: 'Ame si xɔ',
+  },
+  calendar: {
+    back: 'Trɔ',
+    title: 'Ɣletidzeɖoɖo',
+    overdue: 'Etsi megbe',
+    thisWeek: 'Kwasiɖa sia',
+    total: 'Katã',
+    filterAll: 'Katã',
+    today: 'Egbe',
+    tomorrow: 'Etsɔ',
+    yesterday: 'Etsɔ si va yi',
+    type: {
+      TONTINE: 'Tontinewo',
+      INVOICE: 'Agbalẽ dodowo',
+      GROWTH: 'Dziƒoƒo',
+      FOLLOWUP: 'Ŋkuléle',
+    },
+  },
+  growth: {
+    back: 'Trɔ',
+    title: 'Dziƒoƒo ɖoɖo',
+    computing: 'Le wò ɖoɖo la bum…',
+    statusDoing: 'Le edzi yim',
+    statusDone: 'Wowɔe',
+    statusSkip: 'To eŋu',
+  },
+  simulator: {
+    back: 'Trɔ',
+    title: 'Akɔntabublawo',
+    contribution: 'Fexexe',
+    frequency: 'Zi nenie',
+    freqWeekly: 'Kwasiɖa sia kwasiɖa',
+    freqBiweekly: 'Kwasiɖa eve sia eve',
+    freqMonthly: 'Ɣleti sia ɣleti',
+    duration: 'Ɣeyiɣi',
+    targetAmount: 'Taɖodzinu',
+    projection: 'Nukpɔkpɔ ŋgɔ',
+    type: 'Ƒomevi',
+    memberCount: 'Ame nenie',
+    myPosition: 'Nye teƒe',
+  },
+  scorePage: {
+    back: 'Trɔ',
+    computing: 'Le akɔnta bum…',
+    composition: 'Nu siwo wɔ wò score',
+    points: 'kpɔ',
+    howToProgress: 'Aleke nàyi ŋgɔ',
+  },
+  notifPrefs: {
+    back: 'Trɔ',
+    title: 'Gbeƒãɖeɖewo',
+    whatIReceive: 'Nu si mexɔna',
+    always: 'Ɣesiaɣi',
+    securityLabel: 'Dedienɔnɔ',
+    items: {
+      notifPayment: { label: 'Fexexewo kple gakotoku' },
+      notifTontine: { label: 'Tontinewo' },
+      notifBusiness: { label: 'Asitsatsa' },
+      notifSupport: { label: 'Kpekpeɖeŋu' },
+      notifSystem: { label: 'Mɔ̃wɔwɔ' },
+      notifPromotion: { label: 'Nunana kple nu yeyewo' },
+    },
+  },
+  discover: {
+    railTitle: 'Tontine siwo ʋu fifia',
+    seeAll: 'Kpɔ wo katã',
+    pageTitle: 'Tontine siwo ʋu',
+    empty: 'Tontine aɖeke meʋu fifia o. Trɔ va kpuie!',
+    conditions: 'Sewo',
+    full: 'Eyɔ fũ',
+    view: 'Kpɔ',
+    joinCta: 'Ge ɖe eme',
+  },
+  tontineJoin: {
+    title: 'Ge ɖe tontine sia me',
+    conditionsLabel: 'Gegeɖeme ƒe sewo',
+    messageLabel: 'Gbedeasi na dzikpɔla',
+    messageOptional: 'Ne èdi',
+    send: 'Bia be yeage ɖe eme',
+    resend: 'Gaɖo biabia ɖa',
+    cancel: 'Ɖe nye biabia ɖa',
+    pendingTitle: 'Woɖo biabia la ɖa',
+    closedTitle: 'Wotu gegeɖeme',
+    full: 'Tontine sia yɔ fũ.',
+  },
+  tontineRequests: {
+    title: 'Gegeɖeme ƒe biabiawo',
+    approve: 'Lɔ̃ ɖe edzi',
+    reject: 'Gbe',
+    confirmReject: 'Ɖo kpe gbegbe la dzi',
+  },
+  market: {
+    railTitle: 'Hametɔwo ƒe asime',
+    seeAll: 'Kpɔ asime la',
+    byTontine: 'Woate ŋu axe fe to tontine me',
+    community: 'KESSIA hame',
+    discover: 'Ke ɖe eŋu',
+    view: 'Kpɔ',
+    title: 'Asime',
+    mine: 'Nye nuwo',
+    sell: 'Dzra',
+    allCategories: 'Hatsotsowo katã',
+    popularProducts: 'Adzɔnu xɔŋkɔwo',
+    empty: 'Nu aɖeke mele afii fifia o.',
+    backToList: 'Trɔ yi asime la me',
+    manage: 'Kpɔ edzi',
+    buyWallet: 'Ƒle (gakotoku)',
+    article: 'Adzɔnu',
+    yourBalance: 'Wò ga si susɔ',
+    installments: 'Fexexe nenie',
+    perPayment: 'Fexexe ɖeka',
+    target: 'Taɖodzinu',
+    sellTitle: 'Tsɔ adzɔnu aɖe ɖe asi',
+    fieldTitle: 'Ŋkɔ na ɖeɖefia la',
+    fieldPrice: 'Asixɔxɔ (FCFA)',
+    fieldCategory: 'Hatsotso',
+    chooseCategory: 'Tia…',
+    fieldCity: 'Du',
+    fieldDescription: 'Numeɖeɖe',
+    fieldImage: 'Foto',
+    fieldStock: 'Agbɔsɔsɔ',
+    publish: 'Ɖe ɖeɖefia la ɖe go',
   },
   support: {
     title: 'Kpekpeɖeŋu',

@@ -56,16 +56,22 @@ affiche l'éwé avec le marqueur « en cours ».
 
 ## Élargissement (2026-09-10, « compléter module par module »)
 
-`ee.ts` étendu au vocabulaire d'interface de l'espace membre — libellés
-de sections, boutons, états, champs de formulaire courts — pour :
-**accueil, wallet, tontines, support, profil, connexion**. Restent en
-français (fallback) tant qu'un·e professionnel·le ne les a pas traités :
-statuts KYC, prose juridique, mécanique financière détaillée (séquestre,
-contrat, plafonds, calculs), messages d'erreur nuancés, réponses IA,
-back-office. `ready` toujours `false`.
+`ee.ts` étendu au vocabulaire d'interface de l'espace membre — titres de
+sections, boutons, états, statuts, onglets, champs courts — couvrant
+désormais : **accueil, wallet, tontines (+ détail, découverte, adhésion,
+demandes), marketplace, agenda, plan de croissance, simulateurs, score,
+préférences de notification, support, profil, connexion**.
 
-Prochain passage : business, academy, community, invest/insurance/loans,
-calendrier — avec relecture native avant `ready: true`.
+Restent en français (fallback) tant qu'un·e professionnel·le ne les a pas
+traités/relus : statuts KYC détaillés, prose juridique, mécanique
+financière (séquestre, contrat, plafonds, calculs de versements,
+cagnotte), messages d'erreur nuancés, descriptions et avertissements
+longs, réponses IA, back-office. `ready` toujours `false`.
+
+Prochain passage : détail Business (comptabilité), pages des modules
+« aperçu » (academy/community/jobs/diaspora/invest/insurance/prêts),
+`kycPage` / `privacyPage` / `trust` — avec relecture native, avant
+`ready: true`.
 
 ## Vérification
 

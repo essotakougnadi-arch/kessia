@@ -16,12 +16,14 @@ Le projet suit la feuille de route par phases du cahier des charges (§52).
 
 ### Ajouté
 - `lib/i18n/messages/ee.ts` étendu au vocabulaire d'interface de l'espace
-  membre : navigation, actions, libellés de sections, boutons, états,
-  champs courts pour accueil / wallet / tontines / support / profil /
+  membre : titres de sections, boutons, états, statuts, onglets, champs
+  courts pour accueil / wallet / tontines (+ détail, découverte,
+  adhésion, demandes) / marketplace / agenda / plan de croissance /
+  simulateurs / score / préférences de notification / support / profil /
   connexion. Orthographe standard Eʋegbe.
-- Restent en français (fallback) : statuts KYC, prose juridique,
-  mécanique financière détaillée, messages d'erreur nuancés, réponses IA,
-  back-office — en attendant une relecture native.
+- Restent en français (fallback, relecture native requise) : statuts KYC
+  détaillés, prose juridique, mécanique financière, messages d'erreur
+  nuancés, descriptions et avertissements longs, réponses IA, back-office.
   `LOCALE_META.ee.ready` reste `false`.
 
 ### Vérification
