@@ -3,14 +3,16 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
-## [Non publié] — Traduction éwé du chrome (ADR 0047)
+## [Non publié] — Traduction éwé (ADR 0047)
 
 ### Ajouté
-- `lib/i18n/messages/ee.ts` étendu au chrome de l'interface : navigation
-  complète, actions génériques, fréquences, sous-ensemble d'auth,
-  libellés d'accueil / PIN. Orthographe normalisée (standard Eʋegbe).
-- Le vocabulaire financier / juridique / KYC / la prose serveur restent
-  en français (fallback) en attendant une relecture native.
+- `lib/i18n/messages/ee.ts` étendu au vocabulaire d'interface de l'espace
+  membre : navigation, actions, libellés de sections, boutons, états,
+  champs courts pour accueil / wallet / tontines / support / profil /
+  connexion. Orthographe standard Eʋegbe.
+- Restent en français (fallback) : statuts KYC, prose juridique,
+  mécanique financière détaillée, messages d'erreur nuancés, réponses IA,
+  back-office — en attendant une relecture native.
   `LOCALE_META.ee.ready` reste `false`.
 
 ### Vérification

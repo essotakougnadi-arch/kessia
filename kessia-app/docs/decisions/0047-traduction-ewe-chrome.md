@@ -54,7 +54,20 @@ affiche l'éwé avec le marqueur « en cours ».
 - Pour finaliser : compléter `ee.ts` module par module avec relecture
   native, puis passer `ready: true`.
 
+## Élargissement (2026-09-10, « compléter module par module »)
+
+`ee.ts` étendu au vocabulaire d'interface de l'espace membre — libellés
+de sections, boutons, états, champs de formulaire courts — pour :
+**accueil, wallet, tontines, support, profil, connexion**. Restent en
+français (fallback) tant qu'un·e professionnel·le ne les a pas traités :
+statuts KYC, prose juridique, mécanique financière détaillée (séquestre,
+contrat, plafonds, calculs), messages d'erreur nuancés, réponses IA,
+back-office. `ready` toujours `false`.
+
+Prochain passage : business, academy, community, invest/insurance/loans,
+calendrier — avec relecture native avant `ready: true`.
+
 ## Vérification
 
-`vitest` (**182**) — `catalogs.test.ts` + `core.test.ts` verts.
-`tsc` + `build` OK.
+`vitest` (**182**) — `catalogs.test.ts` + `core.test.ts` verts (ee reste
+un sous-ensemble strict de fr). `tsc` + `lint` + `build` OK.
