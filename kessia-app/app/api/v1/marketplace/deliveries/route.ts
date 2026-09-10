@@ -6,9 +6,11 @@
 // ============================================================
 
 import { NextRequest } from 'next/server';
+import prisma from '@/lib/db/prisma';
 import { withAuth } from '@/lib/auth/middleware';
 import { requestDeliverySchema } from '@/lib/validations/marketplace';
 import { requestDelivery } from '@/lib/delivery';
+import { createAddress } from '@/lib/marketplace/addresses';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { created, badRequest, conflict, forbidden, notFound, validationError, serverError } from '@/lib/utils/response';
@@ -30,14 +32,42 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return validationError(parsed.error);
     const body = parsed.data;
 
+    // Adresse : carnet ou saisie libre.
+    let dropoffZone = body.dropoffZone;
+    let dropoffAddress = body.dropoffAddress;
+    let recipientPhone = body.recipientPhone;
+    if (body.addressId) {
+      const addr = await prisma.deliveryAddress.findFirst({
+        where: { id: body.addressId, userId: context.userId },
+      });
+      if (!addr) return notFound('Adresse introuvable dans votre carnet.');
+      dropoffZone = addr.area;
+      dropoffAddress = addr.address;
+      recipientPhone = addr.recipientPhone;
+    }
+    if (!dropoffZone || !dropoffAddress || !recipientPhone) {
+      return badRequest('Adresse de livraison incomplète.');
+    }
+
     const result = await requestDelivery({
       orderId: body.orderId,
       userId: context.userId,
       mode: body.mode,
-      dropoffZone: body.dropoffZone,
-      dropoffAddress: body.dropoffAddress,
-      recipientPhone: body.recipientPhone,
+      dropoffZone,
+      dropoffAddress,
+      recipientPhone,
+      alsoOrderIds: body.alsoOrderIds,
+      schedule: body.schedule,
     });
+
+    if (result.ok && body.saveAddress && !body.addressId) {
+      await createAddress(context.userId, {
+        label: body.saveAddressLabel?.trim() || 'Livraison',
+        area: dropoffZone,
+        address: dropoffAddress,
+        recipientPhone,
+      }).catch(() => null);
+    }
 
     if (!result.ok) {
       switch (result.code) {

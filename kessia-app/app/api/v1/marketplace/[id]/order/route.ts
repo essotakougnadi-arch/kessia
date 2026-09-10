@@ -14,6 +14,7 @@ import { ok, created, notFound, conflict, badRequest, validationError, serverErr
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { postDoubleEntry } from '@/lib/ledger/ledger.service';
+import { getMarketplaceEscrowWallet } from '@/lib/marketplace/escrow';
 import { generateInviteCode } from '@/lib/utils/crypto';
 import { recordTontineEvent } from '@/lib/tontine/events';
 import { recordAudit } from '@/lib/audit/audit.service';
@@ -74,17 +75,27 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       if (!buyerWallet || !item.seller.wallet) {
         return badRequest('Wallet manquant pour finaliser le paiement.');
       }
+      const onDelivery = item.settlement === 'ON_DELIVERY';
       const idem = `MKT_ORDER_${item.id}_${context.userId}_${Date.now()}`;
+
+      // ON_DELIVERY → fonds vers le séquestre plateforme, versés au
+      // vendeur à la confirmation de réception (ADR 0045).
+      const destWalletId = onDelivery
+        ? (await getMarketplaceEscrowWallet()).id
+        : item.seller.wallet.id;
+
       const led = await postDoubleEntry({
         fromWalletId: buyerWallet.id,
-        toWalletId: item.seller.wallet.id,
+        toWalletId: destWalletId,
         type: 'SALE_PAYMENT',
         amount: price,
         description: `Achat marketplace — ${item.title}`,
-        descriptionTo: `Vente marketplace — ${item.title}`,
+        descriptionTo: onDelivery
+          ? `Séquestre marketplace — ${item.title}`
+          : `Vente marketplace — ${item.title}`,
         referenceId: item.id,
         idempotencyKey: idem,
-        metadata: { itemId: item.id, kind: 'marketplace' },
+        metadata: { itemId: item.id, kind: 'marketplace', settlement: item.settlement },
       });
       if (!led.success) return badRequest(led.error ?? 'Le paiement a échoué.');
 
@@ -99,7 +110,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         return tx.marketplaceOrder.create({
           data: {
             itemId: item.id, buyerId: context.userId, mode: 'WALLET',
-            amount: price, currency: item.currency, status: 'PAID', ledgerRef: idem,
+            amount: price, currency: item.currency,
+            status: onDelivery ? 'PENDING_SETTLEMENT' : 'PAID',
+            settlement: item.settlement,
+            ledgerRef: idem,
           },
         });
       });
@@ -108,15 +122,23 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         userId: item.sellerId,
         category: 'PAYMENT',
         priority: 'HIGH',
-        title: 'Article vendu 🎉',
-        body: `Votre article « ${item.title} » a été acheté (${price.toLocaleString('fr-FR')} ${item.currency}).`,
+        title: onDelivery ? 'Article réservé (séquestre)' : 'Article vendu 🎉',
+        body: onDelivery
+          ? `« ${item.title} » a un acheteur (${price.toLocaleString('fr-FR')} ${item.currency}). Les fonds sont en séquestre : vous serez réglé à la confirmation de réception.`
+          : `Votre article « ${item.title} » a été acheté (${price.toLocaleString('fr-FR')} ${item.currency}).`,
         actionUrl: '/marketplace/mine',
       });
       void recordAudit({
-        userId: context.userId, action: 'marketplace.order.wallet', entity: 'MarketplaceOrder', entityId: order.id, request,
+        userId: context.userId, action: 'marketplace.order.wallet', entity: 'MarketplaceOrder', entityId: order.id,
+        metadata: { settlement: item.settlement }, request,
       });
 
-      return created({ orderId: order.id, mode: 'WALLET', status: 'PAID' }, 'Achat réglé depuis votre wallet.');
+      return created(
+        { orderId: order.id, mode: 'WALLET', status: order.status, settlement: item.settlement },
+        onDelivery
+          ? 'Achat réglé — fonds en séquestre jusqu\'à la réception. Organisez la livraison.'
+          : 'Achat réglé depuis votre wallet.',
+      );
     }
 
     // ─────────────────────────── TONTINE ──────────────────────────

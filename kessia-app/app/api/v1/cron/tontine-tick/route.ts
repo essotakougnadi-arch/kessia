@@ -14,6 +14,7 @@ import { NextRequest } from 'next/server';
 import { runTontineTick } from '@/lib/tontine/orchestrator';
 import { runCustomerReminders } from '@/lib/reminders/customer-reminders';
 import { runDeliveryTick } from '@/lib/delivery';
+import { runMarketplaceEscrowTick } from '@/lib/marketplace/escrow';
 import { runRetentionPurge } from '@/lib/privacy/retention';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { ok, unauthorized, serverError } from '@/lib/utils/response';
@@ -33,7 +34,7 @@ async function handle(request: NextRequest) {
   try {
     if (!authorized(request)) return unauthorized('Secret cron invalide ou absent.');
 
-    const [tontine, reminders, deliveries, retention] = await Promise.all([
+    const [tontine, reminders, deliveries, escrow, retention] = await Promise.all([
       runTontineTick(),
       runCustomerReminders().catch((e) => {
         logApiError('/v1/cron/tontine-tick:reminders', e);
@@ -43,12 +44,16 @@ async function handle(request: NextRequest) {
         logApiError('/v1/cron/tontine-tick:deliveries', e);
         return { advanced: 0 };
       }),
+      runMarketplaceEscrowTick().catch((e) => {
+        logApiError('/v1/cron/tontine-tick:escrow', e);
+        return { released: 0 };
+      }),
       runRetentionPurge().catch((e) => {
         logApiError('/v1/cron/tontine-tick:retention', e);
         return { otps: 0, sessions: 0, notifications: 0, auditLogs: 0 };
       }),
     ]);
-    const result = { tontine, reminders, deliveries, retention };
+    const result = { tontine, reminders, deliveries, escrow, retention };
 
     void recordAudit({
       action: 'cron.tontine_tick',
@@ -57,7 +62,7 @@ async function handle(request: NextRequest) {
       request,
     });
 
-    return ok(result, 'Tick exécuté (tontines + relances clients + livraisons + purge rétention).');
+    return ok(result, 'Tick exécuté (tontines + relances + livraisons + séquestre marketplace + purge rétention).');
   } catch (e) {
     logApiError('/v1/cron/tontine-tick', e);
     return serverError();

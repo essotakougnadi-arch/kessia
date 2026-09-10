@@ -27,6 +27,7 @@ export function serializeItem(it: ItemWithSeller, opts?: { includeImage?: boolea
     status: it.status,
     pickupZone: it.pickupZone,
     pickupZoneLabel: findZone(it.pickupZone)?.label ?? null,
+    settlement: it.settlement,
     createdAt: it.createdAt,
     sellerId: it.sellerId,
     sellerName: it.seller ? `${it.seller.firstName} ${it.seller.lastName}` : null,

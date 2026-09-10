@@ -3,6 +3,29 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Livraison marketplace : extensions (ADR 0045)
+
+### Ajouté
+- **Paiement du vendeur à la confirmation de réception (séquestre)** —
+  le vendeur choisit `IMMEDIATE` ou `ON_DELIVERY` à la mise en vente.
+  En séquestre : fonds acheteur → wallet plateforme, versés au vendeur à
+  la confirmation de réception (ou d'office après 14 j) ; remboursés à
+  l'acheteur si la livraison est annulée avant enlèvement.
+  `lib/marketplace/escrow.ts`, `WalletKind.MARKETPLACE_ESCROW`.
+- **Carnet d'adresses de livraison** — `model DeliveryAddress` + CRUD
+  `/api/v1/marketplace/addresses`. La modale de livraison propose les
+  adresses enregistrées / en ajoute une.
+- **Livraison depuis le panier, une par vendeur** — après paiement, les
+  commandes sont regroupées par vendeur ; une course Miaride couvre
+  plusieurs articles (`MarketplaceDelivery.extraOrderIds`).
+- **Livraison différée pour l'achat par tontine** — statut `SCHEDULED` :
+  adresse enregistrée, aucun débit, activable à la fin du plan d'épargne.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (**178**) + `build` OK.
+  `marketplace-settlement.itest.ts` (2) + `marketplace-delivery.spec.ts`
+  (+2) au vert.
+
 ## [Non publié] — Base de test isolée pour les E2E (ADR 0044)
 
 ### Ajouté

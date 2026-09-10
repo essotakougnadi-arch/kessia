@@ -49,6 +49,7 @@ export default function SellClient() {
       price,
       city: (f.get('city') as string).trim() || undefined,
       pickupZone: (f.get('pickupZone') as string) || undefined,
+      settlement: (f.get('settlement') as string) === 'ON_DELIVERY' ? 'ON_DELIVERY' : 'IMMEDIATE',
       stock: Math.max(1, Number(f.get('stock')) || 1),
       payableByTontine,
       ...(payableByTontine ? { tontineInstallments: Math.max(2, Math.min(24, Number(f.get('installments')) || 6)) } : {}),
@@ -116,6 +117,15 @@ export default function SellClient() {
             ))}
           </select>
           <span className={styles.toggleHint}>{t('market.fieldPickupZoneHint')}</span>
+        </div>
+
+        <div className="form-group">
+          <label className="label" htmlFor="settlement">{t('market.fieldSettlement')}</label>
+          <select id="settlement" name="settlement" className="input" defaultValue="IMMEDIATE">
+            <option value="IMMEDIATE">{t('market.settlementImmediate')}</option>
+            <option value="ON_DELIVERY">{t('market.settlementOnDelivery')}</option>
+          </select>
+          <span className={styles.toggleHint}>{t('market.fieldSettlementHint')}</span>
         </div>
 
         <div className="form-group">

@@ -22,11 +22,26 @@ export type CartLine = {
   currency: string;
   imageUrl: string | null;
   qty: number;
+  // Pour regrouper la livraison par vendeur au paiement (ADR 0045).
+  sellerId?: string | null;
+  sellerName?: string | null;
+  pickupZone?: string | null;
+};
+
+type CartAddInput = {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  sellerId?: string | null;
+  sellerName?: string | null;
+  pickupZone?: string | null;
 };
 
 type CartState = {
   lines: CartLine[];
-  add: (item: { id: string; title: string; price: number; currency: string; imageUrl: string | null }) => void;
+  add: (item: CartAddInput) => void;
   remove: (itemId: string) => void;
   setQty: (itemId: string, qty: number) => void;
   clear: () => void;
@@ -47,7 +62,12 @@ export const useCartStore = create<CartState>()(
           return {
             lines: [
               ...state.lines,
-              { itemId: item.id, title: item.title, price: item.price, currency: item.currency, imageUrl: item.imageUrl, qty: 1 },
+              {
+                itemId: item.id, title: item.title, price: item.price, currency: item.currency,
+                imageUrl: item.imageUrl, qty: 1,
+                sellerId: item.sellerId ?? null, sellerName: item.sellerName ?? null,
+                pickupZone: item.pickupZone ?? null,
+              },
             ],
           };
         }),

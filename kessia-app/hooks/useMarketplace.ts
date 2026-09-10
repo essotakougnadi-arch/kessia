@@ -26,13 +26,15 @@ export type MarketItem = {
   status: string;
   pickupZone: string | null;
   pickupZoneLabel: string | null;
+  settlement: 'IMMEDIATE' | 'ON_DELIVERY';
   createdAt: string;
   sellerId: string;
   sellerName: string | null;
   businessName: string | null;
 };
 
-export type DeliveryStatus = 'REQUESTED' | 'COURIER_ASSIGNED' | 'PICKED_UP' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
+export type DeliveryStatus =
+  | 'SCHEDULED' | 'REQUESTED' | 'COURIER_ASSIGNED' | 'PICKED_UP' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
 
 export type DeliveryInfo = {
   id: string;
@@ -46,7 +48,9 @@ export type DeliveryInfo = {
   trackingUrl: string | null;
   providerRef: string | null;
   dropoffAddress: string;
+  dropoffArea: string;
   pickupLabel: string;
+  extraItemCount: number;
   sellerReadyAt: string | null;
   deliveredAt: string | null;
 };
@@ -55,17 +59,40 @@ export type MyPurchase = {
   id: string;
   mode: 'WALLET' | 'TONTINE';
   status: string;
+  settlement: 'IMMEDIATE' | 'ON_DELIVERY';
   amount: number;
   currency: string;
   tontineId: string | null;
+  tontineStatus: string | null;
   createdAt: string;
+  sellerId: string;
   item: { id: string; title: string; hasImage: boolean };
   deliverable: boolean;
   pickupMissing: boolean;
+  scheduleable: boolean;
+  scheduledActivatable: boolean;
+  awaitingReceipt: boolean;
   delivery: DeliveryInfo | null;
+  coveredByDeliveryId: string | null;
 };
 
-export type MySale = { id: string; item: { title: string }; delivery: DeliveryInfo };
+export type MySale = {
+  id: string;
+  settlement: 'IMMEDIATE' | 'ON_DELIVERY';
+  status: string;
+  item: { title: string };
+  delivery: DeliveryInfo;
+};
+
+export type DeliveryAddress = {
+  id: string;
+  label: string;
+  area: string;
+  areaLabel: string | null;
+  address: string;
+  recipientPhone: string;
+  isDefault: boolean;
+};
 
 export type ActionResult = { success: boolean; message: string; data?: unknown };
 
@@ -153,10 +180,15 @@ export function useDeliveryActions() {
   }
   async function request(payload: {
     orderId: string;
+    alsoOrderIds?: string[];
     mode: 'SIMULATED' | 'HANDOFF';
-    dropoffZone: string;
-    dropoffAddress: string;
-    recipientPhone: string;
+    schedule?: boolean;
+    addressId?: string;
+    dropoffZone?: string;
+    dropoffAddress?: string;
+    recipientPhone?: string;
+    saveAddress?: boolean;
+    saveAddressLabel?: string;
   }): Promise<ActionResult> {
     return toResult(await apiSend('/api/v1/marketplace/deliveries', 'POST', payload));
   }
@@ -164,6 +196,32 @@ export function useDeliveryActions() {
     return toResult(await apiSend(`/api/v1/marketplace/deliveries/${deliveryId}`, 'POST', body));
   }
   return { quote, request, act };
+}
+
+// ── Carnet d'adresses de livraison (ADR 0045) ──────────────
+export function useDeliveryAddresses() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const { data, isLoading, mutate } = useSWR<{ addresses: DeliveryAddress[] }>(
+    accessToken ? ['/api/v1/marketplace/addresses', accessToken] : null,
+    ([url]: [string, string]) => apiGet(url),
+    { revalidateOnFocus: false },
+  );
+  async function create(payload: Omit<DeliveryAddress, 'id' | 'areaLabel' | 'isDefault'> & { isDefault?: boolean }): Promise<ActionResult> {
+    const r = toResult(await apiSend('/api/v1/marketplace/addresses', 'POST', payload));
+    if (r.success) mutate();
+    return r;
+  }
+  async function update(id: string, payload: Partial<DeliveryAddress>): Promise<ActionResult> {
+    const r = toResult(await apiSend(`/api/v1/marketplace/addresses/${id}`, 'PATCH', payload));
+    if (r.success) mutate();
+    return r;
+  }
+  async function remove(id: string): Promise<ActionResult> {
+    const r = toResult(await apiSend(`/api/v1/marketplace/addresses/${id}`, 'DELETE'));
+    if (r.success) mutate();
+    return r;
+  }
+  return { addresses: data?.addresses ?? [], isLoading, refresh: () => mutate(), create, update, remove };
 }
 
 // ── Actions ────────────────────────────────────────────────

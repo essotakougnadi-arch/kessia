@@ -46,7 +46,13 @@ export default function MarketplaceClient() {
   const addToCart = useCartStore((s) => s.add);
   const cartCount = cartLines.reduce((sum, l) => sum + l.qty, 0);
 
-  function onAddToCart(e: MouseEvent, it: { id: string; title: string; price: number; currency: string; imageUrl: string | null }) {
+  function onAddToCart(
+    e: MouseEvent,
+    it: {
+      id: string; title: string; price: number; currency: string; imageUrl: string | null;
+      sellerId?: string | null; sellerName?: string | null; pickupZone?: string | null;
+    },
+  ) {
     e.preventDefault();
     e.stopPropagation();
     addToCart(it);
@@ -141,7 +147,7 @@ export default function MarketplaceClient() {
                 </div>
                 <button
                   className={styles.addToCartBtn}
-                  onClick={(e) => onAddToCart(e, { id: it.id, title: it.title, price: it.price, currency: it.currency, imageUrl: it.imageUrl })}
+                  onClick={(e) => onAddToCart(e, { id: it.id, title: it.title, price: it.price, currency: it.currency, imageUrl: it.imageUrl, sellerId: it.sellerId, sellerName: it.sellerName, pickupZone: it.pickupZone })}
                   id={`btn-add-cart-${it.id}`}
                 >
                   🛒 {t('market.addToCart')}

@@ -10,6 +10,7 @@ import prisma from '@/lib/db/prisma';
 import { withAuth } from '@/lib/auth/middleware';
 import { trackingCodeSchema } from '@/lib/validations/marketplace';
 import {
+  activateScheduledDelivery,
   advanceSimulatedDelivery,
   attachTracking,
   cancelDelivery,
@@ -23,6 +24,7 @@ export const dynamic = 'force-dynamic';
 
 const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('advance') }),
+  z.object({ action: z.literal('activate') }),
   z.object({ action: z.literal('ready') }),
   z.object({ action: z.literal('confirm') }),
   z.object({ action: z.literal('cancel') }),
@@ -34,6 +36,7 @@ function serialize(d: Awaited<ReturnType<typeof loadFull>>) {
   return {
     id: d.id,
     orderId: d.orderId,
+    extraOrderIds: d.extraOrderIds,
     provider: d.provider,
     mode: d.mode,
     status: d.status,
@@ -93,6 +96,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const result =
       body.action === 'advance' ? await advanceSimulatedDelivery(params.id)
+      : body.action === 'activate' ? await activateScheduledDelivery(params.id, context.userId)
       : body.action === 'ready' ? await markSellerReady(params.id, context.userId)
       : body.action === 'confirm' ? await confirmDelivered(params.id, context.userId)
       : body.action === 'cancel' ? await cancelDelivery(params.id, context.userId)
@@ -108,7 +112,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const full = await loadFull(params.id);
-    return ok(serialize(full), 'Livraison mise à jour.');
+    return ok(
+      { ...serialize(full), handoffUrl: 'handoffUrl' in result ? result.handoffUrl ?? null : null },
+      'Livraison mise à jour.',
+    );
   } catch (err) {
     logApiError('/v1/marketplace/deliveries/[id] POST', err);
     return serverError();

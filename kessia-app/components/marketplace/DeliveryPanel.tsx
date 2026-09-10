@@ -1,13 +1,20 @@
 'use client';
 // ============================================================
-// KESSIA — Livraison Miaride d'une commande marketplace (ADR 0042)
-// Vue acheteur (demander + suivre) et vendeur (colis prêt).
+// KESSIA — Livraison Miaride d'une commande marketplace (ADR 0042, 0045)
+// Vue acheteur (demander / programmer / suivre) et vendeur (colis prêt).
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Icon } from '@/components/ui/Icon';
-import { useDeliveryActions, type DeliveryInfo, type DeliveryQuote, type MyPurchase, type MySale } from '@/hooks/useMarketplace';
+import {
+  useDeliveryActions,
+  useDeliveryAddresses,
+  type DeliveryInfo,
+  type DeliveryQuote,
+  type MyPurchase,
+  type MySale,
+} from '@/hooks/useMarketplace';
 import { LOME_ZONES } from '@/lib/delivery/zones';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
@@ -25,47 +32,142 @@ function stepLabel(t: ReturnType<typeof useT>, s: DeliveryInfo['status']): strin
 // ── Acheteur ─────────────────────────────────────────────────
 export function BuyerDelivery({ purchase, onChange }: { purchase: MyPurchase; onChange: () => void }) {
   const t = useT();
-  if (purchase.delivery) return <DeliveryTimeline delivery={purchase.delivery} role="buyer" onChange={onChange} />;
+
+  if (purchase.delivery?.status === 'SCHEDULED') {
+    return <ScheduledDelivery purchase={purchase} onChange={onChange} />;
+  }
+  if (purchase.delivery) {
+    return <DeliveryTimeline delivery={purchase.delivery} role="buyer" onChange={onChange} />;
+  }
+  if (purchase.coveredByDeliveryId) {
+    return (
+      <div className={styles.hint}>
+        <Icon name="package" size={14} tinted /> {t('market.delivery.bundledHint')}
+      </div>
+    );
+  }
   if (purchase.deliverable) return <RequestDelivery purchase={purchase} onChange={onChange} />;
+  if (purchase.scheduleable) return <RequestDelivery purchase={purchase} onChange={onChange} schedule />;
   if (purchase.pickupMissing) {
     return <div className={styles.hint}><Icon name="package" size={14} tinted /> {t('market.delivery.pickupMissing')}</div>;
   }
   return null;
 }
 
-function RequestDelivery({ purchase, onChange }: { purchase: MyPurchase; onChange: () => void }) {
+function ScheduledDelivery({ purchase, onChange }: { purchase: MyPurchase; onChange: () => void }) {
+  const t = useT();
+  const addToast = useUiStore((s) => s.addToast);
+  const { act } = useDeliveryActions();
+  const [busy, setBusy] = useState<string | null>(null);
+  const d = purchase.delivery!;
+
+  async function run(action: 'activate' | 'cancel') {
+    setBusy(action);
+    const r = await act(d.id, { action });
+    setBusy(null);
+    addToast({ type: r.success ? 'success' : 'error', message: r.message });
+    if (r.success) {
+      if (action === 'activate') {
+        const data = r.data as { handoffUrl?: string | null } | undefined;
+        if (data?.handoffUrl) window.open(data.handoffUrl, '_blank', 'noopener');
+      }
+      onChange();
+    }
+  }
+
+  return (
+    <div className={styles.scheduled}>
+      <div className={styles.tlHead}>
+        <span className={styles.tlBadge}><Icon name="clock" size={13} /> {t('market.delivery.step.SCHEDULED')}</span>
+      </div>
+      <p className={styles.tlNote}>
+        {t('market.delivery.scheduledNote', { zone: d.dropoffAddress })}
+      </p>
+      <div className={styles.tlActions}>
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={!!busy || !purchase.scheduledActivatable}
+          onClick={() => run('activate')}
+        >
+          {t('market.delivery.activate')}
+        </button>
+        <button className="btn btn-ghost btn-sm" disabled={!!busy} onClick={() => run('cancel')}>
+          {t('market.delivery.cancel')}
+        </button>
+      </div>
+      {!purchase.scheduledActivatable && (
+        <p className={styles.hint}>{t('market.delivery.activateHint')}</p>
+      )}
+    </div>
+  );
+}
+
+function RequestDelivery({
+  purchase,
+  onChange,
+  schedule = false,
+  alsoOrderIds,
+  triggerLabel,
+}: {
+  purchase: MyPurchase;
+  onChange: () => void;
+  schedule?: boolean;
+  alsoOrderIds?: string[];
+  triggerLabel?: string;
+}) {
   const t = useT();
   const addToast = useUiStore((s) => s.addToast);
   const phone = useAuthStore((s) => s.user?.phone) ?? '';
   const { quote, request } = useDeliveryActions();
+  const { addresses } = useDeliveryAddresses();
 
   const [open, setOpen] = useState(false);
+  const [addressId, setAddressId] = useState<string>('');
   const [zone, setZone] = useState('');
   const [address, setAddress] = useState('');
   const [recipient, setRecipient] = useState(phone);
   const [handoff, setHandoff] = useState(false);
+  const [saveAddr, setSaveAddr] = useState(false);
+  const [saveLabel, setSaveLabel] = useState('');
   const [q, setQ] = useState<DeliveryQuote | null>(null);
   const [loadingQ, setLoadingQ] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  const usingBook = addressId !== '' && addressId !== '__new__';
+  const effectiveZone = usingBook ? (addresses.find((a) => a.id === addressId)?.area ?? '') : zone;
+
+  // Pré-sélection : adresse par défaut du carnet.
   useEffect(() => {
-    if (!open || !zone) { setQ(null); return; }
+    if (open && addresses.length > 0 && addressId === '') {
+      setAddressId(addresses.find((a) => a.isDefault)?.id ?? addresses[0].id);
+    }
+  }, [open, addresses, addressId]);
+
+  useEffect(() => {
+    if (!open || !effectiveZone) { setQ(null); return; }
     let cancelled = false;
     setLoadingQ(true);
-    quote(purchase.id, zone).then((res) => { if (!cancelled) { setQ(res); setLoadingQ(false); } });
+    quote(purchase.id, effectiveZone).then((res) => { if (!cancelled) { setQ(res); setLoadingQ(false); } });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, zone, purchase.id]);
+  }, [open, effectiveZone, purchase.id]);
 
   async function submit() {
-    if (!zone || address.trim().length < 5 || recipient.trim().length < 8) return;
     setBusy(true);
     const r = await request({
       orderId: purchase.id,
+      alsoOrderIds,
       mode: handoff ? 'HANDOFF' : 'SIMULATED',
-      dropoffZone: zone,
-      dropoffAddress: address.trim(),
-      recipientPhone: recipient.trim(),
+      schedule: schedule || undefined,
+      ...(usingBook
+        ? { addressId }
+        : {
+            dropoffZone: zone,
+            dropoffAddress: address.trim(),
+            recipientPhone: recipient.trim(),
+            saveAddress: saveAddr || undefined,
+            saveAddressLabel: saveAddr ? saveLabel.trim() || undefined : undefined,
+          }),
     });
     setBusy(false);
     addToast({ type: r.success ? 'success' : 'error', message: r.message });
@@ -77,34 +179,68 @@ function RequestDelivery({ purchase, onChange }: { purchase: MyPurchase; onChang
     }
   }
 
-  const canSubmit = zone && address.trim().length >= 5 && recipient.trim().length >= 8 && (handoff || q?.covered);
+  const manualOk = zone && address.trim().length >= 5 && recipient.trim().length >= 8;
+  const canSubmit = schedule
+    ? (usingBook || manualOk)
+    : (usingBook || manualOk) && (handoff || q?.covered);
+
+  const title = schedule ? t('market.delivery.scheduleTitle') : t('market.delivery.modalTitle');
 
   return (
     <>
       <button className={styles.requestBtn} id={`btn-deliver-${purchase.id}`} onClick={() => setOpen(true)}>
-        <Icon name="mobile" size={15} tinted /> {t('market.delivery.organize')}
+        <Icon name={schedule ? 'clock' : 'mobile'} size={15} tinted />{' '}
+        {triggerLabel ?? (schedule ? t('market.delivery.scheduleCta') : t('market.delivery.organize'))}
       </button>
 
-      <Modal open={open} onClose={() => !busy && setOpen(false)} title={t('market.delivery.modalTitle')} locked={busy}>
+      <Modal open={open} onClose={() => !busy && setOpen(false)} title={title} locked={busy}>
         <div className={styles.form}>
           <p className={styles.preview}>
-            <strong>{t('modulesPages.previewLabel')}</strong> {t('market.delivery.previewBanner')}
+            <strong>{t('modulesPages.previewLabel')}</strong>{' '}
+            {schedule ? t('market.delivery.schedulePreview') : t('market.delivery.previewBanner')}
           </p>
 
-          <label className="label" htmlFor="dz">{t('market.delivery.dropoffZone')}</label>
-          <select id="dz" className="input" value={zone} onChange={(e) => setZone(e.target.value)}>
-            <option value="">{t('market.delivery.chooseZone')}</option>
-            {LOME_ZONES.map((z) => <option key={z.key} value={z.key}>{z.label}</option>)}
-          </select>
+          {addresses.length > 0 && (
+            <>
+              <label className="label" htmlFor="dab">{t('market.delivery.savedAddress')}</label>
+              <select id="dab" className="input" value={addressId} onChange={(e) => setAddressId(e.target.value)}>
+                {addresses.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label} — {a.areaLabel ?? a.area}
+                  </option>
+                ))}
+                <option value="__new__">{t('market.delivery.newAddress')}</option>
+              </select>
+            </>
+          )}
 
-          <label className="label" htmlFor="da">{t('market.delivery.dropoffAddress')}</label>
-          <input id="da" className="input" value={address} maxLength={240}
-            placeholder={t('market.delivery.addressPlaceholder')} onChange={(e) => setAddress(e.target.value)} />
+          {!usingBook && (
+            <>
+              <label className="label" htmlFor="dz">{t('market.delivery.dropoffZone')}</label>
+              <select id="dz" className="input" value={zone} onChange={(e) => setZone(e.target.value)}>
+                <option value="">{t('market.delivery.chooseZone')}</option>
+                {LOME_ZONES.map((z) => <option key={z.key} value={z.key}>{z.label}</option>)}
+              </select>
 
-          <label className="label" htmlFor="dp">{t('market.delivery.recipientPhone')}</label>
-          <input id="dp" className="input" value={recipient} maxLength={20} onChange={(e) => setRecipient(e.target.value)} />
+              <label className="label" htmlFor="da">{t('market.delivery.dropoffAddress')}</label>
+              <input id="da" className="input" value={address} maxLength={240}
+                placeholder={t('market.delivery.addressPlaceholder')} onChange={(e) => setAddress(e.target.value)} />
 
-          {zone && !handoff && (
+              <label className="label" htmlFor="dp">{t('market.delivery.recipientPhone')}</label>
+              <input id="dp" className="input" value={recipient} maxLength={20} onChange={(e) => setRecipient(e.target.value)} />
+
+              <label className={styles.handoffToggle}>
+                <input type="checkbox" checked={saveAddr} onChange={(e) => setSaveAddr(e.target.checked)} />
+                <span><strong>{t('market.delivery.saveThisAddress')}</strong></span>
+              </label>
+              {saveAddr && (
+                <input className="input" value={saveLabel} maxLength={40}
+                  placeholder={t('market.delivery.saveAddressLabel')} onChange={(e) => setSaveLabel(e.target.value)} />
+              )}
+            </>
+          )}
+
+          {effectiveZone && !handoff && !schedule && (
             <div className={styles.quote}>
               {loadingQ ? <span>{t('common.loading')}</span>
                 : q?.covered ? (
@@ -116,7 +252,7 @@ function RequestDelivery({ purchase, onChange }: { purchase: MyPurchase; onChang
             </div>
           )}
 
-          {q?.covered && !handoff && (
+          {q?.covered && !handoff && !schedule && (
             <div className={styles.total}>
               <span>{t('market.delivery.total')}</span>
               <strong>{formatNumber(purchase.amount + q.amount)} FCFA</strong>
@@ -134,6 +270,7 @@ function RequestDelivery({ purchase, onChange }: { purchase: MyPurchase; onChang
 
           <button className="btn btn-primary btn-lg btn-full" disabled={busy || !canSubmit} onClick={submit}>
             {busy ? t('market.processing')
+              : schedule ? t('market.delivery.confirmSchedule')
               : handoff ? t('market.delivery.openMiaride')
               : t('market.delivery.confirmRequest')}
           </button>
@@ -180,6 +317,9 @@ function DeliveryTimeline({ delivery, role, onChange }: { delivery: DeliveryInfo
         <span className={styles.tlBadge}>
           <Icon name="mobile" size={13} /> Miaride{delivery.simulated ? ' · aperçu' : ''}
         </span>
+        {delivery.extraItemCount > 0 && (
+          <span className={styles.tlCourier}>{t('market.delivery.bundleCount', { n: delivery.extraItemCount + 1 })}</span>
+        )}
         {delivery.courierName && <span className={styles.tlCourier}>{delivery.courierName}</span>}
         {delivery.trackingUrl && (
           <a href={delivery.trackingUrl} target="_blank" rel="noreferrer" className={styles.tlTrack}>
@@ -265,7 +405,12 @@ export function SellerDeliveries({ sales, onChange }: { sales: MySale[]; onChang
       <div className={styles.sellerList}>
         {shown.map((s) => (
           <div key={s.id} className={styles.sellerRow}>
-            <div className={styles.sellerRowTitle}>{s.item.title}</div>
+            <div className={styles.sellerRowTitle}>
+              {s.item.title}
+              {s.settlement === 'ON_DELIVERY' && (
+                <span className={styles.escrowTag}>{t('market.delivery.escrowTag')}</span>
+              )}
+            </div>
             <DeliveryTimeline delivery={s.delivery} role="seller" onChange={onChange} />
           </div>
         ))}

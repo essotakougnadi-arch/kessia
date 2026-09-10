@@ -115,6 +115,13 @@ export default function ItemClient({ id }: { id: string }) {
             </div>
           )}
 
+          {item.settlement === 'ON_DELIVERY' && !isSeller && (
+            <div className={styles.deliveryHint}>
+              <Icon name="shield" size={14} tinted />
+              {t('market.settlementBuyerNote')}
+            </div>
+          )}
+
           {item.description && <p className={styles.detailDesc}>{item.description}</p>}
 
           {isSeller ? (
@@ -137,7 +144,7 @@ export default function ItemClient({ id }: { id: string }) {
                 className="btn btn-ghost btn-lg"
                 id="btn-add-cart-detail"
                 onClick={() => {
-                  addToCart({ id: item.id, title: item.title, price: item.price, currency: item.currency, imageUrl: item.imageUrl });
+                  addToCart({ id: item.id, title: item.title, price: item.price, currency: item.currency, imageUrl: item.imageUrl, sellerId: item.sellerId, sellerName: item.sellerName, pickupZone: item.pickupZone });
                   addToast({ type: 'success', message: t('market.addedToCart', { title: item.title }) });
                 }}
               >

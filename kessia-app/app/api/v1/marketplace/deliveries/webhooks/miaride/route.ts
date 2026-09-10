@@ -12,6 +12,8 @@ import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { z } from 'zod';
 import prisma from '@/lib/db/prisma';
+import { settleOnDelivery } from '@/lib/delivery';
+import { refundEscrowToBuyer } from '@/lib/marketplace/escrow';
 import { notify } from '@/lib/notifications/notify';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
@@ -91,6 +93,12 @@ export async function POST(request: NextRequest) {
 
     if (mapped === 'DELIVERED') {
       void notify({ userId: delivery.buyerId, category: 'BUSINESS', priority: 'HIGH', title: 'Colis livré', body: `« ${delivery.order.item.title} » a été livré.`, actionUrl: '/marketplace/mine' });
+      // Séquestre « paiement à la réception » : la remise vaut confirmation.
+      await settleOnDelivery(delivery, 'buyer_confirmed');
+    } else if (mapped === 'CANCELLED') {
+      for (const oid of [delivery.orderId, ...delivery.extraOrderIds]) {
+        await refundEscrowToBuyer(oid, 'delivery_cancelled_by_courier').catch(() => null);
+      }
     }
     void recordAudit({ action: 'marketplace.delivery.webhook', entity: 'MarketplaceDelivery', entityId: delivery.id, metadata: { reference, status: mapped }, request });
 

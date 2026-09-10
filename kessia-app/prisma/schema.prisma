@@ -113,9 +113,14 @@ enum Direction {
 //                      cotisations d'un cycle entre l'encaissement et le
 //                      versement au bénéficiaire. Jamais rattaché à un
 //                      utilisateur ; une seule instance par tontine.
+//  - MARKETPLACE_ESCROW : séquestre plateforme pour les ventes réglées
+//                      « à la confirmation de réception » (ADR 0045).
+//                      Détient les fonds de l'acheteur entre l'achat et
+//                      la livraison confirmée. Une seule instance.
 enum WalletKind {
   USER
   TONTINE_ESCROW
+  MARKETPLACE_ESCROW
 }
 
 enum TontineType {
@@ -174,10 +179,21 @@ enum MarketplaceOrderMode {
   TONTINE
 }
 
+// Quand le vendeur est réglé (ADR 0045) :
+//  IMMEDIATE   → à l'achat (défaut, comportement historique)
+//  ON_DELIVERY → fonds en séquestre plateforme, versés à la confirmation
+//                de réception par l'acheteur (ou auto-libérés après délai)
+enum MarketplaceSettlement {
+  IMMEDIATE
+  ON_DELIVERY
+}
+
 enum MarketplaceOrderStatus {
   PAID
+  PENDING_SETTLEMENT
   TONTINE_STARTED
   CANCELLED
+  REFUNDED
 }
 
 enum ContributionStatus {
@@ -409,6 +425,7 @@ model User {
   marketplaceItems      MarketplaceItem[]     @relation("MarketplaceSeller")
   marketplaceOrders     MarketplaceOrder[]    @relation("MarketplaceBuyer")
   marketplaceDeliveries MarketplaceDelivery[] @relation("MarketplaceDeliveryBuyer")
+  deliveryAddresses     DeliveryAddress[]
   businesses            Business[]
   notifications         Notification[]
   supportTickets        SupportTicket[]       @relation("TicketUser")
@@ -821,6 +838,9 @@ model MarketplaceItem {
   payableByTontine    Boolean               @default(false)
   // Nombre de versements suggéré pour l'achat par tontine.
   tontineInstallments Int?
+  // Règlement du vendeur : immédiat, ou à la confirmation de réception
+  // (séquestre plateforme). Choisi par le vendeur à la mise en vente.
+  settlement          MarketplaceSettlement @default(IMMEDIATE)
   stock               Int                   @default(1)
   status              MarketplaceItemStatus @default(ACTIVE)
   createdAt           DateTime              @default(now())
@@ -836,19 +856,24 @@ model MarketplaceItem {
 }
 
 model MarketplaceOrder {
-  id        String                 @id @default(cuid())
-  itemId    String
-  buyerId   String
-  mode      MarketplaceOrderMode
-  amount    Decimal                @db.Decimal(18, 2)
-  currency  String                 @default("XOF")
-  status    MarketplaceOrderStatus
-  // mode WALLET : clé d'idempotence de l'écriture ledger.
-  ledgerRef String?
+  id                  String                 @id @default(cuid())
+  itemId              String
+  buyerId             String
+  mode                MarketplaceOrderMode
+  amount              Decimal                @db.Decimal(18, 2)
+  currency            String                 @default("XOF")
+  status              MarketplaceOrderStatus
+  // mode WALLET : clé d'idempotence de l'écriture ledger (achat).
+  ledgerRef           String?
   // mode TONTINE : la tontine Achat SOLO créée pour financer l'achat.
-  tontineId String?
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
+  tontineId           String?
+  // Règlement du vendeur (copié de l'article au moment de l'achat).
+  settlement          MarketplaceSettlement  @default(IMMEDIATE)
+  // ON_DELIVERY : clé d'idempotence du versement séquestre → vendeur.
+  settlementLedgerRef String?
+  settledAt           DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   item     MarketplaceItem      @relation(fields: [itemId], references: [id])
   buyer    User                 @relation("MarketplaceBuyer", fields: [buyerId], references: [id])
@@ -877,6 +902,7 @@ enum DeliveryMode {
 }
 
 enum DeliveryStatus {
+  SCHEDULED
   REQUESTED
   COURIER_ASSIGNED
   PICKED_UP
@@ -898,6 +924,12 @@ model MarketplaceDelivery {
   dropoffAddress String
   dropoffArea    String
   recipientPhone String
+
+  // Panier multi-articles (ADR 0045) : une livraison par vendeur peut
+  // couvrir plusieurs commandes du même panier. `orderId` reste la
+  // commande d'ancrage ; les autres sont listées ici (mêmes enlèvement
+  // et dépôt, frais estimés une seule fois).
+  extraOrderIds String[] @default([])
 
   // Tarif — estimation d'après la zone (jamais présenté comme ferme)
   feeAmount    Decimal @db.Decimal(18, 2)
@@ -923,6 +955,25 @@ model MarketplaceDelivery {
   @@index([buyerId])
   @@index([status])
   @@map("marketplace_deliveries")
+}
+
+// Carnet d'adresses de livraison de l'acheteur (ADR 0045) — évite de
+// ressaisir quartier + adresse + téléphone à chaque commande.
+model DeliveryAddress {
+  id             String   @id @default(cuid())
+  userId         String
+  label          String // « Maison », « Boutique », « Chez maman »…
+  area           String // clé LOME_ZONES
+  address        String
+  recipientPhone String
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("delivery_addresses")
 }
 
 model Supplier {

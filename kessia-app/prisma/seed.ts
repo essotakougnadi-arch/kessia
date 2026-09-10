@@ -310,6 +310,7 @@ async function wipe() {
     () => prisma.marketplaceDelivery.deleteMany(),
     () => prisma.marketplaceOrder.deleteMany(),
     () => prisma.marketplaceItem.deleteMany(),
+    () => prisma.deliveryAddress.deleteMany(),
     () => prisma.invoice.deleteMany(),
     () => prisma.expense.deleteMany(),
     () => prisma.saleItem.deleteMany(),
@@ -775,6 +776,7 @@ async function main() {
       { seller: koffi, title: 'Site vitrine + formation (prestation)', description: 'Création d’un site 5 pages + 1 journée de formation à la mise à jour du contenu.', category: 'SERVICE', price: 250_000, city: 'Lomé', payableByTontine: false, days: 6 },
       { seller: akossiwa, title: 'Sacs de riz local 25 kg (x10)', description: 'Riz de la vallée, récolte récente. Livraison possible dans le Grand Lomé.', category: 'AGRICOLE', price: 130_000, city: 'Lomé', pickupZone: 'agoe', payableByTontine: false, stock: 4, days: 1 },
       { seller: kossi, title: 'Présentoir métallique 5 niveaux', description: 'Léger, démontable. Deux disponibles.', category: 'EQUIPEMENT', price: 35_000, city: 'Lomé', pickupZone: 'be', payableByTontine: false, stock: 2, days: 10 },
+      { seller: kossi, title: 'Groupe électrogène 3 kVA', description: 'Démarrage électrique, faible consommation. Vendu avec paiement sécurisé : réglé au vendeur à la réception.', category: 'EQUIPEMENT', price: 260_000, city: 'Lomé', pickupZone: 'be', payableByTontine: true, tontineInstallments: 6, settlement: 'ON_DELIVERY', days: 4 },
     ].map((it) =>
       prisma.marketplaceItem.create({
         data: {
@@ -786,6 +788,7 @@ async function main() {
           currency: 'XOF',
           city: it.city,
           pickupZone: it.pickupZone ?? null,
+          settlement: (it as { settlement?: 'IMMEDIATE' | 'ON_DELIVERY' }).settlement ?? 'IMMEDIATE',
           payableByTontine: it.payableByTontine,
           tontineInstallments: it.payableByTontine ? it.tontineInstallments : null,
           stock: it.stock ?? 1,
@@ -813,6 +816,13 @@ async function main() {
       trackingUrl: 'https://miaride.app/suivi/MIA-K7P2QX', courierName: 'Mensah T. · moto',
       simulated: true, sellerReadyAt: daysAgo(1),
     },
+  });
+  // Carnet d'adresses de livraison (ADR 0045)
+  await prisma.deliveryAddress.createMany({
+    data: [
+      { userId: kossi.id, label: 'Maison', area: 'nyekonakpoe', address: 'Nyékonakpoè, rue derrière la station Total', recipientPhone: kossi.phone, isDefault: true },
+      { userId: kossi.id, label: 'Boutique', area: 'be', address: 'Marché de Bè, allée B, box 14', recipientPhone: kossi.phone, isDefault: false },
+    ],
   });
 
   console.log('🔔 Notifications & support…');
@@ -903,7 +913,7 @@ async function main() {
     ],
   });
 
-  console.log('\n✅ Seed terminé — 12 comptes, 10 tontines (dont 1 achat individuel + 4 publiques ouvertes), demandes d’adhésion, 7 articles marketplace, 4 entreprises, Fonds de Garantie (démo).\n');
+  console.log('\n✅ Seed terminé — 12 comptes, 10 tontines (dont 1 achat individuel + 4 publiques ouvertes), demandes d’adhésion, 8 articles marketplace, 4 entreprises, Fonds de Garantie (démo).\n');
   console.table([
     { Rôle: 'Membre (SME)', Téléphone: '+22890000001', Nom: 'Kossi Amétépé' },
     { Rôle: 'Membre (Micro)', Téléphone: '+22890000002', Nom: 'Ama Dossou' },
