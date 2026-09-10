@@ -3,6 +3,19 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Traduction éwé du chrome (ADR 0047)
+
+### Ajouté
+- `lib/i18n/messages/ee.ts` étendu au chrome de l'interface : navigation
+  complète, actions génériques, fréquences, sous-ensemble d'auth,
+  libellés d'accueil / PIN. Orthographe normalisée (standard Eʋegbe).
+- Le vocabulaire financier / juridique / KYC / la prose serveur restent
+  en français (fallback) en attendant une relecture native.
+  `LOCALE_META.ee.ready` reste `false`.
+
+### Vérification
+- `vitest` (**182**) — `catalogs.test.ts` + `core.test.ts` verts.
+
 ## [Non publié] — KESSIA AI : LLM optionnel + finitions (ADR 0046)
 
 ### Ajouté
