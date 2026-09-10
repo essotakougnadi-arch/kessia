@@ -19,12 +19,18 @@ export default function BottomNav() {
   const pathname = usePathname();
   const t = useT();
 
+  // Sur /ai lui-même, le bouton flottant n'a pas de sens et recouvre la
+  // barre de saisie — on le masque.
+  const showAiFab = !pathname.startsWith('/ai');
+
   return (
     <>
       {/* KESSIA AI — accessible globalement (§10 / §17) */}
-      <Link href="/ai" className={styles.aiFab} id="btn-nav-ai" aria-label="KESSIA AI">
-        <Icon name="ai" size={24} strokeWidth={2} />
-      </Link>
+      {showAiFab && (
+        <Link href="/ai" className={styles.aiFab} id="btn-nav-ai" aria-label="KESSIA AI">
+          <Icon name="ai" size={24} strokeWidth={2} />
+        </Link>
+      )}
 
       <nav className={styles.nav} aria-label="Navigation mobile">
         {NAV_ITEMS.map((item) => (

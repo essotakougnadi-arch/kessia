@@ -130,7 +130,7 @@ export default function BusinessClient() {
 
       <div className={styles.ctaSection}>
         <div className={styles.ctaCard}>
-          <div className={styles.ctaIcon}>🏪</div>
+          <div className={styles.ctaIcon}><Icon name="business" size={26} tinted /></div>
           <div className={styles.ctaText}>
             <div className={styles.ctaTitle}>{t('business.ctaTitle')}</div>
             <div className={styles.ctaDesc}>{t('business.ctaDesc')}</div>

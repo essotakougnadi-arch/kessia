@@ -3,6 +3,15 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Audit visuel : correctifs concrets
+
+### Corrigé
+- Le bouton flottant « KESSIA AI » de la barre mobile s'affichait aussi
+  sur `/ai`, où il recouvrait le bouton d'envoi et la mention du bas —
+  masqué sur cette route (`BottomNav`).
+- Carte « Ajouter une activité » (`/business`) : emoji 🏪 → icône Lucide
+  colorée, cohérente avec le reste de la page.
+
 ## [Non publié] — Traduction éwé (ADR 0047)
 
 ### Ajouté
