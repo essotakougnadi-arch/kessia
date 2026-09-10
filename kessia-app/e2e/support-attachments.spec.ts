@@ -9,26 +9,38 @@ test.beforeEach(async ({ context, request, baseURL }) => {
   await loginViaApi(context, request, baseURL!, SEED.main);
 });
 
-test('un utilisateur joint une pièce à son ticket et la retrouve', async ({ page }) => {
-  const tickets = await (await page.request.get('/api/v1/support')).json();
-  const ticket = (tickets.data as { id: string; status: string }[]).find((t) => t.status !== 'CLOSED');
-  expect(ticket, 'un ticket non fermé doit exister dans le seed').toBeTruthy();
+// Chaque test crée SON PROPRE ticket (au lieu de réutiliser un ticket du
+// seed) : la pièce jointe et le plafond `MAX_ATTACHMENTS_PER_TICKET`
+// restent isolés run après run, même sur une base non réinitialisée.
+async function freshTicket(page: import('@playwright/test').Page): Promise<string> {
+  const res = await page.request.post('/api/v1/support', {
+    data: {
+      category: 'ACCOUNT',
+      subject: `E2E pièce jointe ${Date.now()}`,
+      description: 'Ticket créé par la suite E2E pour tester les pièces jointes.',
+    },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  return (await res.json()).data.id as string;
+}
 
-  const up = await page.request.post(`/api/v1/support/${ticket!.id}/attachments`, {
+test('un utilisateur joint une pièce à son ticket et la retrouve', async ({ page }) => {
+  const ticketId = await freshTicket(page);
+
+  const up = await page.request.post(`/api/v1/support/${ticketId}/attachments`, {
     data: { fileName: 'preuve.png', dataUrl: PNG_1PX },
   });
   expect(up.status(), await up.text()).toBe(201);
 
-  const list = await (await page.request.get(`/api/v1/support/${ticket!.id}/attachments`)).json();
+  const list = await (await page.request.get(`/api/v1/support/${ticketId}/attachments`)).json();
   const names = (list.data as { fileName: string }[]).map((a) => a.fileName);
   expect(names).toContain('preuve.png');
 });
 
 test('un type de fichier non autorisé est refusé', async ({ page }) => {
-  const tickets = await (await page.request.get('/api/v1/support')).json();
-  const ticket = (tickets.data as { id: string; status: string }[]).find((t) => t.status !== 'CLOSED');
+  const ticketId = await freshTicket(page);
 
-  const res = await page.request.post(`/api/v1/support/${ticket!.id}/attachments`, {
+  const res = await page.request.post(`/api/v1/support/${ticketId}/attachments`, {
     data: { fileName: 'script.html', dataUrl: 'data:text/html;base64,PGgxPmhpPC9oMT4=' },
   });
   expect(res.status()).toBe(400);

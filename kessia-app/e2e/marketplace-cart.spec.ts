@@ -15,7 +15,9 @@ test('ajouter un article au panier puis payer débite le wallet et confirme la c
   await page.goto('/wallet?action=deposit');
   await page.locator('#deposit-amount').fill('1000000');
   await page.locator('button[type="submit"]').click();
-  await expect(page.getByText(/Dépôt|crédité/i)).toBeVisible({ timeout: 10_000 });
+  // `.first()` : sur une base non réinitialisée, l'historique du wallet
+  // contient déjà des lignes « Dépôt … » — on ne veut que la confirmation.
+  await expect(page.getByText(/Dépôt|crédité/i).first()).toBeVisible({ timeout: 10_000 });
 
   // Ajoute le premier article disponible au panier depuis le catalogue.
   await page.goto('/marketplace');

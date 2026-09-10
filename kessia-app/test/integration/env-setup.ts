@@ -30,6 +30,15 @@ function loadEnvFile(file: string) {
 loadEnvFile('.env');
 loadEnvFile('.env.local');
 
+// Base de test isolée (opt-in) : `USE_TEST_DB=1 npm run test:integration`
+// charge .env.test par-dessus — même base dédiée que les E2E, à
+// réinitialiser avec `npm run db:test:reset`. Voir docs/development/testing.md.
+if (process.env.USE_TEST_DB === '1') {
+  loadEnvFile('.env.test');
+  const fromE2E = process.env.E2E_DATABASE_URL;
+  if (fromE2E) process.env.DATABASE_URL = fromE2E;
+}
+
 // Le rate limiting est neutralisé pour la suite d'intégration (comme en E2E).
 process.env.E2E_RATE_LIMIT_BYPASS = '1';
 

@@ -11,6 +11,7 @@ kessia-app/tsconfig.tsbuildinfo
 **/.env
 **/.env.local
 **/.env.*.local
+**/.env.test
 
 # divers
 .DS_Store

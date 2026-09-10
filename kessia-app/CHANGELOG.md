@@ -3,6 +3,26 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Base de test isolée pour les E2E (ADR 0044)
+
+### Ajouté
+- **Base de test dédiée** : `.env.test` (gitignoré, `.env.test.example`
+  fourni) + `npm run db:test:reset` (schéma neuf `--force-reset` + seed,
+  refuse de tourner sur la base de `.env.local`) + `npm run
+  test:e2e:isolated`. `playwright.config.ts` injecte cette base dans le
+  serveur de test et n'y réutilise jamais un serveur branché sur la démo.
+- Tests d'intégration : `USE_TEST_DB=1 npm run test:integration` cible la
+  même base isolée.
+- `docs/development/testing.md` — topologie des trois niveaux de tests.
+
+### Corrigé
+- `support-attachments` et `marketplace-cart` (intermittents en local par
+  accumulation sur la base de démo) : ticket créé à la volée, sélecteur
+  `.first()` sur la confirmation de dépôt → indépendants de l'état.
+
+### Vérification
+- `tsc` + `lint` (0 warning) + `vitest` (178) + `build` OK.
+
 ## [Non publié] — Effacement RGPD + purge de rétention (ADR 0043)
 
 ### Ajouté

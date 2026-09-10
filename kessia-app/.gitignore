@@ -25,6 +25,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+.env.test
 
 # prisma
 /prisma/*.db

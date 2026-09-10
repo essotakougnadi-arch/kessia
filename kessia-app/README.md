@@ -73,11 +73,22 @@ Optionnelles :
 ### Tests E2E
 
 ```bash
-# ⚠️ Viser une base de test JETABLE (Postgres local ou branche Supabase), jamais la prod.
-DATABASE_URL=<test> npm run db:push && npm run db:seed
+# 1. Configurer une base de test ISOLÉE (une seule fois)
+cp .env.test.example .env.test        # puis renseigner DATABASE_URL (base dédiée)
+
+# 2. À chaque campagne
 npm run build
-E2E_RATE_LIMIT_BYPASS=1 npm run test:e2e      # démarre `next start` et lance Playwright
+npm run test:e2e:isolated             # = db:test:reset (schéma neuf + seed) puis Playwright
 ```
+
+`npm run db:test:reset` refuse de tourner si `.env.test` pointe la même base
+que `.env.local` (garde-fou anti-`--force-reset` sur la démo). La config
+Playwright injecte automatiquement cette base dans le serveur lancé pour les
+tests et n'y réutilise jamais un `next dev` branché sur la démo.
+
+Sans `.env.test`, `npm run test:e2e` vise la base de `.env.local` (démo
+partagée) — acceptable en dépannage, mais deux suites peuvent flancher par
+accumulation de données. Voir [`docs/development/testing.md`](docs/development/testing.md).
 
 Cibler un serveur déjà lancé : `E2E_BASE_URL=http://localhost:3000 npm run test:e2e`.
 En CI : [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) (Postgres éphémère).
