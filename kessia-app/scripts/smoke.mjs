@@ -48,6 +48,18 @@ await check('GET / → 200', async () => {
   if (!res.ok) throw new Error(`status=${res.status}`);
 });
 
+// Marketplace public — catalogue accessible sans authentification.
+await check('GET /api/v1/marketplace → 200', async () => {
+  const r = await json('/api/v1/marketplace');
+  if (r.status !== 200) throw new Error(`status=${r.status}`);
+});
+
+// RBAC — une route admin protégée doit refuser sans jeton admin.
+await check('GET /api/v1/admin/users sans jeton → 401', async () => {
+  const r = await json('/api/v1/admin/users');
+  if (r.status !== 401) throw new Error(`status=${r.status} (attendu 401)`);
+});
+
 if (PHONE && PASSWORD) {
   let token = '';
   await check('POST /api/v1/auth/login → token', async () => {
@@ -62,17 +74,27 @@ if (PHONE && PASSWORD) {
 
   if (token) {
     const auth = { headers: { authorization: `Bearer ${token}` } };
-    await check('GET /api/v1/wallet → 200', async () => {
+    await check('GET /api/v1/wallet → 200 (Wallet)', async () => {
       const r = await json('/api/v1/wallet', auth);
       if (r.status !== 200) throw new Error(`status=${r.status}`);
     });
-    await check('GET /api/v1/tontine → 200', async () => {
+    await check('GET /api/v1/wallet/transactions → 200 (Ledger)', async () => {
+      const r = await json('/api/v1/wallet/transactions', auth);
+      if (r.status !== 200) throw new Error(`status=${r.status}`);
+    });
+    await check('GET /api/v1/tontine → 200 (Tontines)', async () => {
       const r = await json('/api/v1/tontine', auth);
       if (r.status !== 200) throw new Error(`status=${r.status}`);
     });
+
+    // RBAC — le compte de smoke (non-admin) doit être refusé sur une route admin.
+    await check('GET /api/v1/admin/users avec jeton non-admin → 403', async () => {
+      const r = await json('/api/v1/admin/users', auth);
+      if (r.status !== 403) throw new Error(`status=${r.status} (attendu 403)`);
+    });
   }
 } else {
-  console.log('  (SMOKE_PHONE / SMOKE_PASSWORD absents — parcours authentifié ignoré)');
+  console.log('  (SMOKE_PHONE / SMOKE_PASSWORD absents — parcours authentifié ignoré : Wallet/Ledger/Tontines/RBAC non vérifiés)');
 }
 
 console.log(failures === 0 ? '\n✅ Smoke tests OK' : `\n❌ ${failures} échec(s)`);
