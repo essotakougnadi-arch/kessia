@@ -3,6 +3,27 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.0 : validations A/C dédiées (CI + staging)
+
+### Ajouté
+- `docs/audit/P0_0_A_CI_MIGRATION_VALIDATION.md` — garde anti-prod (`DATABASE_URL`
+  jamais un hôte Supabase, testée sur 4 URLs), test positif (`migrate deploy`
+  réel sur Postgres jetable), **test négatif** (migration invalide →
+  `exit 1`, erreur P3018, `migrate status` confirme l'échec) ; étapes CI
+  `integration.yml`/`e2e.yml` enrichies (garde + `migrate status` explicite).
+  État : mécanisme prouvé, push GitHub toujours bloqué (scope `workflow`).
+- `docs/audit/P0_0_C_STAGING_MIGRATION_VALIDATION.md` — constat vérifié
+  (aucun staging, Vercel CLI sans session) ; `scripts/smoke.mjs` enrichi
+  (Marketplace, RBAC 401/403, Ledger) et **testé réellement** contre
+  l'application démarrée sur la base migrée de la validation B (9/9) ;
+  checklist précise de provisionnement (aucun secret demandé dans le chat).
+
+### Vérification
+- Garde anti-prod : 4/4 cas corrects (2 URLs prod bloquées, 2 URLs CI/locales autorisées).
+- Test négatif : `prisma migrate deploy` → exit 1 (P3018) ; `prisma migrate status` → exit 1, migration listée « failed ». Base et schéma de test supprimés après usage.
+- `smoke.mjs` : 9/9 checks verts contre l'app réelle sur base fraîchement migrée + seedée.
+- `tsc`/`lint` : 0 erreur/warning après ces changements.
+
 ## [Non publié] — Phase 0 (durcissement production) — P0.0 : migrations Prisma versionnées (ADR 0048)
 
 ### Ajouté

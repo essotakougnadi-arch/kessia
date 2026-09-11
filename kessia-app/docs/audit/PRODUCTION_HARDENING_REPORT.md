@@ -17,8 +17,19 @@ résultat → risques résiduels → commit.
 ## P0.0 — Migrations Prisma versionnées
 
 **Statut : code-complet. B (base jetable) intégralement prouvé de bout en
-bout. A (CI) et C (staging) restent bloqués — actions opérateur requises,
-détaillées en fin de section. Verdict : P0.0 NON VALIDÉ — P0.1 BLOQUÉ.**
+bout. A (CI) et C (staging) ont chacun leur rapport dédié et détaillé :**
+
+- **[P0_0_A_CI_MIGRATION_VALIDATION.md](P0_0_A_CI_MIGRATION_VALIDATION.md)**
+  — mécanisme CI construit, garde anti-prod testée, test positif et
+  **test négatif** (migration invalide → échec immédiat, prouvé) ; seul
+  point manquant : le push du diff sur GitHub (scope `workflow`).
+- **[P0_0_C_STAGING_MIGRATION_VALIDATION.md](P0_0_C_STAGING_MIGRATION_VALIDATION.md)**
+  — aucune infrastructure staging n'existe ; smoke tests enrichis et
+  prouvés en conditions quasi réelles (local, base migrée) ; checklist
+  précise de ce qu'il reste à provisionner (dashboard Vercel/Supabase/
+  GitHub), sans secret demandé ici.
+
+**Verdict : P0.0 NON VALIDÉ — P0.1 BLOQUÉ.**
 
 ### Problème (audit, item #32 / P1.8 du plan)
 
