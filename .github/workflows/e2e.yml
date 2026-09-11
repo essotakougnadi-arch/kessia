@@ -1,7 +1,10 @@
 # ============================================================
 # KESSIA — Tests E2E (cahier des charges §49)
-#   Postgres éphémère → migrate + seed → build → Playwright
+#   Postgres éphémère → migrate deploy + seed → build → Playwright
 # La base est jetable : recréée à chaque exécution, jamais la prod.
+#
+# `prisma migrate deploy` (et non `db push`, ADR 0048) : applique
+# l'historique versionné de prisma/migrations/ sur une base neuve.
 # ============================================================
 name: E2E
 
@@ -51,11 +54,25 @@ jobs:
         working-directory: kessia-app
         run: npm ci
 
-      - name: Prisma generate + push schema
-        working-directory: kessia-app
+      - name: Garde anti-production — DATABASE_URL ne doit jamais être une base réelle
         run: |
-          npx prisma generate
-          npx prisma db push --skip-generate
+          if echo "$DATABASE_URL" | grep -qiE "supabase\.co|pooler\.supabase\.com"; then
+            echo "::error::DATABASE_URL pointe vers un hôte Supabase — refus d'exécuter une migration CI dessus."
+            exit 1
+          fi
+          echo "OK — DATABASE_URL cible le Postgres éphémère du runner (localhost), pas une base réelle."
+
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy (base éphémère du runner, jamais la prod)
+        working-directory: kessia-app
+        run: npx prisma migrate deploy
+
+      - name: Vérifier l'état des migrations
+        working-directory: kessia-app
+        run: npx prisma migrate status
 
       - name: Seed
         working-directory: kessia-app
