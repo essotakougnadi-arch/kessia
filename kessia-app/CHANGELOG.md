@@ -30,10 +30,29 @@ Le projet suit la feuille de route par phases du cahier des charges (§52).
   prototypage local jetable ; `migrate deploy` sur les bases partagées.
 
 ### Vérification
-- `tsc --noEmit` : 0 erreur. `lint` : 0 warning. `vitest` : **182** verts.
+- `tsc --noEmit` : 0 erreur. `lint` : 0 warning. `vitest` (unitaires) :
+  **182/182** verts. `test:integration` (contre la base réelle) :
+  **36/36** verts (13 fichiers — ledger, transferts+reversal, séquestres
+  tontine, séquestre marketplace, RBAC, inscription, plafonds KYC).
   `npm run build` : compilé sans erreur.
-- CI (`integration.yml`, `e2e.yml`) : `prisma migrate deploy` validé sur
-  Postgres éphémère neuf.
+- `prisma migrate diff --from-url <base réelle> --to-schema-datamodel`
+  (lecture seule) : migration **vide** — la baseline `0_init` correspond
+  exactement à l'état réel de la base, aucune dérive.
+- Snapshot d'intégrité avant/après la suite d'intégration : 0 séquestre
+  tontine déséquilibré, 0 clé d'idempotence dupliquée, 0 ligne orpheline,
+  0 résidu de test non nettoyé. 1 écart isolé relevé sur le wallet système
+  `MARKETPLACE_ESCROW` — tracé à un défaut de nettoyage **pré-existant**
+  de `test/integration/marketplace-settlement.itest.ts` (non causé par
+  P0.0, aucune perte financière — le solde réel reste correct, seul
+  l'historique ledger de ce wallet partagé est incomplet). Non corrigé
+  ici (hors périmètre migrations) — détail et recommandation dans
+  `docs/audit/PRODUCTION_HARDENING_REPORT.md` §P0.0.
+- **Preuve CI/staging incomplète, signalée explicitement** : le commit CI
+  (`db push` → `migrate deploy` dans `integration.yml`/`e2e.yml`) est prêt
+  localement mais bloqué au push (token sans scope `workflow` — aucune
+  régénération tentée, application manuelle laissée à l'opérateur). Aucun
+  environnement staging n'existe encore (P1.9 non fait) : « smoke test
+  staging » non exécutable. Détails dans le rapport de durcissement.
 - Base de démo partagée **non encore baselinée** — procédure documentée,
   à exécuter par l'opérateur avant la première migration de schéma réelle
   (P0.2).

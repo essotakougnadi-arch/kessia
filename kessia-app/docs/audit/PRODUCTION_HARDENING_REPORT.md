@@ -16,7 +16,8 @@ résultat → risques résiduels → commit.
 
 ## P0.0 — Migrations Prisma versionnées
 
-**Statut : FAIT.**
+**Statut : code-complet et validé localement. Preuve CI/staging PARTIELLE — 3 points
+en attente d'action côté opérateur, détaillés en fin de section.**
 
 ### Problème (audit, item #32 / P1.8 du plan)
 
@@ -89,22 +90,100 @@ docs/decisions/0048-migrations-prisma-versionnees.md   (nouveau)
 - **Aucune donnée existante supprimée** : aucune commande destructive n'a été
   exécutée contre une base contenant des données réelles.
 
-### Tests exécutés
+### Tests exécutés et résultats
 
-- `npx prisma validate` — schéma valide.
-- `npx prisma migrate diff --from-empty --to-schema-datamodel` — génération
-  sans erreur, SQL relu (44 `CREATE TABLE`, 45 `CREATE TYPE`, 68 index, 57
-  contraintes de clé étrangère — cohérent avec les 44 modèles / 45 enums du
-  schéma).
-- `npx tsc --noEmit`
-- `npm run lint`
-- `npx vitest run --root .`
-- `npm run build`
-- CI GitHub Actions (`integration.yml`, `e2e.yml`) déclenchée par le push —
-  validation réelle de `prisma migrate deploy` sur Postgres éphémère neuf.
+| Vérification | Résultat |
+|---|---|
+| `npx prisma validate` | ✅ schéma valide |
+| `npx prisma migrate diff --from-empty --to-schema-datamodel` | ✅ généré sans erreur — 44 `CREATE TABLE`, 45 `CREATE TYPE`, 68 index, 57 contraintes FK (cohérent avec 44 modèles / 45 enums) |
+| `npx prisma migrate diff --from-url <base réelle> --to-schema-datamodel` (lecture seule) | ✅ **migration vide** — la baseline `0_init` correspond exactement à l'état réellement déployé, aucun écart |
+| `npx tsc --noEmit` | ✅ 0 erreur |
+| `npm run lint` | ✅ 0 warning |
+| `npx vitest run --root .` (unitaires) | ✅ **182/182** verts |
+| `npm run test:integration` (contre la base réelle) | ✅ **36/36** verts, 13 fichiers — Ledger (`createLedgerEntry`, idempotence, verrou), transferts + reversal, séquestre tontine ×3 (solo/orchestrateur/croissance), séquestre marketplace, RBAC back-office, inscription, plafonds KYC |
+| `npm run build` | ✅ compilé sans erreur |
+| Snapshot d'intégrité (script temporaire, lecture seule, supprimé après usage) **avant** la suite d'intégration | 17 wallets, 92 écritures ledger, 10 tontines (5 séquestres actifs), 0 wallet en désaccord avec son ledger, 0 séquestre déséquilibré, 0 clé d'idempotence dupliquée, 0 ligne orpheline |
+| Même snapshot **après** la suite d'intégration | 18 wallets, 94 écritures, 0 séquestre tontine déséquilibré, 0 doublon, 0 orphelin, 0 résidu `itest_` — **1 écart isolé** sur le wallet système `MARKETPLACE_ESCROW`, voir finding ci-dessous |
+| Santé prod (`/api/health`) avant/pendant/après tous les commits | ✅ `{"status":"ok","db":"ok"}` en continu, aucune interruption |
+| `prisma migrate deploy` réellement exécuté sur une base neuve/isolée | ❌ **non prouvé** — voir « Preuve CI/staging » ci-dessous |
+| `npm run test:e2e:isolated` | ❌ **non exécutable** dans cet environnement — aucun `.env.test` configuré (base de test dédiée absente) |
+| Smoke test staging | ❌ **non exécutable** — aucun environnement staging déployé (`staging.yml` reste un squelette tant que `STAGING_DEPLOY_HOOK`/`STAGING_BASE_URL` ne sont pas configurés — c'est l'objet de P1.9, pas encore fait) |
 
-*(Résultats détaillés : voir la synthèse de fin d'étape communiquée à
-l'utilisateur, avec le hash de commit.)*
+### Finding découvert pendant la vérification — wallet séquestre marketplace
+
+Le snapshot « après » a révélé un wallet `MARKETPLACE_ESCROW` (singleton système)
+dont les écritures ledger sommées ne correspondent plus à son solde
+(solde réel `0`, correct ; mais la somme des écritures visibles ne l'explique
+plus). Investigation menée jusqu'au bout :
+
+- **Cause identifiée avec certitude**, fichier
+  `test/integration/marketplace-settlement.itest.ts`, `afterEach` (ligne ~30-31) :
+  le nettoyage de fin de test supprime les écritures ledger du séquestre dont
+  `referenceId` correspond à un `userId` de test — ce qui efface la ligne
+  CRÉDIT (posée avec `referenceId: buyer.id`) — mais **pas** les lignes DÉBIT
+  de règlement/remboursement (posées avec `referenceId: order.id`), qui
+  restent. Le solde du wallet (`balance`, jamais touché par ce nettoyage)
+  reste correct (`0`) ; seul l'historique du ledger pour ce wallet partagé
+  devient incomplet.
+- **Ni un bug financier, ni causé par P0.0** : aucun argent n'a été perdu ou
+  mal attribué (le solde réel est exact), et P0.0 n'a modifié ni le ledger,
+  ni ce test, ni la logique de séquestre. C'est un défaut de nettoyage
+  **pré-existant** de ce test précis, révélé (pas créé) par l'exécution de
+  la suite d'intégration demandée pour valider P0.0 — et qui se reproduira à
+  chaque exécution future de ce test contre une base partagée.
+- **Non corrigé dans ce commit** (hors périmètre migrations de P0.0, aucun
+  refactoring non nécessaire). Aucune ligne n'a été supprimée manuellement
+  pour « nettoyer » — l'ancien wallet et ses 2 écritures restantes sont
+  laissés tels quels sur la base de démo.
+- **Recommandation** : corriger `afterEach` pour aussi cibler les
+  écritures dont `referenceId` est l'id de commande, ou marquer le
+  séquestre marketplace comme hors-cible de nettoyage automatique — à
+  traiter en P1.6 (réconciliation, qui aurait détecté exactement ce genre
+  d'écart) ou en micro-correctif dédié, au choix de l'utilisateur.
+
+### Preuve CI/staging — état réel (à ne pas confondre avec « ça compile »)
+
+Conformément à la demande de ne pas déclarer P0.0 terminé sur la seule foi
+d'un code de sortie 0, voici précisément ce qui est prouvé et ce qui ne l'est
+pas encore, et pourquoi :
+
+1. **CI (`integration.yml`/`e2e.yml` avec `migrate deploy`)** : le commit qui
+   fait ce changement (`7203b9c`, voir plus haut) est prêt localement mais
+   **pas encore poussé sur GitHub** — le push a été refusé (token sans scope
+   `workflow`), et conformément à la consigne reçue, aucune régénération de
+   token n'a été tentée ; l'application du diff est laissée à l'opérateur.
+   **Tant que ce commit n'est pas sur GitHub, la CI tourne encore avec
+   l'ancien `db push`** — aucune exécution réelle de `migrate deploy` en CI
+   n'a donc pu être observée.
+2. **Base cible « staging », isolée du dev/prod** : **il n'existe aucun
+   environnement staging à ce jour.** `.github/workflows/staging.yml` est un
+   squelette qui saute toutes ses étapes tant que les secrets
+   `STAGING_DEPLOY_HOOK`/`STAGING_BASE_URL` ne sont pas configurés (ils ne
+   le sont pas) — c'est précisément l'objet de l'étape P1.9, pas encore
+   entamée. Il n'y a donc rien à « vérifier isolé » aujourd'hui — l'affirmer
+   serait inexact.
+3. **`migrate deploy` exécuté pour de vrai sur une base neuve** : non
+   reproduit dans cet environnement (ni Docker ni serveur Postgres local
+   disponibles ici — vérifié). À la place, la preuve la plus forte possible
+   sans base jetable a été apportée : `prisma migrate diff --from-url <base
+   réelle> --to-schema-datamodel` (lecture seule, zéro écriture) renvoie une
+   **migration vide** — la baseline colle exactement à la réalité, donc
+   `migrate resolve --applied 0_init` puis tout `migrate deploy` futur
+   s'appliqueront proprement. C'est une preuve d'exactitude de la baseline,
+   **pas** une preuve d'exécution réelle du pipeline.
+4. **Smoke test staging** : sans staging, impossible à exécuter — non fait,
+   et non simulé.
+
+**Ce qui reste, concrètement, pour clore ces 3 points** (détaillé dans le
+message de réponse, format « quel élément / pourquoi / où / quelle valeur /
+conséquences / comment vérifier ») :
+- Application manuelle du diff CI (`7203b9c`) sur GitHub par l'opérateur.
+- Une base Postgres jetable (nouveau projet/branche Supabase, ou Postgres
+  local) pour `.env.test`, seule façon de prouver `migrate deploy` et de
+  faire tourner `test:e2e:isolated` en conditions réelles depuis cet
+  environnement.
+- Un environnement staging réel (P1.9) pour qu'un « smoke test staging »
+  ait un sens.
 
 ### Ce qui reste à faire (hors P0.0, plus tard dans le plan)
 
