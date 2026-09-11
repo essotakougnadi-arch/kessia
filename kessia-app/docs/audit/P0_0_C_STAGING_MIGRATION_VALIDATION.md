@@ -106,49 +106,113 @@ séquence en staging.
 KESSIA repository → GitHub Actions → Build/Tests → Vercel STAGING → Supabase STAGING → prisma migrate deploy → Smoke tests
 ```
 
-## 5. Configuration manuelle requise — précise, sans secret dans le chat
+**Décision actée** : C n'est pas reporté à P1.9. Reste néanmoins vrai : la
+**création** des comptes/projets Vercel et Supabase est une action de
+dashboard que cette session ne peut pas exécuter elle-même — ce que je
+peux faire, et qui est fait ci-dessous, c'est préparer entièrement le
+code/CI qui pilotera cette infrastructure dès qu'elle existe.
 
-| # | Élément | Où le configurer | Pourquoi | Environnement | Comment vérifier (sans afficher la valeur) |
-|---|---|---|---|---|---|
-| 1 | Nouveau projet Vercel (staging) | Dashboard Vercel → New Project, relier au même dépôt GitHub, **Root Directory = `kessia-app`** (piège déjà documenté), branche de déploiement dédiée (ex. `staging` ou preview) | Isoler le runtime staging de la prod (`kessia-dun.vercel.app`) | Vercel | `vercel project ls` (une fois authentifié) liste le nouveau projet |
-| 2 | Nouveau projet Supabase (staging) | Dashboard Supabase → New Project | Base + Storage entièrement séparés de la démo/prod — condition explicite de ta demande | Supabase | Le projet apparaît dans le dashboard avec sa propre référence (`<ref>.supabase.co`), distincte de `uwvnarmojdbutbunzqww` |
-| 3 | `DATABASE_URL` (staging) | Variables d'environnement du **projet Vercel staging** (pas celui de prod) | Pointer l'app staging sur la base Supabase staging, jamais sur la prod | Vercel staging | `GET /api/health` sur l'URL staging retourne `db: ok` après déploiement |
-| 4 | `JWT_SECRET` / `JWT_REFRESH_SECRET` (staging) | Variables d'environnement du projet Vercel staging | Valeurs **différentes** de la prod — une session staging ne doit jamais être valide en prod ni inversement | Vercel staging | Un jeton émis par `/login` en staging est refusé par la prod (à vérifier une fois disponible) |
-| 5 | `SUPABASE_SERVICE_ROLE_KEY` / buckets KYC/tickets/avatars (staging) | Variables d'environnement du projet Vercel staging, buckets créés dans le projet Supabase staging | Stockage entièrement séparé — condition explicite de ta demande | Supabase staging + Vercel staging | Un upload KYC en staging échoue si le bucket n'existe pas (`NoSuchBucket`) — signal déjà observé et compris pendant B |
-| 6 | Secret GitHub `STAGING_DEPLOY_HOOK` | Repo GitHub → Settings → Secrets and variables → Actions | Permet à `staging.yml` de déclencher un déploiement Vercel staging sans exposer de token Vercel dans le workflow | GitHub Actions | `staging.yml` ne saute plus l'étape « Trigger deploy » (visible dans les logs du run, sans révéler le secret) |
-| 7 | Secret GitHub `STAGING_BASE_URL` | Repo GitHub → Settings → Secrets and variables → Actions | URL publique du déploiement staging, utilisée par `smoke.mjs` | GitHub Actions | `staging.yml` exécute l'étape « Smoke tests » au lieu de la sauter |
-| 8 | Secrets GitHub `STAGING_SMOKE_PHONE`/`STAGING_SMOKE_PASSWORD` | Repo GitHub → Settings → Secrets and variables → Actions | Compte de seed staging (jamais un vrai utilisateur) pour le parcours authentifié du smoke test | GitHub Actions | Les checks authentifiés (Wallet/Ledger/Tontines/RBAC) s'exécutent au lieu d'être ignorés |
-| 9 | Baseline de migration sur la base staging neuve | Une fois la base Supabase staging créée : `npx prisma migrate deploy` (je peux l'exécuter moi-même dès que j'ai — via GitHub Actions déclenché par le deploy hook, ou si tu me donnes temporairement l'accès — un `DATABASE_URL` staging) | Une base neuve n'a pas encore de schéma | Supabase staging | `prisma migrate status` → « up to date » |
+## 5. `staging.yml` complété — migration réelle avant déploiement
 
-**Rien à coller dans le chat** : les valeurs des lignes 3-5 et 9 sont des
-identifiants de connexion — elles se configurent uniquement dans les
-coffres Vercel/Supabase/GitHub prévus à cet effet, jamais transmises ici.
-Une fois 1-8 faits par toi, je peux exécuter 9 et la suite (déploiement,
-`migrate deploy`, smoke tests, lecture des logs) et produire la suite de
-ce rapport.
+Le squelette existant ne faisait que déclencher le déploiement puis lancer
+les smoke tests — **aucune migration n'était exécutée sur la base staging**.
+Ajouté : un job `migrate` (avant `deploy`, dont il est une dépendance
+`needs:`) qui applique `prisma migrate deploy` sur `STAGING_DATABASE_URL`,
+avec :
 
-## 6. Décision proposée
+- une garde anti-production dédiée (refuse si l'URL contient la référence
+  du projet Supabase de **production**, `uwvnarmojdbutbunzqww` — testée,
+  cf. §6) ;
+- `prisma migrate status` explicite après coup ;
+- aucun `continue-on-error`/`|| true` : si la migration échoue, `deploy`
+  (donc le déclenchement Vercel + les smoke tests) **ne se lance pas** ;
+- portée à un **GitHub Environment** dédié `staging` (secrets scopés,
+  possibilité d'ajouter des règles de protection plus tard) ;
+- `permissions: contents: read` au niveau du workflow (moindre privilège
+  — ce pipeline n'écrit jamais dans le dépôt).
 
-Deux options, à ton choix :
+## 6. Garde anti-production — testée
 
-- **Provisionner maintenant** (1-8 ci-dessus, ~20-30 min de configuration
-  dashboard) → je complète immédiatement ce rapport avec un run staging
-  réel.
-- **Reporter C à P1.9** (sa place déjà prévue dans ta feuille de route) et
-  considérer, pour clore P0.0, que **B (preuve mécanique complète sur base
-  jetable) + A (mécanisme CI prouvé, ne manque que le push du diff) sont
-  le maximum démontrable avant que l'infrastructure staging existe** — ce
-  qui est cohérent avec la remarque de l'audit : la séparation staging est
-  elle-même un prérequis (P1.9), pas un acquis de P0.0.
+| URL testée | Résultat |
+|---|---|
+| Référence prod réelle (`…uwvnarmojdbutbunzqww…`) | **BLOQUÉ** ✅ |
+| Référence staging hypothétique (autre ref) | **AUTORISÉ** ✅ |
 
-## 7. Fichiers concernés
+(Volontairement différente de la garde de A : celle de `integration.yml`/
+`e2e.yml` bloque *tout* hôte Supabase, car ce job ne doit jamais en
+toucher un seul ; celle-ci doit au contraire autoriser la base staging
+tout en bloquant spécifiquement la production — d'où un test sur la
+référence de projet, pas sur le nom d'hôte générique.)
+
+## 7. CHECKLIST STAGING — ce qu'il reste à créer/configurer
+
+Aucune valeur secrète n'est demandée ici — uniquement des **noms** à créer
+dans les coffres prévus à cet effet.
+
+### 7.1 Vercel
+
+| Élément | Détail |
+|---|---|
+| **Projet** | Nouveau projet Vercel (ou nouvel environnement dédié sur le projet existant — un projet séparé est plus simple à isoler) |
+| **Branche/environnement** | Relier au même dépôt GitHub ; le job `deploy` de `staging.yml` déclenche via un **Deploy Hook** (pas besoin de connecter Git directement sur `main` si tu préfères garder `main` = prod uniquement) |
+| **Build** | Identique à la prod : Root Directory = `kessia-app`, Build Command = `prisma generate && next build` (déjà dans `package.json`, rien à changer) |
+| **Variables d'environnement à créer** (Vercel → projet staging → Settings → Environment Variables) | `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRY`, `JWT_REFRESH_EXPIRY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_KYC_BUCKET`, `SUPABASE_TICKET_BUCKET`, `SUPABASE_AVATARS_BUCKET`, `SMS_PROVIDER=DEV` — voir détail §7.4 |
+| **Deploy Hook** | Vercel → projet staging → Settings → Git → Deploy Hooks → créer un hook (nom libre, ex. "github-actions-staging") sur la branche de ton choix → copier son URL dans le secret GitHub `STAGING_DEPLOY_HOOK` (§7.3) |
+| **Cron** | `vercel.json` (cron quotidien du tick tontine) ne s'exécute que sur l'environnement **Production** d'un projet Vercel — sur un projet staging séparé il restera inactif, ce qui est sans conséquence pour ces tests |
+
+### 7.2 Supabase
+
+| Élément | Détail |
+|---|---|
+| **Projet** | Nouveau projet Supabase, dédié staging |
+| **Région recommandée** | La même que la production (`eu-west-1`) — cohérence de latence et évite les surprises liées au pooler (cf. ADR 0039) |
+| **Migrations** | Aucune action manuelle — une fois `STAGING_DATABASE_URL` configuré (§7.3), le job `migrate` de `staging.yml` exécute `prisma migrate deploy` automatiquement à chaque run |
+| **Stockage (Storage)** | Créer 3 buckets **privés** : ceux dont les noms seront donnés dans `SUPABASE_KYC_BUCKET`/`SUPABASE_TICKET_BUCKET`/`SUPABASE_AVATARS_BUCKET` (ex. reprendre les mêmes noms que la prod : `kyc-documents`, `ticket-attachments`, `avatars`) |
+| **Bucket KYC** | `kyc-documents`, **privé** (pas de lecture publique) — sans lui, les uploads KYC échouent en 404 `NoSuchBucket` (comportement déjà observé et compris pendant la validation B) |
+| **Clés à noter** (pour §7.1) | `Project URL`, `anon public key`, `service_role key` (Settings → API du projet staging) — à reporter dans les variables Vercel, jamais ici |
+| **Connexion** | Noter la chaîne du pooler **session** (port 5432) pour les migrations (`STAGING_DATABASE_URL`, GitHub) et celle du pooler **transaction** (port 6543, `pgbouncer=true`) pour le runtime applicatif (`DATABASE_URL` sur Vercel) — même distinction que la prod, cf. `DATABASE_MIGRATION_PLAN.md` |
+
+### 7.3 GitHub
+
+| Secret/config | Où | Sert à | Comment vérifier sans révéler la valeur |
+|---|---|---|---|
+| Environment `staging` | Repo → Settings → Environments → New environment → nommer exactement `staging` | Scope les secrets ci-dessous à cet environnement plutôt qu'à tout le dépôt (déjà référencé par `environment: staging` dans `staging.yml`) | L'environnement apparaît dans Settings → Environments |
+| `STAGING_DATABASE_URL` | Dans l'environnement `staging` → Environment secrets | Base Postgres staging, utilisée uniquement par le job `migrate` | Le job `migrate` du prochain run n'imprime plus « non configuré » |
+| `STAGING_DEPLOY_HOOK` | Idem | Déclenche le déploiement Vercel staging | Le job `deploy` n'ignore plus l'étape « Trigger deploy » |
+| `STAGING_BASE_URL` | Idem | URL publique du staging, utilisée par les smoke tests | L'étape « Smoke tests » s'exécute au lieu d'être sautée |
+| `STAGING_SMOKE_PHONE` / `STAGING_SMOKE_PASSWORD` | Idem | Compte de **seed** (ex. `+22890000001` / le mot de passe commun du seed) — jamais un vrai utilisateur | Les checks authentifiés (Wallet/Ledger/Tontines/RBAC) du smoke test s'exécutent |
+| Permissions du workflow | Déjà fait dans le code (`permissions: contents: read` dans `staging.yml`) | Moindre privilège — rien à configurer côté dashboard | Visible dans le fichier, appliqué automatiquement |
+
+### 7.4 KESSIA (variables applicatives, à poser sur Vercel staging, cf. `.env.example`)
+
+| Variable | Obligatoire pour C ? | Rôle |
+|---|---|---|
+| `DATABASE_URL` | **Oui** | Pooler **transaction** (port 6543) du projet Supabase staging — runtime applicatif |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | **Oui** | Valeurs dédiées, différentes de la prod |
+| `SMS_PROVIDER=DEV` | **Oui** (pour les smoke tests) | Permet au parcours de connexion par mot de passe de fonctionner sans fournisseur SMS réel (déjà comment `smoke.mjs` teste — voir §3) |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | **Oui** | Accès Storage (upload KYC/tickets/avatars) |
+| `SUPABASE_KYC_BUCKET` / `SUPABASE_TICKET_BUCKET` / `SUPABASE_AVATARS_BUCKET` | **Oui** | Noms des buckets créés en §7.2 |
+| `NODE_ENV` | Non — posé automatiquement par Vercel | — |
+| `UPSTASH_REDIS_REST_URL`/`_TOKEN`, `CRON_SECRET`, `PAYMENT_WEBHOOK_SECRET`, `MIARIDE_*`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `PUSH/SMS/EMAIL_PROVIDER_KEY` | Non | Optionnels — restent en mode simulé/absent sans bloquer les smoke tests de C |
+| `DEMO_MODE` / `NEXT_PUBLIC_DEMO_MODE` | Non | Seulement si tu veux aussi tester l'inscription par OTP à la main sur staging — `smoke.mjs` n'en a pas besoin (connexion par mot de passe directe) |
+| `E2E_RATE_LIMIT_BYPASS` | **À NE PAS poser** | Réservé aux runs E2E CI — ne doit jamais être une variable du déploiement staging lui-même |
+
+## 8. Fichiers concernés
 
 ```
-scripts/smoke.mjs                     (modifié, testé, poussé)
-.github/workflows/staging.yml         (inchangé — déjà prêt à activer dès que les secrets existent)
+.github/workflows/staging.yml         (modifié — job `migrate`, environment, permissions)
+scripts/smoke.mjs                     (déjà modifié/testé/poussé précédemment)
 ```
 
-## 8. Commit
+## 9. Commit
 
-`smoke.mjs` : voir hash communiqué dans la réponse à l'utilisateur pour
-cette étape.
+`.github/workflows/staging.yml` : commit local, **bloqué au push pour la
+même raison que A** (scope `workflow` du token) — regroupé avec le diff de
+A, voir hash communiqué dans la réponse à l'utilisateur.
+
+## 10. Prochaine étape dès l'infrastructure prête
+
+Dès que 7.1-7.3 sont en place (7.4 se déduit de 7.1) : un push sur `main`
+(ou `workflow_dispatch`) déclenche `staging.yml` → `migrate` (schéma
+staging à jour) → `deploy` (Vercel + smoke tests). Je lirai le run réel et
+compléterai ce rapport avec les logs et le verdict C.
