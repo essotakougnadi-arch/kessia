@@ -23,10 +23,16 @@ Ce dossier (`kessia-app/`) contient l'**application web Next.js** : frontend + A
 ```bash
 npm install
 npx prisma generate
-npx prisma db push          # synchronise le schéma
+npx prisma migrate deploy   # applique l'historique versionné (prisma/migrations/)
 npm run db:seed             # données de démonstration (dev uniquement)
 npm run dev                 # http://localhost:3000
 ```
+
+> Schéma versionné depuis l'ADR 0048 : `prisma/migrations/` fait foi. `prisma db push`
+> reste disponible pour un prototypage local jetable mais **ne doit plus être utilisé
+> sur une base partagée (démo/staging/prod)** — toute évolution de schéma passe par
+> `npx prisma migrate dev --name <intitulé>` puis `migrate deploy`. Voir
+> `docs/audit/DATABASE_MIGRATION_PLAN.md`.
 
 ### Variables d'environnement
 
@@ -62,7 +68,9 @@ Optionnelles :
 |---|---|
 | `npm run dev` | Serveur de développement |
 | `npm run build` | Build de production |
-| `npm run db:push` | Synchronise le schéma Prisma → PostgreSQL |
+| `npm run db:migrate:deploy` | Applique `prisma/migrations/` (démo/staging/prod) |
+| `npm run db:migrate` | Crée + applique une migration en dev (`prisma migrate dev`) |
+| `npm run db:push` | Prototypage local jetable uniquement — **jamais sur une base partagée** |
 | `npm run db:seed` | Remplit la base avec des données de démo |
 | `npm run db:studio` | Prisma Studio |
 | `npm run lint` | ESLint |

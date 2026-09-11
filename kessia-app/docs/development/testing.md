@@ -34,8 +34,13 @@ cp .env.test.example .env.test
 ```
 
 `.env.test` est gitignoré. `npm run db:test:reset` **refuse** de tourner si
-son `DATABASE_URL` est celui de `.env.local` (le `--force-reset` serait
-destructif sur la démo).
+son `DATABASE_URL` est celui de `.env.local` (le reset serait destructif
+sur la démo).
+
+Depuis l'ADR 0048, `db:test:reset` rejoue `prisma/migrations/` via
+`prisma migrate reset --force` (et non plus `db push --force-reset`) :
+la base de test valide donc les mêmes migrations versionnées que la CI
+et, à terme, la production.
 
 ## Boucle de travail
 

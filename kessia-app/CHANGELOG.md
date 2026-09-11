@@ -3,6 +3,41 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 (durcissement production) — P0.0 : migrations Prisma versionnées (ADR 0048)
+
+### Ajouté
+- `prisma/migrations/0_init/` — baseline versionnée générée depuis le schéma
+  actuel (44 tables, 45 enums), exclusivement `CREATE`/`ALTER … ADD
+  CONSTRAINT`, aucune instruction destructive.
+- Script `db:migrate:deploy` (`prisma migrate deploy`), à utiliser sur toute
+  base partagée (démo, à terme staging/prod).
+- `docs/audit/DATABASE_MIGRATION_PLAN.md` — procédure de création de
+  migration, baselining de la base de démo, migrations destructives,
+  rollback.
+- `docs/audit/PHASE0_EXECUTION_PLAN.md` — plan d'exécution détaillé des 20
+  actions de remédiation de l'audit du 2026-09-10.
+- `docs/audit/PRODUCTION_HARDENING_REPORT.md` — rapport vivant, mis à jour à
+  chaque étape de la Phase 0.
+
+### Modifié
+- `.github/workflows/integration.yml`, `.github/workflows/e2e.yml` :
+  `prisma db push --skip-generate` → `prisma migrate deploy` (Postgres
+  éphémère de CI — valide à chaque run que la baseline s'applique
+  proprement).
+- `scripts/db-test-reset.mjs` : `prisma db push --force-reset` →
+  `prisma migrate reset --force` (garde-fou anti-démo inchangé).
+- `README.md`, `docs/development/testing.md` : `db push` réservé au
+  prototypage local jetable ; `migrate deploy` sur les bases partagées.
+
+### Vérification
+- `tsc --noEmit` : 0 erreur. `lint` : 0 warning. `vitest` : **182** verts.
+  `npm run build` : compilé sans erreur.
+- CI (`integration.yml`, `e2e.yml`) : `prisma migrate deploy` validé sur
+  Postgres éphémère neuf.
+- Base de démo partagée **non encore baselinée** — procédure documentée,
+  à exécuter par l'opérateur avant la première migration de schéma réelle
+  (P0.2).
+
 ## [Non publié] — Audit visuel : correctifs concrets
 
 ### Corrigé

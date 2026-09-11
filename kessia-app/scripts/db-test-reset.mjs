@@ -7,12 +7,17 @@
 // d'environnement E2E_DATABASE_URL. Refuse de tourner si cette URL est
 // identique à celle de .env.local / .env (garde-fou anti-écrasement de
 // la base de démo partagée). Puis :
-//   1) prisma db push --force-reset   (schéma neuf, tables vidées)
+//   1) prisma migrate reset --force   (rejoue prisma/migrations/ sur une base vidée)
 //   2) prisma db seed                 (personas de démo)
 //
 // Pourquoi : deux suites E2E (support-attachments, marketplace-cart)
 // accumulaient des données sur la base de démo partagée et devenaient
 // intermittentes. Une base dédiée + reset avant run règle ça.
+//
+// `migrate reset` (et non `db push --force-reset`, ADR 0048) : rejoue
+// l'historique versionné de prisma/migrations/ au lieu de dériver le
+// schéma à la volée — la base de test valide ainsi les mêmes migrations
+// que la CI et, à terme, la production.
 // Voir docs/development/testing.md.
 // ============================================================
 
@@ -65,8 +70,8 @@ const env = { ...process.env, DATABASE_URL: testUrl };
 const run = (args) =>
   execFileSync('npx', args, { stdio: 'inherit', env, shell: process.platform === 'win32' });
 
-console.log('\n1/2 — prisma db push --force-reset');
-run(['prisma', 'db', 'push', '--force-reset', '--skip-generate']);
+console.log('\n1/2 — prisma migrate reset --force');
+run(['prisma', 'migrate', 'reset', '--force', '--skip-generate', '--skip-seed']);
 
 console.log('\n2/2 — seed');
 execFileSync('npx', ['tsx', 'prisma/seed.ts'], {
