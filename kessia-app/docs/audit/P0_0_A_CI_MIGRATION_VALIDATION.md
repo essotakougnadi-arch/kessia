@@ -191,9 +191,63 @@ de cet environnement de développement** :
 ```
 .github/workflows/integration.yml   (modifié, prêt localement)
 .github/workflows/e2e.yml            (modifié, prêt localement)
+.github/workflows/staging.yml        (modifié — job migrate + fail-hard, cf. rapport C)
 ```
 
-## 10. Commit
+## 10. Checklist de validation complète (avant application/push)
 
-Commit local (non poussé, contenu ci-dessus) : voir hash communiqué dans
-la réponse à l'utilisateur pour cette étape.
+Demandée avant application manuelle par l'utilisateur — exécutée intégralement :
+
+| Vérification | Résultat |
+|---|---|
+| `git diff` relu (3 fichiers) | ✅ conforme au contenu présenté pour validation |
+| `tsc --noEmit` | ✅ 0 erreur |
+| `lint` | ✅ 0 warning |
+| `vitest` (unitaires) | ✅ 182/182 |
+| `test:integration` (base jetable, `USE_TEST_DB=1`) | ✅ 13 fichiers, 36/36 tests |
+| `test:e2e:isolated` (base jetable, 49 tests) | ⚠️ voir §11 — un vrai bug découvert, sans rapport avec A/C |
+| `npm run build` | ✅ compilé sans erreur |
+| YAML des 3 fichiers (`js-yaml`) | ✅ syntaxe valide, jobs bien formés |
+| `grep "npx prisma db push"` sur les 3 fichiers | ✅ 0 occurrence (seulement des commentaires explicatifs mentionnant l'ancien comportement) |
+| `git push origin main` | ❌ refusé, même message que précédemment (scope `workflow`) — aucune régénération tentée |
+
+## 11. Finding découvert pendant `test:e2e:isolated` — bug réel, hors périmètre A/C
+
+En creusant des échecs E2E d'apparence aléatoire (login → 500, différents
+comptes/spécs à chaque run), la cause a été **isolée et prouvée**, pas
+supposée :
+
+- **Reproduction directe** : 20 appels `POST /api/v1/auth/login` en
+  rafale sur le même compte → 15/20 en `500`.
+- **Cause exacte** (log serveur) : `Invalid prisma.session.create() invocation:
+  Unique constraint failed on the fields: (token)`.
+- **Explication** : `lib/auth/session.ts::createSession` stocke le JWT
+  d'accès lui-même comme `Session.token` (`@unique` en base). `jwt.sign()`
+  (librairie `jsonwebtoken`) est déterministe à `iat` égal (granularité
+  à la seconde) — deux connexions du **même utilisateur dans la même
+  seconde** produisent donc un JWT strictement identique, et la deuxième
+  écriture en base viole la contrainte d'unicité → `500` non rattrapé.
+- **Pourquoi ça n'apparaissait jamais avant** : contre la base de démo
+  cloud (Supabase), la latence réseau (~100-500 ms/appel) espace
+  naturellement les connexions au-delà d'une seconde. Ma base de test
+  locale (B) répond en quelques millisecondes, ce qui a rendu la
+  collision visible pour la première fois.
+- **Hors périmètre de A/C** : aucun rapport avec les migrations, la CI ou
+  le staging — c'est un défaut pré-existant de la logique de session
+  (`lib/auth/session.ts`), probablement dans le champ naturel de **P0.2
+  (Sessions/tokens)**. **Non corrigé ici**, conformément à la consigne de
+  ne rien changer hors du périmètre A/C.
+- **Distinct des échecs E2E déjà documentés** (`PRODUCTION_HARDENING_REPORT.md`,
+  validation B) sur `strict mode violation` (toast vs élément de liste,
+  fragilité de locator UI) — deux causes différentes, toutes deux
+  pré-existantes et sans rapport avec le schéma/la migration/les données
+  financières (Ledger/Wallet/séquestres inchangés et corrects sur tous
+  les runs).
+
+## 12. Commit
+
+Commit local (non poussé) : `37b747d` (staging.yml, correction demandée)
+sur `366eec1` (integration.yml/e2e.yml, contenu inchangé depuis la
+présentation initiale — comparé et validé par l'utilisateur avant
+application). Push tenté après validation complète ci-dessus : refusé,
+identique à chaque tentative précédente.

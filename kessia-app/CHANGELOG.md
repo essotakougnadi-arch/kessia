@@ -3,6 +3,33 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.0 : staging.yml fail-hard + finding session
+
+### Modifié
+- `staging.yml` : correction demandée — plus aucun skip silencieux. Un
+  secret obligatoire absent (`STAGING_DATABASE_URL`, ou l'un des 4 requis
+  par `deploy`) fait désormais **échouer** le job (`::error::` + `exit 1`)
+  au lieu de sauter ses étapes en rapportant un succès. Garde anti-prod
+  renforcée à deux niveaux : liste noire (référence prod) + liste blanche
+  positive optionnelle via la variable non secrète
+  `STAGING_SUPABASE_PROJECT_REF`. 5 scénarios testés localement.
+
+### Vérification (checklist complète avant application manuelle de A)
+- `tsc` : 0 erreur. `lint` : 0 warning. `vitest` : 182/182.
+  `test:integration` (base jetable, `USE_TEST_DB=1`) : 13 fichiers, 36/36.
+  `build` : OK. YAML des 3 fichiers : syntaxe valide. `grep "db push"` :
+  0 commande restante (seulement des commentaires).
+- `test:e2e:isolated` : **finding réel découvert et root-causé** (pas de
+  la flakiness) — `lib/auth/session.ts::createSession` stocke le JWT
+  d'accès comme `Session.token` (`@unique`) ; `jwt.sign()` est
+  déterministe à `iat` égal (granularité seconde), donc deux connexions
+  du même utilisateur dans la même seconde produisent un JWT identique et
+  violent la contrainte d'unicité → 500 non rattrapé. Reproduit
+  directement (15/20 requêtes en rafale → 500). Hors périmètre A/C, non
+  corrigé ici (candidat naturel pour P0.2 — Sessions/tokens).
+- Push de A retenté après validation complète : refusé, identique aux
+  tentatives précédentes (scope `workflow`).
+
 ## [Non publié] — Phase 0 — P0.0 : validations A/C dédiées (CI + staging)
 
 ### Ajouté

@@ -112,37 +112,64 @@ dashboard que cette session ne peut pas exécuter elle-même — ce que je
 peux faire, et qui est fait ci-dessous, c'est préparer entièrement le
 code/CI qui pilotera cette infrastructure dès qu'elle existe.
 
-## 5. `staging.yml` complété — migration réelle avant déploiement
+## 5. `staging.yml` complété — migration réelle avant déploiement, aucun skip silencieux
 
 Le squelette existant ne faisait que déclencher le déploiement puis lancer
-les smoke tests — **aucune migration n'était exécutée sur la base staging**.
-Ajouté : un job `migrate` (avant `deploy`, dont il est une dépendance
-`needs:`) qui applique `prisma migrate deploy` sur `STAGING_DATABASE_URL`,
-avec :
+les smoke tests — **aucune migration n'était exécutée sur la base staging**,
+et un secret absent faisait sauter les étapes en rapportant un job
+**réussi** (rien à faire, mais toujours vert). Corrigé après retour de
+l'utilisateur : c'était précisément le risque à éliminer, un run vert ne
+devant jamais pouvoir être lu comme « C validé » alors que rien n'a été
+exécuté.
 
-- une garde anti-production dédiée (refuse si l'URL contient la référence
-  du projet Supabase de **production**, `uwvnarmojdbutbunzqww` — testée,
-  cf. §6) ;
-- `prisma migrate status` explicite après coup ;
-- aucun `continue-on-error`/`|| true` : si la migration échoue, `deploy`
-  (donc le déclenchement Vercel + les smoke tests) **ne se lance pas** ;
-- portée à un **GitHub Environment** dédié `staging` (secrets scopés,
-  possibilité d'ajouter des règles de protection plus tard) ;
-- `permissions: contents: read` au niveau du workflow (moindre privilège
-  — ce pipeline n'écrit jamais dans le dépôt).
+Ajouté :
 
-## 6. Garde anti-production — testée
+- Un job `migrate` (avant `deploy`, dont il est une dépendance `needs:`)
+  qui applique `prisma generate` + `prisma migrate deploy` +
+  `prisma migrate status` sur `STAGING_DATABASE_URL`.
+- **Fail-hard, pas de skip** : si `STAGING_DATABASE_URL` (job `migrate`)
+  ou l'un des 4 secrets requis par `deploy`
+  (`STAGING_DEPLOY_HOOK`/`STAGING_BASE_URL`/`STAGING_SMOKE_PHONE`/
+  `STAGING_SMOKE_PASSWORD`) est absent, le job échoue explicitement
+  (`::error::` + `exit 1`), il ne saute plus silencieusement ses étapes.
+  Un run vert de ce workflow signifie désormais réellement « migration +
+  déploiement + smoke tests exécutés avec succès ».
+- Aucun `continue-on-error`/`|| true` sur `migrate deploy` : si la
+  migration échoue, `deploy` (donc Vercel + smoke tests) **ne se lance
+  pas**.
+- Portée à un **GitHub Environment** dédié `staging` (secrets scopés,
+  possibilité d'ajouter des règles de protection plus tard).
+- `permissions: contents: read` au niveau du workflow (moindre privilège).
+- Aucune valeur secrète n'est jamais imprimée — y compris dans les
+  nouveaux messages d'erreur `::error::`, qui restent des messages fixes.
 
-| URL testée | Résultat |
+## 6. Garde anti-production — deux niveaux, testés (5 scénarios)
+
+Suite au retour explicite de l'utilisateur (« ne dépends pas uniquement
+d'un identifiant codé en dur ») :
+
+- **Niveau 1 — liste noire** (comme avant) : `STAGING_DATABASE_URL` ne
+  doit jamais contenir la référence du projet Supabase de **production**
+  (`uwvnarmojdbutbunzqww`).
+- **Niveau 2 — liste blanche positive** (nouveau) : une **variable non
+  secrète** `STAGING_SUPABASE_PROJECT_REF` (GitHub Environment `staging`
+  → Variables, pas Secrets — recommandée, pas obligatoire) porte la
+  référence du projet staging attendue. Si elle est renseignée,
+  `STAGING_DATABASE_URL` **doit** la contenir, sinon refus — protection
+  positive, plus robuste qu'une seule exclusion.
+
+| Scénario testé | Résultat |
 |---|---|
-| Référence prod réelle (`…uwvnarmojdbutbunzqww…`) | **BLOQUÉ** ✅ |
-| Référence staging hypothétique (autre ref) | **AUTORISÉ** ✅ |
+| `STAGING_DATABASE_URL` absent | **ÉCHEC explicite** (`exit 1`) ✅ |
+| Référence prod réelle dans l'URL | **BLOQUÉ** (liste noire) ✅ |
+| Référence staging correcte + `STAGING_SUPABASE_PROJECT_REF` renseignée | **AUTORISÉ** ✅ |
+| Référence staging incorrecte + `STAGING_SUPABASE_PROJECT_REF` renseignée | **BLOQUÉ** (liste blanche) ✅ |
+| `STAGING_SUPABASE_PROJECT_REF` non renseignée | **AUTORISÉ avec avertissement** (liste noire seule) ✅ |
 
-(Volontairement différente de la garde de A : celle de `integration.yml`/
-`e2e.yml` bloque *tout* hôte Supabase, car ce job ne doit jamais en
+(Garde volontairement différente de celle de A : `integration.yml`/
+`e2e.yml` bloquent *tout* hôte Supabase, car ce job ne doit jamais en
 toucher un seul ; celle-ci doit au contraire autoriser la base staging
-tout en bloquant spécifiquement la production — d'où un test sur la
-référence de projet, pas sur le nom d'hôte générique.)
+tout en bloquant spécifiquement la production.)
 
 ## 7. CHECKLIST STAGING — ce qu'il reste à créer/configurer
 
@@ -181,7 +208,9 @@ dans les coffres prévus à cet effet.
 | `STAGING_DEPLOY_HOOK` | Idem | Déclenche le déploiement Vercel staging | Le job `deploy` n'ignore plus l'étape « Trigger deploy » |
 | `STAGING_BASE_URL` | Idem | URL publique du staging, utilisée par les smoke tests | L'étape « Smoke tests » s'exécute au lieu d'être sautée |
 | `STAGING_SMOKE_PHONE` / `STAGING_SMOKE_PASSWORD` | Idem | Compte de **seed** (ex. `+22890000001` / le mot de passe commun du seed) — jamais un vrai utilisateur | Les checks authentifiés (Wallet/Ledger/Tontines/RBAC) du smoke test s'exécutent |
+| `STAGING_SUPABASE_PROJECT_REF` (recommandée, pas obligatoire) | Dans l'environnement `staging` → **Environment variables** (pas Secrets — ce n'est pas une valeur sensible) | Garde anti-production positive : `STAGING_DATABASE_URL` doit contenir cette référence, sinon refus (§6) | Le job `migrate` affiche « référence de projet staging confirmée » au lieu de l'avertissement recommandant de la configurer |
 | Permissions du workflow | Déjà fait dans le code (`permissions: contents: read` dans `staging.yml`) | Moindre privilège — rien à configurer côté dashboard | Visible dans le fichier, appliqué automatiquement |
+| Comportement en cas d'oubli d'un secret **obligatoire** | — | — | Le job concerné **échoue** (rouge), il ne « réussit » plus en silence — c'est volontaire (retour utilisateur) |
 
 ### 7.4 KESSIA (variables applicatives, à poser sur Vercel staging, cf. `.env.example`)
 
