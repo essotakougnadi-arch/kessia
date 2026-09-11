@@ -73,11 +73,15 @@ README et `DATABASE_MIGRATION_PLAN.md` le documentent explicitement. Toute
   depuis cet environnement — c'est une opération sur une base réelle,
   documentée comme procédure opérateur avec sauvegarde préalable dans
   `DATABASE_MIGRATION_PLAN.md`, pas automatisée ici.
-- Pas de `directUrl` séparé dans `datasource db` — le pooler en mode session
-  (port 5432, actuellement seul port utilisé) supporte le DDL de
-  `migrate deploy` ; l'ajout d'un `directUrl` dédié est du ressort de P1.10
-  (pooling) si le runtime applicatif bascule un jour sur le pooler
-  transaction (port 6543, qui ne supporte pas le DDL).
+- Pas de `directUrl` séparé dans `datasource db`. Le runtime applicatif
+  (Vercel) est déjà sur le pooler transaction (port 6543, `pgbouncer=true`,
+  ADR 0039) qui **ne supporte pas** le DDL de Prisma Migrate — c'est pour
+  cette raison que `.env` (lu par le CLI Prisma) reste volontairement
+  distinct de `.env.local` (lu par l'app) et pointe sur le pooler session
+  (port 5432). Toute commande `prisma migrate …`/`db push` doit utiliser
+  cette URL port 5432, jamais celle déployée sur Vercel — détaillé dans
+  `DATABASE_MIGRATION_PLAN.md` §4. Formaliser un `directUrl` explicite est
+  du ressort de P1.10 (pooling).
 
 ## Conséquences
 

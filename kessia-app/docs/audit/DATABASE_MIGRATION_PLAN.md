@@ -73,6 +73,16 @@ Cette étape n'a pas été exécutée par cette session (nécessite les identifi
 de production et est un acte sur une base réelle) — à exécuter par l'opérateur
 disposant de `DATABASE_URL` :
 
+> ⚠️ **Deux URLs distinctes existent pour cette même base** (ADR 0039) :
+> le pooler **session** (port `5432`, celui de `.env`/`.env.local` en local)
+> et le pooler **transaction** (port `6543`, `pgbouncer=true` — celui
+> effectivement configuré comme `DATABASE_URL` sur Vercel pour le runtime
+> applicatif, requis pour éviter la saturation du pool en serverless).
+> **Toute commande `prisma migrate …` (comme tout `db push`) doit
+> impérativement utiliser l'URL du port `5432`** — PgBouncer en mode
+> transaction casse le DDL de Prisma Migrate. Ne jamais pointer ces
+> commandes sur la `DATABASE_URL` déployée sur Vercel.
+
 ```bash
 # 0. Sauvegarde préalable (obligatoire, même si l'opération suivante est
 #    non destructive en théorie — règle absolue de la Phase 0).
@@ -157,11 +167,13 @@ toujours par une **nouvelle** migration.
 - **P1.9 (staging)** : un vrai environnement staging avec sa propre base,
   sur laquelle `migrate deploy` s'exécute dans le pipeline avant la
   production.
-- **P1.10/P1.11 (secrets, pooling)** : si le runtime applicatif bascule sur
-  le pooler transaction (port 6543, `pgbouncer=true`), un `directUrl` séparé
-  (port 5432) devra être ajouté au bloc `datasource db` pour que
-  `migrate deploy`/`migrate dev` continuent de fonctionner (le mode
-  transaction ne supporte pas le DDL avancé de Prisma Migrate).
+- **P1.10/P1.11 (secrets, pooling)** : le runtime applicatif est **déjà** sur
+  le pooler transaction (port 6543, `pgbouncer=true`, cf. encart ci-dessus) —
+  un `directUrl` séparé (port 5432) devrait être ajouté au bloc
+  `datasource db` pour que `migrate deploy` s'exécute sans dépendre d'une
+  variable d'environnement locale distincte de celle du runtime (aujourd'hui
+  le CLI Prisma lit `.env`, séparé de `.env.local` justement pour cette
+  raison — cf. en-tête de `.env`). À formaliser avec le reste du pooling.
 
 ## 8. Fichiers concernés par ce changement
 
