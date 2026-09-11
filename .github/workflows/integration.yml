@@ -1,9 +1,13 @@
 # ============================================================
 # KESSIA — Tests d'intégration (cahier des charges §49)
-#   Postgres éphémère → generate + push + seed → vitest (*.itest.ts)
+#   Postgres éphémère → generate + migrate deploy + seed → vitest (*.itest.ts)
 # Exercent les handlers de route et les services de domaine contre
 # une vraie base (ledger atomique, idempotence, webhooks, plafonds
 # KYC, cycle de tontine). Base jetable, jamais la prod.
+#
+# `prisma migrate deploy` (et non `db push`, ADR 0048) : applique
+# l'historique versionné de prisma/migrations/ sur une base neuve —
+# valide à chaque run que la baseline s'applique proprement.
 # ============================================================
 name: Integration
 
@@ -50,16 +54,32 @@ jobs:
         working-directory: kessia-app
         run: npm ci
 
-      - name: Prisma generate + push schema
-        working-directory: kessia-app
+      - name: Garde anti-production — DATABASE_URL ne doit jamais être une base réelle
         run: |
-          npx prisma generate
-          npx prisma db push --skip-generate
+          if echo "$DATABASE_URL" | grep -qiE "supabase\.co|pooler\.supabase\.com"; then
+            echo "::error::DATABASE_URL pointe vers un hôte Supabase — refus d'exécuter une migration CI dessus."
+            exit 1
+          fi
+          echo "OK — DATABASE_URL cible le Postgres éphémère du runner (localhost), pas une base réelle."
 
-      - name: Seed
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy (base éphémère du runner, jamais la prod)
+        working-directory: kessia-app
+        # Aucune option de contournement (continue-on-error / || true) : un
+        # échec de migration ici fait échouer le job immédiatement (ADR 0048).
+        run: npx prisma migrate deploy
+
+      - name: Vérifier l'état des migrations
+        working-directory: kessia-app
+        run: npx prisma migrate status
+
+      - name: Seed (jeu de données représentatif)
         working-directory: kessia-app
         run: npm run db:seed
 
-      - name: Integration tests
+      - name: Tests dépendant de la base (Ledger, Wallet, Tontines, Marketplace, AuditLog…)
         working-directory: kessia-app
         run: npm run test:integration
