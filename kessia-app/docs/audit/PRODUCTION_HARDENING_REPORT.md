@@ -16,8 +16,9 @@ résultat → risques résiduels → commit.
 
 ## P0.0 — Migrations Prisma versionnées
 
-**Statut : code-complet et validé localement. Preuve CI/staging PARTIELLE — 3 points
-en attente d'action côté opérateur, détaillés en fin de section.**
+**Statut : code-complet. B (base jetable) intégralement prouvé de bout en
+bout. A (CI) et C (staging) restent bloqués — actions opérateur requises,
+détaillées en fin de section. Verdict : P0.0 NON VALIDÉ — P0.1 BLOQUÉ.**
 
 ### Problème (audit, item #32 / P1.8 du plan)
 
@@ -105,9 +106,62 @@ docs/decisions/0048-migrations-prisma-versionnees.md   (nouveau)
 | Snapshot d'intégrité (script temporaire, lecture seule, supprimé après usage) **avant** la suite d'intégration | 17 wallets, 92 écritures ledger, 10 tontines (5 séquestres actifs), 0 wallet en désaccord avec son ledger, 0 séquestre déséquilibré, 0 clé d'idempotence dupliquée, 0 ligne orpheline |
 | Même snapshot **après** la suite d'intégration | 18 wallets, 94 écritures, 0 séquestre tontine déséquilibré, 0 doublon, 0 orphelin, 0 résidu `itest_` — **1 écart isolé** sur le wallet système `MARKETPLACE_ESCROW`, voir finding ci-dessous |
 | Santé prod (`/api/health`) avant/pendant/après tous les commits | ✅ `{"status":"ok","db":"ok"}` en continu, aucune interruption |
-| `prisma migrate deploy` réellement exécuté sur une base neuve/isolée | ❌ **non prouvé** — voir « Preuve CI/staging » ci-dessous |
-| `npm run test:e2e:isolated` | ❌ **non exécutable** dans cet environnement — aucun `.env.test` configuré (base de test dédiée absente) |
-| Smoke test staging | ❌ **non exécutable** — aucun environnement staging déployé (`staging.yml` reste un squelette tant que `STAGING_DEPLOY_HOOK`/`STAGING_BASE_URL` ne sont pas configurés — c'est l'objet de P1.9, pas encore fait) |
+| `prisma migrate deploy` réellement exécuté sur une base neuve/isolée | ✅ **PROUVÉ** (mise à jour) — voir §B ci-dessous |
+| `npm run test:e2e:isolated` | ✅ **PROUVÉ** (mise à jour) — voir §B ci-dessous |
+| Smoke test staging | ❌ **non exécutable** — aucun environnement staging déployé (`staging.yml` reste un squelette tant que `STAGING_DEPLOY_HOOK`/`STAGING_BASE_URL` ne sont pas configurés — c'est l'objet de P1.9, pas encore fait). Voir §C. |
+
+### B — Base de test jetable : PostgreSQL 16 local, isolé, prouvé de bout en bout
+
+Aucune base jetable n'existant dans cet environnement, une instance
+**PostgreSQL 16 locale a été installée** (`winget install PostgreSQL.PostgreSQL.16`,
+service Windows créé mais **laissé inutilisé** — un cluster séparé a été créé
+via `initdb` dans un répertoire temporaire, propriété de l'utilisateur
+courant, aucun droit admin requis, port `5433` distinct du service). Base
+`kessia_p0_test`, entièrement séparée de la base de démo/prod (hôte, port,
+identifiants tous différents).
+
+**Séquence exécutée, base propre à chaque fois :**
+
+1. `createdb kessia_p0_test` → confirmé 0 table (`\dt`).
+2. `DATABASE_URL=…5433/kessia_p0_test npx prisma migrate deploy` → **« All migrations
+   have been successfully applied »**. `_prisma_migrations` : `0_init`,
+   `applied_steps_count=1`, `rolled_back_at` NULL.
+3. **Schéma vérifié** : 45 tables (44 + `_prisma_migrations`), ~45 enums, 113
+   index, 57 contraintes FK — cohérent avec la baseline. `prisma migrate
+   status` → « Database schema is up to date! ».
+4. **Jeu de données représentatif** : `npm run db:seed` contre cette base →
+   12 comptes, 10 tontines, 8 articles marketplace, Fonds de Garantie —
+   **aucune erreur de contrainte/FK**, preuve de compatibilité schéma↔seed.
+5. **Le script modifié par P0.0 lui-même** (`scripts/db-test-reset.mjs`,
+   `.env.test` pointé sur cette instance) : `npm run db:test:reset` →
+   `prisma migrate reset --force` + seed, **exécuté avec succès** — c'est la
+   validation directe, en conditions réelles, du changement fait dans ce
+   commit.
+6. **`npm run test:e2e:isolated`** (49 tests, suite complète) exécutée
+   **trois fois** contre cette base :
+   - Run 1 : 48/49 verts (1 échec : login → 500).
+   - Réexécution isolée du test en échec → **vert** (non reproductible).
+   - Run 2 (reset complet) : 45/49 verts (4 échecs, tous sur le même
+     schéma : `strict mode violation` — le sélecteur `getByText(nom)`
+     matche à la fois l'élément de liste **et** un toast de confirmation
+     qui contient le même texte en sous-chaîne).
+   - Réexécution ciblée des 4 specs → même diagnostic confirmé par le
+     message d'erreur exact (`Toaster_message` + élément de liste).
+   - **Conclusion, avec preuve** : fragilité de test pré-existante (locator
+     trop large face à un toast), **aucun rapport avec le schéma, la
+     migration, ou une donnée financière** — jamais un échec côté Ledger,
+     Wallet, Tontine, séquestre ou AuditLog sur 3 exécutions complètes. Non
+     corrigé (hors périmètre P0.0) ; recommandé en test-hygiène séparée.
+7. **Contrôle d'intégrité final** sur cette base, après les 3 exécutions
+   complètes : 18 wallets, 117 écritures ledger, 15 tontines (6 séquestres),
+   **0 wallet en désaccord, 0 séquestre déséquilibré, 0 clé d'idempotence
+   dupliquée, 0 ligne orpheline**.
+8. Instance arrêtée proprement (`pg_ctl stop -m fast`) en fin de validation ;
+   données conservées sur disque (redémarrage : `pg_ctl -D <data> -o "-p 5433" start`).
+
+**Décision à prendre** : garder cette installation PostgreSQL locale (utile
+pour toute validation future de ce type, et pour faire tourner
+`test:e2e:isolated` en local désormais) ou la désinstaller — à préciser.
 
 ### Finding découvert pendant la vérification — wallet séquestre marketplace
 
@@ -141,49 +195,36 @@ plus). Investigation menée jusqu'au bout :
   traiter en P1.6 (réconciliation, qui aurait détecté exactement ce genre
   d'écart) ou en micro-correctif dédié, au choix de l'utilisateur.
 
-### Preuve CI/staging — état réel (à ne pas confondre avec « ça compile »)
+### A — CI : toujours bloqué (inchangé)
 
-Conformément à la demande de ne pas déclarer P0.0 terminé sur la seule foi
-d'un code de sortie 0, voici précisément ce qui est prouvé et ce qui ne l'est
-pas encore, et pourquoi :
+Le commit qui bascule `integration.yml`/`e2e.yml` sur `migrate deploy`
+(local, hash `48a65fc` au moment de la rédaction) reste **refusé au push**
+par GitHub (token sans scope `workflow`). Retenté explicitement pendant
+cette étape (`git push origin main`) → même refus. Conformément à la
+consigne reçue, **aucune régénération/rotation de token n'a été tentée**.
+Tant que ce diff n'est pas appliqué sur GitHub, la CI réelle tourne encore
+avec `db push` — aucune exécution de `migrate deploy` en CI (GitHub
+Actions) n'a pu être observée. Action requise : cf. réponse à l'utilisateur.
 
-1. **CI (`integration.yml`/`e2e.yml` avec `migrate deploy`)** : le commit qui
-   fait ce changement (`7203b9c`, voir plus haut) est prêt localement mais
-   **pas encore poussé sur GitHub** — le push a été refusé (token sans scope
-   `workflow`), et conformément à la consigne reçue, aucune régénération de
-   token n'a été tentée ; l'application du diff est laissée à l'opérateur.
-   **Tant que ce commit n'est pas sur GitHub, la CI tourne encore avec
-   l'ancien `db push`** — aucune exécution réelle de `migrate deploy` en CI
-   n'a donc pu être observée.
-2. **Base cible « staging », isolée du dev/prod** : **il n'existe aucun
-   environnement staging à ce jour.** `.github/workflows/staging.yml` est un
-   squelette qui saute toutes ses étapes tant que les secrets
-   `STAGING_DEPLOY_HOOK`/`STAGING_BASE_URL` ne sont pas configurés (ils ne
-   le sont pas) — c'est précisément l'objet de l'étape P1.9, pas encore
-   entamée. Il n'y a donc rien à « vérifier isolé » aujourd'hui — l'affirmer
-   serait inexact.
-3. **`migrate deploy` exécuté pour de vrai sur une base neuve** : non
-   reproduit dans cet environnement (ni Docker ni serveur Postgres local
-   disponibles ici — vérifié). À la place, la preuve la plus forte possible
-   sans base jetable a été apportée : `prisma migrate diff --from-url <base
-   réelle> --to-schema-datamodel` (lecture seule, zéro écriture) renvoie une
-   **migration vide** — la baseline colle exactement à la réalité, donc
-   `migrate resolve --applied 0_init` puis tout `migrate deploy` futur
-   s'appliqueront proprement. C'est une preuve d'exactitude de la baseline,
-   **pas** une preuve d'exécution réelle du pipeline.
-4. **Smoke test staging** : sans staging, impossible à exécuter — non fait,
-   et non simulé.
+### C — Staging : impossible à réaliser depuis cet environnement
 
-**Ce qui reste, concrètement, pour clore ces 3 points** (détaillé dans le
-message de réponse, format « quel élément / pourquoi / où / quelle valeur /
-conséquences / comment vérifier ») :
-- Application manuelle du diff CI (`7203b9c`) sur GitHub par l'opérateur.
-- Une base Postgres jetable (nouveau projet/branche Supabase, ou Postgres
-  local) pour `.env.test`, seule façon de prouver `migrate deploy` et de
-  faire tourner `test:e2e:isolated` en conditions réelles depuis cet
-  environnement.
-- Un environnement staging réel (P1.9) pour qu'un « smoke test staging »
-  ait un sens.
+Vérifié explicitement pendant cette étape :
+- **Aucun environnement staging n'existe.** `.github/workflows/staging.yml`
+  saute toutes ses étapes sans les secrets `STAGING_DEPLOY_HOOK`/
+  `STAGING_BASE_URL` (absents) — c'est l'objet de P1.9, non commencé.
+- **Vercel CLI sans session active** (`vercel whoami` → « Logged out »,
+  aucun token configuré dans cet environnement).
+- Même avec un token, la création d'un projet Vercel / la configuration de
+  variables d'environnement via API ne fait pas partie de ce que cet
+  environnement peut faire pour ce type d'opération — seul le déclenchement
+  d'un deploy hook déjà configuré par un humain serait possible.
+- Provisionner un vrai staging (projet Vercel séparé, base Supabase séparée,
+  secrets, déploiement) est un ensemble d'actions de configuration de
+  compte/dashboard qui ne peut être fait que par l'opérateur.
+
+**Conclusion** : C ne peut pas être démontré par cette session seule, dans
+l'état actuel de l'infrastructure. Options détaillées dans la réponse à
+l'utilisateur.
 
 ### Ce qui reste à faire (hors P0.0, plus tard dans le plan)
 

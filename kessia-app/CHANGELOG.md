@@ -47,12 +47,22 @@ Le projet suit la feuille de route par phases du cahier des charges (§52).
   l'historique ledger de ce wallet partagé est incomplet). Non corrigé
   ici (hors périmètre migrations) — détail et recommandation dans
   `docs/audit/PRODUCTION_HARDENING_REPORT.md` §P0.0.
-- **Preuve CI/staging incomplète, signalée explicitement** : le commit CI
-  (`db push` → `migrate deploy` dans `integration.yml`/`e2e.yml`) est prêt
-  localement mais bloqué au push (token sans scope `workflow` — aucune
-  régénération tentée, application manuelle laissée à l'opérateur). Aucun
-  environnement staging n'existe encore (P1.9 non fait) : « smoke test
-  staging » non exécutable. Détails dans le rapport de durcissement.
+- **Preuve B (base jetable) apportée intégralement** : PostgreSQL 16 installé
+  localement (`winget`), cluster isolé via `initdb` (port 5433, hors service
+  Windows), base `kessia_p0_test` séparée de la démo/prod. `migrate deploy`
+  depuis zéro → succès, schéma vérifié (45 tables, ~45 enums, 113 index, 57
+  FK), seed représentatif chargé sans erreur, `db:test:reset` (le script
+  modifié par ce commit) validé en conditions réelles, `test:e2e:isolated`
+  exécuté 3× (49 tests) — seuls échecs : fragilité de locator Playwright
+  pré-existante (toast vs liste), aucun rapport avec le schéma/la migration/
+  une donnée financière. Intégrité finale : 0 écart Ledger/Wallet/séquestre/
+  idempotence. Instance arrêtée proprement, données conservées.
+- **A (CI) et C (staging) restent bloqués**, non contournés : le commit CI
+  (`db push` → `migrate deploy`) reste refusé au push (scope `workflow`
+  manquant, aucune régénération tentée) ; aucun environnement staging
+  n'existe (Vercel CLI sans session, aucune infra provisionnée — objet de
+  P1.9). **Verdict : P0.0 NON VALIDÉ — P0.1 BLOQUÉ.** Détails dans le
+  rapport de durcissement.
 - Base de démo partagée **non encore baselinée** — procédure documentée,
   à exécuter par l'opérateur avant la première migration de schéma réelle
   (P0.2).
