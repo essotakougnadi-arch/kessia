@@ -130,6 +130,17 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: npx prisma migrate status
 
+      - name: Seed (jeu de données de démonstration — aucune donnée réelle)
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        # Nécessaire : une base fraîchement migrée n'a que le schéma, aucun
+        # compte. Les smoke tests (job `deploy`) se connectent avec le
+        # compte de démonstration standard (STAGING_SMOKE_PHONE/PASSWORD,
+        # cf. prisma/seed.ts) — sans ce seed, ils échoueraient à coup sûr,
+        # pas à cause d'un problème de migration/déploiement.
+        run: npm run db:seed
+
   deploy:
     needs: migrate
     runs-on: ubuntu-latest
