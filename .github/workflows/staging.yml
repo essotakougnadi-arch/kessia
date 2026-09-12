@@ -1,13 +1,32 @@
 # ============================================================
-# KESSIA — Déploiement staging + smoke tests (cahier des charges §50)
+# KESSIA — Migration + déploiement staging + smoke tests (cahier des charges §50)
 #
-# Squelette prêt à activer. Nécessite, côté secrets GitHub :
-#   STAGING_DEPLOY_HOOK   URL de déclenchement du déploiement (Vercel/…)
+# Nécessite, côté secrets GitHub (environnement "staging") :
+#   STAGING_DATABASE_URL  Connexion Postgres du projet Supabase STAGING
+#                         (pooler session, port 5432 — jamais le pooler
+#                         transaction 6543, qui casse le DDL de Prisma
+#                         Migrate, cf. DATABASE_MIGRATION_PLAN.md)
+#   STAGING_DEPLOY_HOOK   URL de déclenchement du déploiement (Vercel)
 #   STAGING_BASE_URL      URL publique de l'environnement staging
-#   STAGING_SMOKE_PHONE / STAGING_SMOKE_PASSWORD   compte de test
+#   STAGING_SMOKE_PHONE / STAGING_SMOKE_PASSWORD   compte de test (seed)
 #
-# Tant que ces secrets ne sont pas définis, les étapes sont ignorées
-# proprement (pas d'échec de pipeline).
+# Et, en variable non secrète (Environments → staging → Variables) :
+#   STAGING_SUPABASE_PROJECT_REF   référence du projet Supabase STAGING
+#                                  attendue (ex. "abcdefghijklmnop") —
+#                                  recommandée, pas obligatoire (garde
+#                                  positive en plus de la liste noire).
+#
+# IMPORTANT — aucun skip silencieux : si un secret obligatoire manque,
+# le job concerné ÉCHOUE explicitement (::error:: + exit 1), il ne se
+# contente jamais de sauter ses étapes en rapportant un succès. Un run
+# de ce workflow qui se termine en vert signifie donc réellement
+# "migration + déploiement + smoke tests staging exécutés avec succès",
+# jamais "secrets absents, rien fait". Aucune valeur secrète n'est
+# jamais imprimée dans les logs — uniquement des messages fixes.
+#
+# Ordre : migrate (schéma staging à jour) -> deploy (déclenche Vercel,
+# attend, smoke tests). Si la migration échoue, le déploiement ne se
+# déclenche pas (ADR 0048 — P0.0 validation C).
 # ============================================================
 name: Staging
 
@@ -20,38 +39,132 @@ concurrency:
   group: staging
   cancel-in-progress: true
 
+# Moindre privilège : ce workflow lit le code et appelle des services
+# externes (Vercel, Supabase) — il n'a besoin d'écrire nulle part dans le
+# dépôt.
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  migrate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    # Environnement GitHub dédié : scope les secrets/variables STAGING_*
+    # à cet environnement (Settings → Environments → "staging") plutôt
+    # qu'à tout le dépôt.
+    environment: staging
     env:
-      STAGING_DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
-      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      STAGING_SUPABASE_PROJECT_REF: ${{ vars.STAGING_SUPABASE_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prérequis staging — STAGING_DATABASE_URL obligatoire
+        if: env.STAGING_DATABASE_URL == ''
+        run: |
+          echo "::error::STAGING_DATABASE_URL est requis pour valider la migration staging (P0.0 — validation C) et n'est pas configuré."
+          echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement staging n'est pas provisionné."
+          echo "::error::Voir docs/audit/P0_0_C_STAGING_MIGRATION_VALIDATION.md pour la procédure de provisionnement."
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kessia-app/package-lock.json
+
+      - name: Install
+        working-directory: kessia-app
+        run: npm ci
+
+      - name: Garde anti-production — référence de projet Supabase
+        run: |
+          # Défense en profondeur à deux niveaux. Aucune valeur secrète
+          # n'est jamais imprimée — uniquement des messages fixes.
+          #
+          # 1) Liste noire : la référence du projet Supabase de PRODUCTION
+          #    ne doit jamais apparaître dans STAGING_DATABASE_URL. Cette
+          #    référence identifie un projet, ce n'est pas un identifiant
+          #    secret en tant que tel (elle apparaît déjà dans l'URL
+          #    publique du projet, ADR 0039) — mais ce n'est pas non plus
+          #    une preuve suffisante à elle seule : elle protège contre
+          #    une erreur de copier-coller vers la prod, pas contre une
+          #    URL staging mal formée.
+          if echo "$STAGING_DATABASE_URL" | grep -q "uwvnarmojdbutbunzqww"; then
+            echo "::error::STAGING_DATABASE_URL pointe vers le projet Supabase de PRODUCTION — refus d'appliquer une migration dessus."
+            exit 1
+          fi
+
+          # 2) Liste blanche (positive, plus robuste) : si la variable
+          #    d'environnement (non secrète) STAGING_SUPABASE_PROJECT_REF
+          #    est renseignée, STAGING_DATABASE_URL DOIT la contenir.
+          #    Recommandée, pas obligatoire — pour ne pas ajouter un
+          #    nouveau prérequis bloquant en plus de STAGING_DATABASE_URL.
+          if [ -n "$STAGING_SUPABASE_PROJECT_REF" ]; then
+            if ! echo "$STAGING_DATABASE_URL" | grep -q "$STAGING_SUPABASE_PROJECT_REF"; then
+              echo "::error::STAGING_DATABASE_URL ne correspond pas à STAGING_SUPABASE_PROJECT_REF (référence de projet staging attendue) — refus d'appliquer la migration."
+              exit 1
+            fi
+            echo "OK — référence de projet staging confirmée (garde positive + liste noire)."
+          else
+            echo "::warning::STAGING_SUPABASE_PROJECT_REF non configurée — seule la garde liste noire (référence de production) est active. Configurer cette variable (Environments → staging → Variables) est recommandé pour une garde positive plus robuste."
+            echo "OK — référence de production absente de l'URL (garde liste noire uniquement)."
+          fi
+
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy (staging)
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        # Aucune option de contournement : un échec ici bloque le job
+        # `deploy` qui en dépend (needs: migrate) — le déploiement ne part
+        # pas si la migration échoue.
+        run: npx prisma migrate deploy
+
+      - name: Vérifier l'état des migrations (staging)
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npx prisma migrate status
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    env:
+      STAGING_DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
+      STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+      STAGING_SMOKE_PHONE: ${{ secrets.STAGING_SMOKE_PHONE }}
+      STAGING_SMOKE_PASSWORD: ${{ secrets.STAGING_SMOKE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prérequis staging — secrets obligatoires
+        if: env.STAGING_DEPLOY_HOOK == '' || env.STAGING_BASE_URL == '' || env.STAGING_SMOKE_PHONE == '' || env.STAGING_SMOKE_PASSWORD == ''
+        run: |
+          echo "::error::Un ou plusieurs secrets obligatoires sont absents (STAGING_DEPLOY_HOOK, STAGING_BASE_URL, STAGING_SMOKE_PHONE, STAGING_SMOKE_PASSWORD)."
+          echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement staging n'est pas entièrement provisionné."
+          echo "::error::Voir docs/audit/P0_0_C_STAGING_MIGRATION_VALIDATION.md pour la procédure de provisionnement."
+          exit 1
+
       - name: Trigger deploy
-        if: env.STAGING_DEPLOY_HOOK != ''
         run: curl -fsSL -X POST "$STAGING_DEPLOY_HOOK"
 
       - name: Wait for deploy
-        if: env.STAGING_BASE_URL != ''
         run: sleep 90
 
       - uses: actions/setup-node@v4
-        if: env.STAGING_BASE_URL != ''
         with:
           node-version: 20
 
       - name: Smoke tests
-        if: env.STAGING_BASE_URL != ''
         working-directory: kessia-app
         env:
           SMOKE_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
           SMOKE_PHONE: ${{ secrets.STAGING_SMOKE_PHONE }}
           SMOKE_PASSWORD: ${{ secrets.STAGING_SMOKE_PASSWORD }}
         run: node scripts/smoke.mjs
-
-      - name: Skipped notice
-        if: env.STAGING_BASE_URL == ''
-        run: echo "Secrets staging non configurés — étape ignorée. Voir docs/operations/backup-recovery.md et .github/workflows/staging.yml."
