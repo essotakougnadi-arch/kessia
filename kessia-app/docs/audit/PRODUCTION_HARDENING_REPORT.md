@@ -16,18 +16,25 @@ résultat → risques résiduels → commit.
 
 ## P0.0 — Migrations Prisma versionnées
 
-**Statut : code-complet. B (base jetable) intégralement prouvé de bout en
-bout. A (CI) et C (staging) ont chacun leur rapport dédié et détaillé :**
+**Statut : A + B + C tous VALIDÉS avec preuve réelle. P0.0 proposé comme
+terminé — en attente de la validation explicite de l'utilisateur.**
 
-- **[P0_0_A_CI_MIGRATION_VALIDATION.md](P0_0_A_CI_MIGRATION_VALIDATION.md)**
-  — mécanisme CI construit, garde anti-prod testée, test positif et
-  **test négatif** (migration invalide → échec immédiat, prouvé) ; seul
-  point manquant : le push du diff sur GitHub (scope `workflow`).
-- **[P0_0_C_STAGING_MIGRATION_VALIDATION.md](P0_0_C_STAGING_MIGRATION_VALIDATION.md)**
-  — aucune infrastructure staging n'existe ; smoke tests enrichis et
-  prouvés en conditions quasi réelles (local, base migrée) ; checklist
-  précise de ce qu'il reste à provisionner (dashboard Vercel/Supabase/
-  GitHub), sans secret demandé ici.
+- **A — [P0_0_A_CI_MIGRATION_VALIDATION.md](P0_0_A_CI_MIGRATION_VALIDATION.md)**
+  — `integration.yml`/`e2e.yml` appliqués et vérifiés sur GitHub Actions :
+  run réel `migrate deploy` + `migrate status` verts, base éphémère jamais
+  la prod. (L'échec du job `E2E` lui-même, sur les tests Playwright, est
+  documenté comme hors périmètre — bug pré-existant `createSession()`,
+  réservé à P0.2.)
+- **B — preuve mécanique complète sur PostgreSQL 16 local jetable**
+  (`migrate deploy`, schéma vérifié, seed, `db:test:reset`, E2E isolé,
+  test négatif de migration invalide).
+- **C — [P0_0_C_STAGING_MIGRATION_VALIDATION.md](P0_0_C_STAGING_MIGRATION_VALIDATION.md)**
+  — environnement staging réel provisionné (Vercel + Supabase séparés),
+  run GitHub Actions officiel [`Staging #69`](https://github.com/essotakougnadi-arch/kessia/actions/runs/34838620490)
+  **Success** (migrate 1m51s + deploy 1m57s, smoke tests 9/9). 3 bugs de
+  configuration réels rencontrés et corrigés en cours de route (PgBouncer/
+  prepared statements, identifiants invalides après rotation, chaîne de
+  connexion malformée) — détaillés dans le rapport C.
 
 **Verdict : P0.0 NON VALIDÉ — P0.1 BLOQUÉ.**
 

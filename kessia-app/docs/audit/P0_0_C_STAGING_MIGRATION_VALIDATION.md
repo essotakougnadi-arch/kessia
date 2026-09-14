@@ -9,12 +9,14 @@ date: "11 septembre 2026"
 projet Supabase séparé, secrets séparés, aucune donnée réelle) démontrant
 migration → application → smoke tests → fonctionnalités critiques.
 
-**Verdict : C = NON VALIDÉ — infrastructure inexistante.** Ce n'est pas un
-résultat de test qui a échoué : **l'environnement staging n'existe pas
-encore**, et sa création (compte/dashboard Vercel + Supabase) dépasse ce
-que cette session peut faire seule. Ce document explique précisément ce
-qui a été préparé, ce qui manque, et l'action exacte requise — sans
-qu'aucun secret ne soit demandé ou affiché ici.
+**Verdict final (mise à jour 14/09/2026) : C = VALIDÉ.** Environnement
+staging entièrement provisionné (Vercel `kessia-staging` + Supabase
+`kessia-staging`, séparés de la production), pipeline GitHub Actions réel
+exécuté avec succès de bout en bout : migration → seed → déploiement →
+smoke tests. Voir §9 pour la preuve complète et §8 pour les 3 bugs réels
+rencontrés et corrigés pendant la validation. Les sections 1-7 ci-dessous
+documentent l'état initial (infrastructure inexistante) et la checklist de
+provisionnement — conservées comme trace historique du travail.
 
 ---
 
@@ -229,19 +231,93 @@ dans les coffres prévus à cet effet.
 ## 8. Fichiers concernés
 
 ```
-.github/workflows/staging.yml         (modifié — job `migrate`, environment, permissions)
-scripts/smoke.mjs                     (déjà modifié/testé/poussé précédemment)
+.github/workflows/staging.yml         (modifié — job `migrate`, environment, permissions, seed)
+scripts/smoke.mjs                     (modifié — Marketplace + RBAC + Ledger)
 ```
 
-## 9. Commit
+Commits : `21de1a3` (ajout du seed) — comme les autres fichiers
+`.github/workflows/*`, appliqué manuellement sur GitHub par l'utilisateur
+(scope `workflow` du token toujours absent, jamais régénéré).
 
-`.github/workflows/staging.yml` : commit local, **bloqué au push pour la
-même raison que A** (scope `workflow` du token) — regroupé avec le diff de
-A, voir hash communiqué dans la réponse à l'utilisateur.
+## 9. Provisionnement réel effectué (7.1 → 7.4)
 
-## 10. Prochaine étape dès l'infrastructure prête
+- **Vercel** : nouveau projet `kessia-staging`, Root Directory `kessia-app`,
+  Deploy Hook créé (branche `main`), domaine `kessia-staging.vercel.app`.
+- **Supabase** : nouveau projet `kessia-staging` (réf. `gorxdgafxriugdeutzsb`),
+  région `eu-west-1`, 3 buckets privés (`kyc-documents`, `ticket-attachments`,
+  `avatars`).
+- **GitHub** : Environment `staging` (créé automatiquement par la première
+  référence `environment: staging` du workflow), 5 secrets +
+  1 variable (`STAGING_SUPABASE_PROJECT_REF`).
+- **Vercel (variables KESSIA)** : 10 variables d'environnement posées
+  (`DATABASE_URL`, Supabase, JWT, buckets, `SMS_PROVIDER`).
+- Mot de passe de la base staging **roté deux fois** en cours de route (une
+  fois par précaution après une capture d'écran l'ayant révélé
+  involontairement, une fois pour corriger une transcription erronée).
 
-Dès que 7.1-7.3 sont en place (7.4 se déduit de 7.1) : un push sur `main`
-(ou `workflow_dispatch`) déclenche `staging.yml` → `migrate` (schéma
-staging à jour) → `deploy` (Vercel + smoke tests). Je lirai le run réel et
-compléterai ce rapport avec les logs et le verdict C.
+## 10. Trois bugs réels rencontrés et corrigés pendant la validation
+
+Tous découverts en conditions réelles (pas en théorie), tous corrigés,
+aucun n'est resté en l'état :
+
+1. **`prepared statement "sXX" does not exist`** (Postgres, code `26000`)
+   sur `/api/v1/wallet` — incompatibilité connue entre Prisma et PgBouncer
+   en mode transaction sous requêtes parallèles (`Promise.all`). Diagnostiqué
+   via les logs Vercel (stack trace complète). **Corrigé** en complétant
+   `DATABASE_URL` avec `?pgbouncer=true&connection_limit=1` (le correctif
+   déjà documenté dans `.env.example`, jamais appliqué à la première tentative).
+2. **`the provided database credentials for 'postgres' are not valid`** —
+   après une rotation de mot de passe, `DATABASE_URL` sur Vercel contenait
+   encore une transcription erronée. **Corrigé** en régénérant un mot de
+   passe et en recopiant la chaîne de connexion complète depuis l'interface
+   Supabase plutôt que de la retaper à la main.
+3. **`Database 'postgres&pgbouncer=true&connection_limit=1' does not exist`**
+   — un `?` manquant avant `pgbouncer=true` faisait lire toute la chaîne de
+   paramètres comme faisant partie du nom de la base. **Corrigé** en
+   reconstruisant l'URL avec le bon séparateur (`?` puis `&`), et en
+   vérifiant le port (`6543` pour `DATABASE_URL`/Vercel,
+   **`5432`** pour `STAGING_DATABASE_URL`/GitHub — une confusion des deux
+   poolers avait aussi fait échouer un run par timeout de 10 minutes, le
+   pooler transaction ne supportant pas les opérations de migration).
+
+Aucun de ces trois problèmes n'est un défaut du code applicatif ou du
+mécanisme de migration (`prisma migrate deploy` lui-même a toujours
+fonctionné correctement dès qu'il recevait une URL valide) — tous relèvent
+de la configuration des chaînes de connexion, désormais correctes et
+vérifiées de façon stable (3 exécutions consécutives du smoke test, puis
+un run CI officiel complet).
+
+## 11. Preuve finale — run CI réel complet (14/09/2026)
+
+**Run [`Staging #69`](https://github.com/essotakougnadi-arch/kessia/actions/runs/34838620490)
+— `Success`, 3m54s total.**
+
+| Job | Résultat |
+|---|---|
+| `migrate` | ✅ 1m51s — garde anti-production, `prisma generate`, `prisma migrate deploy` (réussi), `prisma migrate status` (à jour), `seed` (jeu de démonstration) |
+| `deploy` | ✅ 1m57s — prérequis secrets OK, déclenchement du deploy hook Vercel, attente, **smoke tests : 9/9 `ok`** |
+
+Log officiel de l'étape « Smoke tests » :
+```
+ok   GET /api/health → 200 ok
+ok   GET / → 200
+ok   GET /api/v1/marketplace → 200
+ok   GET /api/v1/admin/users sans jeton → 401
+ok   POST /api/v1/auth/login → token
+ok   GET /api/v1/wallet → 200 (Wallet)
+ok   GET /api/v1/wallet/transactions → 200 (Ledger)
+ok   GET /api/v1/tontine → 200 (Tontines)
+ok   GET /api/v1/admin/users avec jeton non-admin → 403
+
+Smoke tests OK
+```
+
+Confirmé indépendamment par 3 appels directs supplémentaires (hors CI)
+contre `https://kessia-staging.vercel.app`, tous 9/9 — aucune régression
+intermittente.
+
+**C = VALIDÉ** : migration réelle, application réellement démarrée, santé
+confirmée, parcours critiques (Auth, Wallet, Ledger, Tontines, Marketplace,
+RBAC) tous vérifiés sur un environnement staging isolé (Vercel + Supabase +
+secrets séparés de la production, aucune donnée réelle, aucune transaction
+financière réelle).

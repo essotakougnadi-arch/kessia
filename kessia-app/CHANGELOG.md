@@ -3,6 +3,43 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.0 : A + B + C validés (staging réel opérationnel)
+
+### Ajouté
+- Environnement staging réel et isolé, entièrement provisionné : projet
+  Vercel `kessia-staging` (Root Directory `kessia-app`, Deploy Hook),
+  projet Supabase `kessia-staging` (région `eu-west-1`, 3 buckets privés),
+  GitHub Environment `staging` (5 secrets + 1 variable non secrète
+  `STAGING_SUPABASE_PROJECT_REF`), 10 variables Vercel. Aucune donnée
+  réelle, aucune transaction financière réelle.
+- `staging.yml` : job `migrate` (`prisma migrate deploy` + `migrate status`
+  + seed) exécuté avant `deploy`, avec garde anti-production à 2 niveaux et
+  échec explicite (pas de skip silencieux) si un secret obligatoire manque.
+
+### Corrigé (3 bugs de configuration réels, découverts en conditions réelles)
+1. `prepared statement "sXX" does not exist` sur `/api/v1/wallet` —
+   incompatibilité Prisma/PgBouncer en mode transaction sous requêtes
+   parallèles → ajout de `?pgbouncer=true&connection_limit=1` à
+   `DATABASE_URL` (Vercel).
+2. Identifiants invalides après rotation du mot de passe de la base
+   staging → chaîne de connexion régénérée intégralement depuis Supabase
+   plutôt que retapée à la main.
+3. `?` manquant avant `pgbouncer=true` (paramètres lus comme faisant partie
+   du nom de la base) + confusion entre pooler session (5432, pour les
+   migrations) et pooler transaction (6543, pour le runtime) sur
+   `STAGING_DATABASE_URL` → causait un timeout de 10 min sur `migrate
+   deploy`. Corrigé.
+
+### Vérification finale
+- **A** : `integration.yml`/`e2e.yml` appliqués et vérifiés sur GitHub
+  Actions — `migrate deploy` + `migrate status` réels, verts.
+- **B** : inchangé, déjà validé (PostgreSQL 16 local jetable).
+- **C** : run [`Staging #69`](https://github.com/essotakougnadi-arch/kessia/actions/runs/34838620490)
+  **Success** — `migrate` 1m51s, `deploy` 1m57s, **smoke tests 9/9**
+  (health, accueil, marketplace, RBAC 401/403, login, Wallet, Ledger,
+  Tontines). Confirmé stable sur 3 exécutions supplémentaires hors CI.
+- **A + B + C validés avec preuve réelle.** P0.0 proposé comme terminé.
+
 ## [Non publié] — Phase 0 — P0.0 : staging.yml fail-hard + finding session
 
 ### Modifié
