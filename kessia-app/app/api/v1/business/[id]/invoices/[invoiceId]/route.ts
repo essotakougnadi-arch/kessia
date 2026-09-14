@@ -15,7 +15,11 @@ import { logApiError } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string; invoiceId: string } }) {
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string; invoiceId: string }> }
+) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;
@@ -59,9 +63,10 @@ const schema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('status'), status: z.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED']) }),
 ]);
 
-type Params = { params: { id: string; invoiceId: string } };
+type Params = { params: Promise<{ id: string; invoiceId: string }> };
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;

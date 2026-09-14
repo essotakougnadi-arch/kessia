@@ -22,7 +22,8 @@ const patchSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('reply'), content: z.string().min(1).max(2000), internal: z.boolean().optional() }),
 ]);
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error } = await requireAdmin(request, SUPPORT_ROLES);
     if (error) return error;
@@ -44,7 +45,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await requireAdmin(request, SUPPORT_ROLES);
     if (error || !context) return error ?? serverError();

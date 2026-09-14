@@ -23,7 +23,8 @@ const createSchema = z.object({
 
 // ---- GET : liste des demandes (gestionnaire) ----
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;
@@ -83,7 +84,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // ---- POST : envoyer une demande d'adhésion ----
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;

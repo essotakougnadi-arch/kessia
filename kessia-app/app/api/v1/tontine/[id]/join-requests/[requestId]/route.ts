@@ -25,8 +25,9 @@ const patchSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; requestId: string } }
+  props: { params: Promise<{ id: string; requestId: string }> }
 ) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;

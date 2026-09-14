@@ -19,7 +19,8 @@ const schema = z.object({
   note: z.string().max(500).optional().or(z.literal('')),
 });
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await requireAdmin(request, COMPLIANCE_ROLES);
     if (error || !context) return error!;

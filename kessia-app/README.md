@@ -126,7 +126,7 @@ Hébergé sur **Vercel**, connecté au dépôt GitHub : chaque `push` sur `main`
 |---|---|
 | Root Directory | `kessia-app` |
 | Build Command | `prisma generate && next build` (via `package.json`) |
-| Variables d'env | contenu de `.env.local` sauf `NODE_ENV` ; `NEXTAUTH_URL` = l'URL de production |
+| Variables d'env | contenu de `.env.local` sauf `NODE_ENV` |
 | Cron | `vercel.json` — `/api/v1/cron/tontine-tick` (quotidien sur le plan Hobby) |
 
 ## État & feuille de route

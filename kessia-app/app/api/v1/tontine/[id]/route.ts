@@ -27,10 +27,8 @@ const updateTontineSchema = z.object({
 
 // ---- GET : Détails d'une tontine ----
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;
@@ -120,10 +118,8 @@ export async function GET(
 
 // ---- PATCH : Modifier une tontine ----
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;

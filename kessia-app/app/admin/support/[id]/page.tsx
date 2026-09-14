@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import Link from 'next/link';
 import styles from '../../admin.module.css';
 import { ticketPill } from '../../pills';
@@ -14,7 +14,8 @@ import type { TicketStatus } from '@prisma/client';
 
 const STATUSES: TicketStatus[] = ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED'];
 
-export default function AdminTicketPage({ params }: { params: { id: string } }) {
+export default function AdminTicketPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const t = useT();
   const meId = useAuthStore((s) => s.user?.id);
   const addToast = useUiStore((s) => s.addToast);

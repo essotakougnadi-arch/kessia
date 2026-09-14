@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'Détail Tontine — KESSIA',
 };
 
-export default function TontineDetailPage({ params }: { params: { id: string } }) {
+export default async function TontineDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   return <TontineDetailClient id={params.id} />;
 }

@@ -3,6 +3,64 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.1 : Next.js 14.2.5 → 15.5.24 (2 RCE critiques corrigées)
+
+### Sécurité
+- **`next` 14.2.5 → 15.5.24.** Le plan initial visait `14.2.35` (dernier
+  patch 14.x), mais l'audit a montré que **deux RCE critiques non
+  authentifiées** (`GHSA-p293-qw3h-jr36`, `GHSA-2xp9-vwfh-vxw4`) restent non
+  corrigées sur **toute** la branche 14.x — correctif uniquement à partir de
+  `15.5.24`/`16.3.3`. Exception explicitement autorisée par l'utilisateur,
+  cible fixée précisément à `15.5.24` (**pas** Next 16). Corrige aussi le
+  contournement d'autorisation middleware `GHSA-f82v-jwr5-mffw`.
+- `postcss` (pin interne obsolète de `next`) forcé à `^8.5.23` via
+  `overrides` npm — élimine son CVE sans migration générale de dépendances.
+- `npm audit` : **15 vulnérabilités (2 critiques) → 8 (0 liée à Next.js)**.
+  Les deux identifiants CVE ciblés vérifiés **absents** de la sortie JSON
+  complète (pas seulement absence dans le résumé). Résiduel = 8
+  devDependencies (`eslint-config-next`/`glob` → nécessite Next 16 ;
+  `vitest`/`vite`/`esbuild` → nécessite vitest 5.x majeur), **0 exposition
+  runtime**.
+
+### Supprimé (dépendances mortes, 0 usage vérifié par `Grep` exhaustif)
+- `next-auth` (jamais importé — l'auth de KESSIA est maison, `lib/auth/*` +
+  `jose`).
+- `uuid` / `@types/uuid` (jamais importés — `lib/utils/crypto.ts` utilise
+  déjà `crypto.randomUUID()` natif).
+
+### Modifié (breaking change Next 15 — Async Request APIs)
+- `params`/`searchParams` (pages, layouts, routes API) et `cookies()`
+  deviennent asynchrones sous Next 15. **48 fichiers** migrés via le codemod
+  officiel `@next/codemod next-async-request-api` (46 routes/pages à segment
+  dynamique + `lib/i18n/server.ts`, ce dernier via l'échappatoire officielle
+  `UnsafeUnwrappedCookies` pour ne pas déclencher un refactor async en
+  cascade sur 9 fichiers appelants — dette technique documentée). Aucune
+  logique métier modifiée (diff proportionné : 180 insertions / 136
+  suppressions). 1 faux positif du codemod corrigé à la main
+  (`app/api/v1/me/route.ts`, ré-export sans paramètre dynamique).
+- `eslint-config-next` `14.2.5 → 14.2.35` (alignée sur la branche 14.x
+  utilisée par `next lint`, pas de bump vers une version liée à Next 16).
+
+### Vérification
+- `tsc` : 0 erreur. `next lint` : 0 warning. `vitest` (unit) : **182/182**.
+  `test:integration` (base jetable, `USE_TEST_DB=1`) : 13 fichiers, **36/36**.
+  `build` : OK (67/67 pages). `test:e2e:isolated` : **46/49** — les 3 échecs
+  documentés comme flakiness d'infrastructure de test pré-existante,
+  **indépendante de la version Next.js** : comparaison contrôlée A/B sur 4
+  runs complets (3× Next 15, 1× Next 14.2.5 via `git stash`) montre à chaque
+  fois 1 à 3 échecs différents et non reproductibles sur **les deux**
+  versions ; le test suspecté initialement (« accent Violet ») relancé 5×
+  d'affilée en isolation → 5/5 réussites. Aucune régression introduite.
+- Déploiement `kessia-staging` + smoke tests : voir le commit de clôture.
+- **Rapport complet** : `docs/audit/P0_1_REMEDIATION_REPORT.md`.
+  `docs/audit/SECURITY_REMEDIATION_REPORT.md` créé (document vivant,
+  consolide P0.1 → P0.5).
+
+### Hors périmètre (confirmé non touché)
+Sessions/tokens/`createSession`/refresh/cookies d'auth/révocation (réservé à
+P0.2, y compris le bug de collision `Session.token`), RBAC métier, Ledger,
+Wallet, séquestres, paiements, Tontines, Marketplace, KYC, IA.
+
 ## [Non publié] — Phase 0 — P0.0 : A + B + C validés (staging réel opérationnel)
 
 ### Ajouté

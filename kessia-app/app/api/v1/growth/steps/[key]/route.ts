@@ -18,7 +18,8 @@ const schema = z.object({
   note: z.string().max(500).optional().or(z.literal('')),
 });
 
-export async function PATCH(request: NextRequest, { params }: { params: { key: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ key: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;

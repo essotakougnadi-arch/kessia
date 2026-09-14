@@ -22,7 +22,8 @@ const schema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;
@@ -74,7 +75,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;

@@ -22,7 +22,8 @@ const reviewSchema = z.object({
   level: z.number().int().min(1).max(3).optional(),
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error } = await requireAdmin(request, COMPLIANCE_ROLES);
     if (error) return error;
@@ -52,7 +53,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await requireAdmin(request, COMPLIANCE_ROLES);
     if (error || !context) return error!;

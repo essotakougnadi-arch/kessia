@@ -44,7 +44,8 @@ function verifySignature(rawBody: string, header: string | null): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-export async function POST(request: NextRequest, { params }: { params: { provider: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ provider: string }> }) {
+  const params = await props.params;
   try {
     const provider = params.provider.toLowerCase();
     if (!KNOWN_PROVIDERS.has(provider)) {

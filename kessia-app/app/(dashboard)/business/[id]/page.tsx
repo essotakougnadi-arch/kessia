@@ -6,7 +6,8 @@ export const metadata: Metadata = {
   title: 'Business — KESSIA',
 };
 
-export default function BusinessDetailPage({ params }: { params: { id: string } }) {
+export default async function BusinessDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   return (
     <Suspense fallback={null}>
       <BusinessDetailClient id={params.id} />

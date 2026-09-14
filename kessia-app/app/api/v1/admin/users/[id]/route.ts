@@ -21,7 +21,8 @@ const patchSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error } = await requireAdmin(request);
     if (error) return error;
@@ -48,7 +49,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // La modération de comptes est réservée aux rôles conformité / admin.
     const { error, context } = await requireAdmin(request, COMPLIANCE_ROLES);

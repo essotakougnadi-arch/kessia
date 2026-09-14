@@ -11,7 +11,11 @@ import { logApiError } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string; invoiceId: string } }) {
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string; invoiceId: string }> }
+) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;

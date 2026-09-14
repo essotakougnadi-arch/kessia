@@ -73,7 +73,7 @@ Console Supabase → *Point in Time* → saisir l'horodatage cible (juste avant 
 ## 7. Secrets
 
 Aujourd'hui les secrets sont dans `.env` / variables d'environnement de l'hébergeur (`.env.example` liste tous les paramètres).
-**Bloquant pilote** : migrer vers un gestionnaire de secrets (Vault, Doppler, ou secrets chiffrés de l'hébergeur avec accès audité) et documenter la rotation de : `JWT_SECRET`, `JWT_REFRESH_SECRET`, `NEXTAUTH_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYMENT_WEBHOOK_SECRET`, `CRON_SECRET`, `METRICS_TOKEN`, `UPSTASH_REDIS_REST_TOKEN`, `NOTIFY_WEBHOOK_SECRET`, clés fournisseurs.
+**Bloquant pilote** : migrer vers un gestionnaire de secrets (Vault, Doppler, ou secrets chiffrés de l'hébergeur avec accès audité) et documenter la rotation de : `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `PAYMENT_WEBHOOK_SECRET`, `CRON_SECRET`, `METRICS_TOKEN`, `UPSTASH_REDIS_REST_TOKEN`, `NOTIFY_WEBHOOK_SECRET`, clés fournisseurs.
 
 ## 8. Nettoyage du stockage KYC (RGPD)
 

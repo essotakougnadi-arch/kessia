@@ -10,7 +10,7 @@
 // (tests, scripts), retombe silencieusement sur le français.
 // ============================================================
 
-import { cookies } from 'next/headers';
+import { cookies, type UnsafeUnwrappedCookies } from 'next/headers';
 import { DEFAULT_LOCALE, LOCALE_META, isLocale, type Locale } from './config';
 import { makeTranslate, type Translate } from './core';
 
@@ -19,7 +19,7 @@ const COOKIE = 'kessia-locale';
 /** Locale de la requête courante (défaut FR si indisponible). */
 export function getServerLocale(): Locale {
   try {
-    const raw = cookies().get(COOKIE)?.value;
+    const raw = (cookies() as unknown as UnsafeUnwrappedCookies).get(COOKIE)?.value;
     return isLocale(raw) ? raw : DEFAULT_LOCALE;
   } catch {
     return DEFAULT_LOCALE;

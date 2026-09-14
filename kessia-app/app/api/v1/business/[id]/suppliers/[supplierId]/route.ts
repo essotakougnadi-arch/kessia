@@ -20,9 +20,10 @@ const patchSchema = z.object({
   notes: z.string().max(1000).optional().or(z.literal('')),
 });
 
-type Params = { params: { id: string; supplierId: string } };
+type Params = { params: Promise<{ id: string; supplierId: string }> };
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;
@@ -48,7 +49,8 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;
@@ -75,7 +77,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, props: Params) {
+  const params = await props.params;
   try {
     const auth = await requireBusinessOwner(request, params.id);
     if ('error' in auth) return auth.error;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from '../../admin.module.css';
@@ -10,7 +10,8 @@ import { useUiStore } from '@/store/uiStore';
 import { formatDate } from '@/lib/utils/format';
 import { useT } from '@/lib/i18n';
 
-export default function AdminKycReviewPage({ params }: { params: { id: string } }) {
+export default function AdminKycReviewPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const t = useT();
   const router = useRouter();
   const addToast = useUiStore((s) => s.addToast);

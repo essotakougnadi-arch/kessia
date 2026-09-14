@@ -19,10 +19,8 @@ const contributeSchema = z.object({
   round: z.number().int().positive(),
 });
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;
