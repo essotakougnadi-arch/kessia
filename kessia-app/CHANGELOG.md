@@ -51,6 +51,14 @@ Le projet suit la feuille de route par phases du cahier des charges (§52).
   fois 1 à 3 échecs différents et non reproductibles sur **les deux**
   versions ; le test suspecté initialement (« accent Violet ») relancé 5×
   d'affilée en isolation → 5/5 réussites. Aucune régression introduite.
+- **CI GitHub Actions** (commits de cette phase) : `ci.yml` ✓, `integration.yml`
+  ✓, `staging.yml` ✓ (migrate 1-2 min + deploy 1-2 min, `/api/health` vérifié
+  en direct). `e2e.yml` : **en échec** (2 failed déterministes
+  `tontine.spec.ts:22`/`:37` + 13-16 flaky, `login → 500` sur le Postgres
+  service container éphémère de CI) — **confirmé pré-existant** : le même
+  run sur `3786926` (clôture P0.0, avant tout changement P0.1) montre
+  exactement le même résultat. Non introduit par cette migration, non
+  corrigé ici (hors périmètre), ticket dédié recommandé.
 - Déploiement `kessia-staging` + smoke tests : voir le commit de clôture.
 - **Rapport complet** : `docs/audit/P0_1_REMEDIATION_REPORT.md`.
   `docs/audit/SECURITY_REMEDIATION_REPORT.md` créé (document vivant,
