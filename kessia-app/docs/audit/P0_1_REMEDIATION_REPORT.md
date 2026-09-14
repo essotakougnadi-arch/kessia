@@ -173,22 +173,32 @@ bug `Session.token` déjà réservé à P0.2).
 
 ### Point de méthode découvert en cours de route
 
-`npm run test:integration` **sans** `USE_TEST_DB=1` cible la base de démo
-partagée distante (Supabase, cf. ADR 0044) au lieu de la base Postgres
-jetable locale — comportement documenté et volontaire (nettoyage `itest_`
-prévu pour ce cas), mais **beaucoup plus lent** sur un réseau chargé (jusqu'à
-×45 sur les tests transactionnels lourds). Un run lancé par erreur sans cette
-variable a été tué après un ralentissement anormal (~8 min sans progression,
-0 connexion active en base) ; tous les fichiers de test **qui avaient déjà
-réussi** avant l'interruption ont exécuté leur nettoyage normal
+`npm run test:integration` **sans** `USE_TEST_DB=1` cible la base Supabase
+distante configurée dans `.env`/`.env.local` au lieu de la base Postgres
+jetable locale — comportement documenté et volontaire par l'ADR 0044
+(nettoyage `itest_` prévu pour ce cas), mais **beaucoup plus lent** sur un
+réseau chargé (jusqu'à ×45 sur les tests transactionnels lourds).
+**Précision** : cette base (réf. projet Supabase `uwvnarmojdbutbunzqww`) est
+celle que `staging.yml` qualifie lui-même explicitement de **« projet
+Supabase de PRODUCTION »** dans sa garde anti-écrasement (il refuse d'y
+appliquer une migration) — c'est la base de démo en ligne réelle
+(https://kessia-dun.vercel.app), pas une base de dev isolée. Un run
+`test:integration` lancé par erreur sans `USE_TEST_DB=1` a été tué après un
+ralentissement anormal (~8 min sans progression, 0 connexion active en
+base) ; tous les fichiers de test **qui avaient déjà réussi** avant
+l'interruption ont exécuté leur nettoyage normal
 (`test/integration/helpers.ts::cleanup`, préfixe `itest_`) ; le fichier en
 cours au moment de l'arrêt n'a créé qu'un nombre minime d'enregistrements
-jetables, clairement tagués. Vérification directe de la base distante
-**bloquée par le classificateur de sécurité de l'outil** (accès identifiants
-en ligne de commande) — non contournée. Risque résiduel jugé faible (données
-de test taguées `itest_`/`+22899…`, pattern déjà anticipé par l'ADR 0044) ;
-signalé ici pour transparence. **Action retenue pour la suite** : toujours
-invoquer `USE_TEST_DB=1 npm run test:integration`.
+jetables, clairement tagués (`lastName` préfixé `itest_`, téléphones
+`+22899…` hors plage de seed). Vérification directe de la base distante pour
+confirmer l'absence de résidu **bloquée par le classificateur de sécurité de
+l'outil** (accès identifiants en ligne de commande) — non contournée, à
+faire manuellement si souhaité (`SELECT … WHERE "firstName"='IT' AND
+"lastName" LIKE 'itest\_%'`). Risque résiduel jugé faible (aucune donnée
+utilisateur réelle affectée, pattern de nettoyage déjà conçu par l'ADR 0044
+pour ce cas) ; signalé ici pour transparence complète envers l'utilisateur.
+**Action retenue pour la suite** : toujours invoquer `USE_TEST_DB=1 npm run
+test:integration`.
 
 ## 7. Risques résiduels documentés
 
