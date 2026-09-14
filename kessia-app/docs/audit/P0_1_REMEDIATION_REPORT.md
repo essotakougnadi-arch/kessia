@@ -200,6 +200,45 @@ pour ce cas) ; signalé ici pour transparence complète envers l'utilisateur.
 **Action retenue pour la suite** : toujours invoquer `USE_TEST_DB=1 npm run
 test:integration`.
 
+### E2E en CI (GitHub Actions) : même conclusion, avec une correction
+
+**Correction apportée à ce rapport** : une vérification initiale du statut
+des workflows GitHub Actions (CI/E2E/Integration/Staging) déclenchés par les
+commits de P0.1 avait conclu à tort que les 4 étaient verts, sur la base
+d'une lecture ambiguë de la page de résumé des checks. Une vérification plus
+rigoureuse (page de détail de chaque run, recherche du texte exact de statut)
+a montré que **le workflow `e2e.yml` est en échec** (`Failure`) sur les runs
+liés à P0.1 :
+
+| Run (commit) | Résultat |
+|---|---|
+| `c8991d5` (migration Next 15.5.24) | 2 failed, 13 flaky, 34 passed |
+| `cca1d93` (précision doc, ce commit) | 2 failed, 15 flaky, 32 passed |
+
+Les échecs « flaky » portent le même symptôme dans les deux cas :
+`login +2289000000X → 500` (erreur serveur, pas un simple 401/timeout comme
+observé en local — cohérent avec un environnement différent : Postgres
+**service container éphémère** de `e2e.yml` en CI, vs. Postgres jetable
+local).
+
+**Vérification décisive** : le même contrôle appliqué au run E2E du commit
+**`3786926`** (clôture de P0.0, **antérieur à tout changement P0.1**) montre
+**exactement le même résultat** : 2 failed, 16 flaky, 31 passed, mêmes
+erreurs 500 sur le login. Les **2 tests « failed » (non flaky) sont
+identiques sur les trois runs** :
+`e2e/tontine.spec.ts:22` (« créer une tontine (type Achat)… ») et
+`e2e/tontine.spec.ts:37` (« créer un plan d'Achat individuel (solo)… »).
+
+**Conclusion** : ce comportement est **pré-existant et confirmé antérieur à
+P0.1** — non introduit ni aggravé par la migration Next.js. C'est un
+problème distinct de la flakiness locale documentée ci-dessus (signature
+différente : 500 déterministe sur 2 tests précis + volume de flaky plus
+élevé en CI), propre à l'environnement `e2e.yml` (Postgres service
+container). **Non corrigé ici** : hors périmètre P0.1 (framework/dépendances
+uniquement), et probablement lié à un problème d'isolation/ordre des tests
+dans `e2e/tontine.spec.ts` ou au démarrage du service Postgres en CI — sujet
+pour un ticket dédié. Ajouté aux risques résiduels (§7).
+
 ## 7. Risques résiduels documentés
 
 1. **`UnsafeUnwrappedCookies` dans `lib/i18n/server.ts`** — échappatoire
@@ -212,9 +251,19 @@ test:integration`.
 3. **`next lint` déprécié** (retiré en Next 16) — migration vers ESLint CLI
    documentée par Next (`@next/codemod@canary next-lint-to-eslint-cli`),
    non urgente tant qu'on reste en 15.x.
-4. **Flakiness E2E pré-existante** (§6) — indépendante de cette migration,
-   non introduite ni aggravée par elle ; reste à traiter séparément
-   (probablement infrastructure de test locale, hors périmètre P0.1).
+4. **Flakiness E2E pré-existante, locale** (§6) — indépendante de cette
+   migration, non introduite ni aggravée par elle ; reste à traiter
+   séparément (probablement infrastructure de test locale, hors périmètre
+   P0.1).
+5. **Workflow `e2e.yml` en échec en CI, pré-existant** (§6) — 2 tests
+   `tontine.spec.ts:22`/`:37` échouent de façon déterministe + 13-16 tests
+   flaky (`500` sur le login) sur le service Postgres éphémère de CI,
+   confirmé présent dès `3786926` (clôture P0.0, avant tout changement
+   P0.1). **N'était pas détecté/rapporté avant ce rapport** — CI/E2E/Staging
+   sont des workflows séparés et seule la validation de P0.0 sur les smoke
+   tests staging (9/9) avait été vérifiée en détail. Recommandation : ticket
+   dédié hors P0.x pour root-causer `tontine.spec.ts` en CI (isolation entre
+   les deux tests, ou démarrage du service Postgres).
 5. **`Session.token` (bug de collision)** — explicitement **réservé à
    P0.2**, non touché ici.
 
