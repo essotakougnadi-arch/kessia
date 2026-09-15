@@ -5,10 +5,22 @@ date: "15 septembre 2026 (ouvert) — mis à jour pendant P0.2"
 
 # Ticket — Échecs `e2e.yml` en CI (pré-existants)
 
-**Statut : OUVERT.** Ouvert à la clôture de P0.1, suite à la découverte
-documentée dans `P0_1_REMEDIATION_REPORT.md` §6/§7. Non bloquant pour P0.1
-(non-régression démontrée par comparaison avec le commit `3786926`,
-antérieur à tout changement P0.1).
+**Statut : PARTIELLEMENT RÉSOLU (mis à jour pendant P0.2, 2026-09-15).**
+Ouvert à la clôture de P0.1, suite à la découverte documentée dans
+`P0_1_REMEDIATION_REPORT.md` §6/§7. Non bloquant pour P0.1 (non-régression
+démontrée par comparaison avec le commit `3786926`, antérieur à tout
+changement P0.1).
+
+**Mise à jour P0.2 — hypothèse confirmée empiriquement.** Après le correctif
+de la collision `Session.token` (commit `f0457d3`), le run `e2e.yml` associé
+montre **47 passed / 2 failed / 0 flaky** (contre 31-34 passed / 2 failed /
+13-16 flaky avant). Le symptôme dominant (`login → 500`) **a disparu**. Les
+2 échecs restants sont les mêmes `tontine.spec.ts:22`/`:37`, mais avec un
+**message d'erreur désormais clair et différent** : violation du mode strict
+Playwright (un locator de texte résout vers plusieurs éléments), sans rapport
+avec l'authentification — confirme qu'il s'agissait d'un problème de test
+distinct (point 2 ci-dessous), maintenant plus visible une fois le bruit
+`login → 500` éliminé.
 
 ## Constat
 
@@ -37,15 +49,11 @@ qui démarre à froid pour chaque run, vs. instance locale déjà chaude).
 
 ## Pistes de root-cause (à instruire, pas encore confirmées)
 
-1. **Hypothèse principale (P0.2)** : le bug de collision `Session.token`
-   (connu, réservé à P0.2 dès l'audit initial) provoque une erreur serveur
-   lors de créations de session concurrentes ou rapprochées — plausible que
-   ce soit exactement la cause des `500` sur `login` observés massivement en
-   CI (où le service Postgres, plus lent à froid, augmente la fenêtre de
-   course). **À vérifier empiriquement pendant P0.2** : si la correction de
-   `Session.token` fait disparaître les `500` en CI, cause confirmée et
-   traitée par P0.2 lui-même (dans son périmètre : « concurrence et
-   idempotence des créations de session »).
+1. **✅ RÉSOLU — collision `Session.token`.** Confirmé cause principale :
+   après le correctif (commit `f0457d3`, `jti` aléatoire remplace le JWT
+   comme clé unique de session), les `500`/flaky sur `login` en CI ont
+   disparu (13-16 flaky → 0 flaky sur le run suivant). Détail dans
+   `P0_2_REMEDIATION_REPORT.md` (à produire à la clôture de P0.2).
 2. **`tontine.spec.ts:22`/`:37`** : deux tests indépendants qui échouent de
    façon déterministe ensemble — piste : dépendance d'ordre/état partagé
    entre les deux tests (comme le pattern déjà résolu par l'ADR 0044 pour
