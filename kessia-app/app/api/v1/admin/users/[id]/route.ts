@@ -101,7 +101,9 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
 
     await prisma.$transaction([
       prisma.user.update({ where: { id: target.id }, data: { isActive: !suspend } }),
-      ...(suspend ? [prisma.session.deleteMany({ where: { userId: target.id } })] : []),
+      ...(suspend
+        ? [prisma.session.updateMany({ where: { userId: target.id, revokedAt: null }, data: { revokedAt: new Date() } })]
+        : []),
       prisma.notification.create({
         data: {
           userId: target.id,

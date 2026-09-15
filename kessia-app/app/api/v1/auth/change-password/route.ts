@@ -41,8 +41,10 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
     await prisma.$transaction([
       prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
-      // Révoquer les autres sessions par sécurité
-      prisma.session.deleteMany({ where: { userId: user.id } }),
+      // Révoquer toutes les sessions par sécurité (revokedAt, pas de
+      // suppression — trace d'audit conservée ; withAuth applique la
+      // révocation immédiatement, cf. P0.2).
+      prisma.session.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } }),
       prisma.notification.create({
         data: {
           userId: user.id, category: 'SECURITY', priority: 'HIGH',

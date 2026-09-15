@@ -4,7 +4,7 @@
 // ============================================================
 
 import { NextRequest } from 'next/server';
-import { verifyAccessToken, extractBearerToken, type JwtPayload } from './session';
+import { verifyAccessToken, extractBearerToken, isSessionRevoked, type JwtPayload } from './session';
 import { unauthorized, forbidden } from '../utils/response';
 import type { UserRole } from '@prisma/client';
 
@@ -12,6 +12,7 @@ export type AuthContext = {
   userId: string;
   phone: string;
   role: UserRole;
+  jti?: string;
 };
 
 /**
@@ -40,12 +41,23 @@ export async function withAuth(
     return { error: unauthorized('Token invalide ou expiré'), context: null };
   }
 
+  // P0.2 : la révocation (logout, changement de mot de passe, suspension
+  // admin, réutilisation de refresh token détectée) est désormais vérifiée
+  // en base à chaque requête — auparavant seule la signature/expiration du
+  // JWT faisait foi, une session révoquée restait donc valide jusqu'à 15
+  // min (finding CRITICAL de l'audit prod-readiness). Rétro-compatible :
+  // un JWT sans `jti` (émis avant ce correctif) n'est pas bloqué ici.
+  if (await isSessionRevoked(payload.jti)) {
+    return { error: unauthorized('Session révoquée. Veuillez vous reconnecter.'), context: null };
+  }
+
   return {
     error: null,
     context: {
       userId: payload.sub,
       phone: payload.phone,
       role: payload.role as UserRole,
+      jti: payload.jti,
     },
   };
 }

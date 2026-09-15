@@ -5,7 +5,6 @@
 
 import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
-import { extractBearerToken } from '@/lib/auth/session';
 import prisma from '@/lib/db/prisma';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { ok, badRequest, serverError } from '@/lib/utils/response';
@@ -18,11 +17,10 @@ export async function GET(request: NextRequest) {
     const { error, context } = await withAuth(request);
     if (error || !context) return error!;
 
-    const current = extractBearerToken(request.headers.get('authorization'));
     const sessions = await prisma.session.findMany({
-      where: { userId: context.userId, expiresAt: { gt: new Date() } },
+      where: { userId: context.userId, revokedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { lastUsedAt: 'desc' },
-      select: { id: true, deviceInfo: true, ipAddress: true, createdAt: true, lastUsedAt: true, token: true },
+      select: { id: true, jti: true, deviceInfo: true, ipAddress: true, createdAt: true, lastUsedAt: true },
     });
 
     return ok(
@@ -32,7 +30,7 @@ export async function GET(request: NextRequest) {
         ipAddress: s.ipAddress,
         createdAt: s.createdAt,
         lastUsedAt: s.lastUsedAt,
-        current: s.token === current,
+        current: s.jti === context.jti,
       }))
     );
   } catch (e) {
@@ -49,21 +47,21 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const all = searchParams.get('all') === 'true';
-    const currentToken = extractBearerToken(request.headers.get('authorization'));
 
     if (all) {
-      await prisma.session.deleteMany({
-        where: { userId: context.userId, token: { not: currentToken ?? '' } },
+      await prisma.session.updateMany({
+        where: { userId: context.userId, revokedAt: null, jti: { not: context.jti ?? '' } },
+        data: { revokedAt: new Date() },
       });
       void recordAudit({ userId: context.userId, action: 'auth.sessions_revoked_all', entity: 'Session', request });
       return ok(null, 'Toutes les autres sessions ont été déconnectées.');
     }
 
     if (!id) return badRequest('Session non précisée.');
-    const target = await prisma.session.findFirst({ where: { id, userId: context.userId } });
+    const target = await prisma.session.findFirst({ where: { id, userId: context.userId, revokedAt: null } });
     if (!target) return badRequest('Session introuvable.');
 
-    await prisma.session.delete({ where: { id } });
+    await prisma.session.update({ where: { id }, data: { revokedAt: new Date() } });
     void recordAudit({ userId: context.userId, action: 'auth.session_revoked', entity: 'Session', entityId: id, request });
     return ok(null, 'Session déconnectée.');
   } catch (e) {

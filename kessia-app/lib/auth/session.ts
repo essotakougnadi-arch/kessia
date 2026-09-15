@@ -6,6 +6,8 @@
 import jwt from 'jsonwebtoken';
 import { generateSecureToken, hashToken } from '../utils/crypto';
 import prisma from '../db/prisma';
+import { recordAudit } from '../audit/audit.service';
+import { notify } from '../notifications/notify';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
@@ -16,6 +18,7 @@ export type JwtPayload = {
   sub: string;       // userId
   phone: string;
   role: string;
+  jti?: string;       // identifiant de session (Session.jti) — absent sur les JWT émis avant P0.2
   iat?: number;
   exp?: number;
 };
@@ -52,13 +55,27 @@ export function verifyRefreshToken(token: string): { sub: string } | null {
 
 // ---- Create session ----
 
+/**
+ * Crée une session : signe un JWT d'accès et génère un refresh token.
+ *
+ * P0.2 : `jti` (identifiant de session, aléatoire — `generateSecureToken`)
+ * remplace le JWT signé comme clé unique en base. Avant ce correctif,
+ * `Session.token` stockait le JWT lui-même en `@unique` ; or un JWT est
+ * déterministe à la seconde près (`iat`), donc deux sessions créées pour
+ * le même utilisateur dans la même seconde (double clic, double onglet,
+ * connexions rapprochées en suite E2E) produisaient un JWT strictement
+ * identique → violation de la contrainte unique → 500 non géré. `jti` est
+ * un token aléatoire indépendant du contenu/timing du JWT : la probabilité
+ * de collision est négligeable (2^-192), donc plus de conflit possible.
+ */
 export async function createSession(
   userId: string,
   phone: string,
   role: string,
   meta?: { deviceInfo?: string; ipAddress?: string }
 ) {
-  const accessToken = signAccessToken({ sub: userId, phone, role });
+  const jti = generateSecureToken(24);
+  const accessToken = signAccessToken({ sub: userId, phone, role, jti });
   const rawRefreshToken = generateSecureToken(48);
   const hashedRefreshToken = hashToken(rawRefreshToken);
 
@@ -68,7 +85,7 @@ export async function createSession(
   await prisma.session.create({
     data: {
       userId,
-      token: accessToken,
+      jti,
       refreshToken: hashedRefreshToken,
       deviceInfo: meta?.deviceInfo,
       ipAddress: meta?.ipAddress,
@@ -85,41 +102,121 @@ export async function createSession(
 
 // ---- Revoke session ----
 
+/** Révocation douce (logout) : marque la session `revokedAt`, ne la supprime pas (trace d'audit). */
 export async function revokeSession(accessToken: string): Promise<void> {
-  await prisma.session.deleteMany({ where: { token: accessToken } });
+  const payload = verifyAccessToken(accessToken);
+  if (!payload?.jti) return;
+  await prisma.session.updateMany({
+    where: { jti: payload.jti, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/** Révoque toutes les sessions actives d'un utilisateur (changement de mot de passe, suspension admin). */
+export async function revokeAllUserSessions(userId: string): Promise<void> {
+  await prisma.session.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Vérifie qu'une session (par `jti`) existe toujours et n'est pas révoquée.
+ * Utilisé par `withAuth` pour que la révocation soit effective immédiatement
+ * (auparavant : seule l'expiration naturelle du JWT à 15 min faisait foi,
+ * une session révoquée restait donc utilisable jusqu'à 15 min — finding
+ * CRITICAL de l'audit prod-readiness).
+ *
+ * Rétro-compatibilité : un JWT émis avant ce correctif n'a pas de `jti`
+ * (`undefined`) — dans ce cas on ne bloque pas (il expirera naturellement
+ * sous 15 min et sera remplacé par un JWT avec `jti` au prochain
+ * login/refresh). Pas de déconnexion de masse au déploiement.
+ */
+export async function isSessionRevoked(jti: string | undefined): Promise<boolean> {
+  if (!jti) return false;
+  const session = await prisma.session.findUnique({
+    where: { jti },
+    select: { revokedAt: true },
+  });
+  // Session introuvable (jamais émise, base réinitialisée) : ne bloque pas
+  // ici — la signature/expiration du JWT reste la garde principale pour ce
+  // cas ; seule une révocation *explicite* (trouvée + revokedAt renseigné)
+  // fait échouer l'authentification.
+  return session?.revokedAt != null;
 }
 
 // ---- Rotate refresh token ----
 
+/**
+ * Rotation du refresh token, avec détection de réutilisation (OWASP) :
+ * chaque rotation révoque la ligne courante et en crée une nouvelle (au
+ * lieu de muter la même ligne en place). Si un refresh token déjà révoqué
+ * (donc déjà tourné une fois) est présenté à nouveau, c'est le signal
+ * standard d'un vol de token → toutes les sessions de l'utilisateur sont
+ * révoquées par précaution, un audit + une notification SECURITY sont émis.
+ */
 export async function rotateRefreshToken(rawRefreshToken: string) {
   const hashed = hashToken(rawRefreshToken);
   const session = await prisma.session.findFirst({
-    where: { refreshToken: hashed, expiresAt: { gt: new Date() } },
+    where: { refreshToken: hashed },
     include: { user: true },
   });
 
+  // Jamais émis (ou base réinitialisée) — aucun signal à émettre.
   if (!session) return null;
 
-  // Génère un nouveau refresh token
+  if (session.revokedAt) {
+    // Réutilisation d'un refresh token déjà tourné/révoqué : signal de vol.
+    await revokeAllUserSessions(session.userId);
+    void recordAudit({
+      userId: session.userId,
+      action: 'auth.refresh_reuse_detected',
+      entity: 'Session',
+      entityId: session.id,
+      metadata: { deviceInfo: session.deviceInfo, ipAddress: session.ipAddress },
+    });
+    void notify({
+      userId: session.userId,
+      category: 'SECURITY',
+      title: 'Activité suspecte détectée',
+      body: 'Un identifiant de connexion déjà utilisé a été présenté à nouveau. Toutes vos sessions ont été déconnectées par précaution.',
+      priority: 'CRITICAL',
+    });
+    return null;
+  }
+
+  if (session.expiresAt <= new Date()) return null; // expiration normale, aucun signal
+
+  const newJti = generateSecureToken(24);
   const newRawRefreshToken = generateSecureToken(48);
   const newHashedRefreshToken = hashToken(newRawRefreshToken);
   const newAccessToken = signAccessToken({
     sub: session.userId,
     phone: session.user.phone,
     role: session.user.role,
+    jti: newJti,
   });
-
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  await prisma.session.update({
-    where: { id: session.id },
-    data: {
-      token: newAccessToken,
-      refreshToken: newHashedRefreshToken,
-      expiresAt,
-      lastUsedAt: new Date(),
-    },
-  });
+  // Révoque la ligne courante + insère la nouvelle dans une transaction :
+  // en cas de double rotation concurrente (ex. double onglet), les deux
+  // trouvent la même ligne non-révoquée et créent chacune une nouvelle
+  // session valide — pas de 500, au pire une session en double (bénin),
+  // jamais de perte de session ni de collision (jti/refreshToken sont des
+  // tokens aléatoires indépendants, pas de risque de collision entre eux).
+  await prisma.$transaction([
+    prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } }),
+    prisma.session.create({
+      data: {
+        userId: session.userId,
+        jti: newJti,
+        refreshToken: newHashedRefreshToken,
+        deviceInfo: session.deviceInfo,
+        ipAddress: session.ipAddress,
+        expiresAt,
+      },
+    }),
+  ]);
 
   return {
     accessToken: newAccessToken,

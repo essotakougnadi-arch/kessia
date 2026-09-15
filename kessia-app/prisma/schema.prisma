@@ -477,20 +477,30 @@ model UserProfile {
 }
 
 model Session {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
-  token        String   @unique
-  refreshToken String   @unique
+  // Identifiant de session aléatoire (indépendant du JWT), placé dans le
+  // payload du JWT (claim `jti`) et utilisé pour tout lookup/révocation.
+  // Corrige P0.2 : l'ancien champ `token` stockait le JWT signé lui-même
+  // en @unique — un JWT est déterministe à la seconde près (iat), donc
+  // deux sessions créées pour le même utilisateur dans la même seconde
+  // produisaient un JWT identique → collision de contrainte unique → 500.
+  jti          String    @unique
+  refreshToken String    @unique
   deviceInfo   String?
   ipAddress    String?
+  // Révocation douce (logout, changement de mot de passe, suspension
+  // admin, détection de réutilisation d'un refresh token) : la ligne est
+  // conservée pour l'audit, `withAuth` refuse toute session revokedAt≠null.
+  revokedAt    DateTime?
   expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  lastUsedAt   DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([token])
   @@index([refreshToken])
+  @@index([userId, revokedAt])
   @@map("sessions")
 }
 
