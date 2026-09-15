@@ -11,19 +11,46 @@ export const SEED = {
 
 type Session = {
   accessToken: string;
-  refreshToken: string;
   user: { id: string; phone: string; firstName: string; lastName: string; role: string; kycStatus: string; kycLevel: number; isPhoneVerified: boolean };
 };
 
-/** Ouvre une session via l'API et l'injecte dans le navigateur (cookie + localStorage). */
+/**
+ * Ouvre une session via l'API et l'injecte dans le navigateur.
+ *
+ * P0.2 : la réponse de /login pose désormais elle-même les cookies
+ * HttpOnly (`kessia-access-token`, `kessia-refresh-token`). Important :
+ * l'appel se fait via `context.request` (PAS le fixture `request` — un
+ * `APIRequestContext` isolé, avec son propre magasin de cookies, jamais
+ * partagé avec le navigateur) pour que `Set-Cookie` soit capturé
+ * automatiquement dans les cookies de CE `BrowserContext`, donc envoyés
+ * par `page` (middleware edge + repli GET de `withAuth`). `request` reste
+ * un paramètre (compat des appelants) mais n'est plus utilisé ici.
+ *
+ * Volontairement, **plus de `context.setExtraHTTPHeaders({ Authorization })`** :
+ * un en-tête fixé une fois pour tout le `BrowserContext` entre en conflit
+ * avec le token en mémoire que l'app met à jour dynamiquement
+ * (`AuthBootstrap` + rotation du refresh token à chaque `/refresh` —
+ * chaque rotation révoque la session précédente ; l'en-tête figé de
+ * Playwright continuait de porter l'ANCIEN token, déjà révoqué, sur
+ * chaque requête déclenchée par la page → 401 permanent, diagnostiqué
+ * empiriquement). Les appels `request.*`/`page.request.*` directs des
+ * specs doivent porter leur propre en-tête `Authorization` explicite
+ * (déjà le cas de la quasi-totalité d'entre eux ; `Session.accessToken`
+ * reste renvoyé pour ça).
+ *
+ * `localStorage['kessia-auth']` ne porte plus que `{user, isAuthenticated}`
+ * (plus de token persisté, cf. `store/authStore.ts`) ; `AuthBootstrap`
+ * échange ensuite le cookie de refresh contre un access token en mémoire au
+ * premier chargement de page — comme un vrai rechargement d'onglet.
+ */
 export async function loginViaApi(
   context: BrowserContext,
-  request: APIRequestContext,
+  _request: APIRequestContext,
   baseURL: string,
   phone: string,
   password = SEED_PASSWORD
 ): Promise<Session> {
-  const res = await request.post(`${baseURL}/api/v1/auth/login`, {
+  const res = await context.request.post(`${baseURL}/api/v1/auth/login`, {
     data: { phone, password },
   });
   expect(res.ok(), `login ${phone} → ${res.status()}`).toBeTruthy();
@@ -31,16 +58,8 @@ export async function loginViaApi(
   const s = body.data as Session;
   expect(s.accessToken, 'la connexion doit renvoyer un token (2FA non attendue en E2E)').toBeTruthy();
 
-  const url = new URL(baseURL);
-  await context.addCookies([
-    { name: 'kessia-access-token', value: s.accessToken, domain: url.hostname, path: '/', sameSite: 'Lax' },
-  ]);
-
-  // Pour que page.request.* soit authentifié comme l'utilisateur courant.
-  await context.setExtraHTTPHeaders({ Authorization: `Bearer ${s.accessToken}` });
-
   const persisted = JSON.stringify({
-    state: { user: s.user, accessToken: s.accessToken, refreshToken: s.refreshToken, isAuthenticated: true },
+    state: { user: s.user, isAuthenticated: true },
     version: 0,
   });
   await context.addInitScript((value) => {

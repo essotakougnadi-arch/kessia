@@ -6,6 +6,7 @@
 import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth/middleware';
 import { revokeSession, extractBearerToken } from '@/lib/auth/session';
+import { clearAuthCookies } from '@/lib/auth/cookies';
 import { ok, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 import { recordAudit } from '@/lib/audit/audit.service';
@@ -28,7 +29,9 @@ export async function POST(request: NextRequest) {
       request,
     });
 
-    return ok(null, 'Déconnexion réussie.');
+    const res = ok(null, 'Déconnexion réussie.');
+    clearAuthCookies(res, request);
+    return res;
   } catch (error) {
     logApiError('/v1/auth/logout', error);
     return serverError();

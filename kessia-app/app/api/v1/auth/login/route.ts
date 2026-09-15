@@ -9,6 +9,7 @@ import prisma from '@/lib/db/prisma';
 import { loginSchema } from '@/lib/validations/auth';
 import { normalizePhone } from '@/lib/utils/crypto';
 import { buildSessionResponse } from '@/lib/auth/session';
+import { setAuthCookies } from '@/lib/auth/cookies';
 import { issue2faChallenge } from '@/lib/auth/twofactor';
 import { ok, badRequest, validationError, serverError, forbidden } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
@@ -132,7 +133,14 @@ export async function POST(request: NextRequest) {
       request,
     });
 
-    return ok(payload, 'Connexion réussie.');
+    // P0.2 : cookies HttpOnly posés en plus du corps JSON (le corps expose
+    // encore accessToken — nécessaire à apiClient côté navigateur — mais
+    // plus jamais refreshToken, qui ne transite désormais que par le
+    // cookie HttpOnly `kessia-refresh-token`, jamais lisible en JS).
+    const { refreshToken, ...responseBody } = payload;
+    const res = ok(responseBody, 'Connexion réussie.');
+    setAuthCookies(res, request, { accessToken: payload.accessToken, refreshToken });
+    return res;
   } catch (error) {
     logApiError('/v1/auth/login', error);
     return serverError();

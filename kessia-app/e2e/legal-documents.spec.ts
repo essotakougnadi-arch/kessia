@@ -15,8 +15,10 @@ test('les pages légales sont publiques et lisibles', async ({ page }) => {
 });
 
 test.describe('documents imprimables', () => {
+  let accessToken = '';
   test.beforeEach(async ({ context, request, baseURL }) => {
-    await loginViaApi(context, request, baseURL!, SEED.main);
+    const s = await loginViaApi(context, request, baseURL!, SEED.main);
+    accessToken = s.accessToken;
   });
 
   test('la facture s’ouvre en document imprimable', async ({ page }) => {
@@ -59,6 +61,7 @@ test.describe('documents imprimables', () => {
 
     // envoi e-mail : aucun fournisseur configuré → simulation enregistrée
     const mail = await page.request.post(`/api/v1/business/${businessId}/invoices/${invoiceId}/email`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
       data: { to: 'client-e2e@example.com' },
     });
     expect(mail.status()).toBe(200);

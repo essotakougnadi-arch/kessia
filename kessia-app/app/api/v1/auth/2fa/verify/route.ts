@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/db/prisma';
 import { buildSessionResponse } from '@/lib/auth/session';
+import { setAuthCookies } from '@/lib/auth/cookies';
 import { verify2faChallenge, verifyTotp, consumeBackupCode } from '@/lib/auth/twofactor';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
@@ -60,7 +61,10 @@ export async function POST(request: NextRequest) {
     });
 
     void recordAudit({ userId: user.id, action: 'auth.login', entity: 'User', entityId: user.id, metadata: { method: '2fa' }, request });
-    return ok(payload, 'Connexion réussie.');
+    const { refreshToken, ...body } = payload;
+    const res = ok(body, 'Connexion réussie.');
+    setAuthCookies(res, request, { accessToken: payload.accessToken, refreshToken });
+    return res;
   } catch (e) {
     logApiError('/v1/auth/2fa/verify', e);
     return serverError();

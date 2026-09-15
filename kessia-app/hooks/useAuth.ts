@@ -69,7 +69,6 @@ export type OtpPayload = {
 type SessionData = {
   user: { id: string; phone: string; firstName: string; lastName: string; role: string; kycStatus: string; kycLevel: number };
   accessToken: string;
-  refreshToken: string;
 };
 type LoginResponse = SessionData | { requires2fa: true; challengeToken: string };
 
@@ -98,7 +97,7 @@ export function useAuth() {
   }
 
   function finishSession(data: SessionData) {
-    login({ ...data.user, isPhoneVerified: true }, data.accessToken, data.refreshToken);
+    login({ ...data.user, isPhoneVerified: true }, data.accessToken);
     setChallengeToken(null);
     addToast({ type: 'success', message: `Bienvenue, ${data.user.firstName} !` });
     router.push(postAuthTarget());

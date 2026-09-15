@@ -8,23 +8,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// ── Cookie sync ─────────────────────────────────────────────
-// Le middleware Next.js (middleware.ts) protège les routes en
-// lisant le cookie `kessia-access-token`. Le store est la source
-// de vérité côté client ; on réplique le token dans un cookie
-// lisible pour que le middleware puisse gater les routes.
-const AUTH_COOKIE = 'kessia-access-token';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 jours (durée du refresh token)
-
-function syncAuthCookie(token: string | null) {
-  if (typeof document === 'undefined') return;
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  if (token) {
-    document.cookie = `${AUTH_COOKIE}=${token}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
-  } else {
-    document.cookie = `${AUTH_COOKIE}=; path=/; max-age=0; SameSite=Lax${secure}`;
-  }
-}
+// P0.2 : les tokens ne sont plus jamais persistés (localStorage) ni posés
+// en cookie par le JavaScript client. Le serveur pose désormais des
+// cookies HttpOnly (`lib/auth/cookies.ts`) — illisibles/inscriptibles en
+// JS, la vraie mitigation XSS. `accessToken` reste en mémoire (le temps de
+// l'onglet, pour l'en-tête `Authorization: Bearer` de `apiClient`) mais
+// n'est plus écrit sur disque ; il est régénéré au chargement via
+// `AuthBootstrap` (POST /api/v1/auth/refresh, cookie HttpOnly envoyé
+// automatiquement par le navigateur). Le refresh token, le plus sensible
+// (30 j), ne transite plus jamais par le JS du navigateur.
 
 export type KessiaUser = {
   id: string;
@@ -42,16 +34,15 @@ export type KessiaUser = {
 type AuthState = {
   // État
   user: KessiaUser | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+  accessToken: string | null; // en mémoire uniquement — jamais persisté
   isAuthenticated: boolean;
   isLoading: boolean;
 
   // Actions
   setUser: (user: KessiaUser) => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
+  setAccessToken: (accessToken: string) => void;
   setLoading: (loading: boolean) => void;
-  login: (user: KessiaUser, accessToken: string, refreshToken: string) => void;
+  login: (user: KessiaUser, accessToken: string) => void;
   logout: () => void;
   updateUser: (partial: Partial<KessiaUser>) => void;
 };
@@ -62,29 +53,23 @@ export const useAuthStore = create<AuthState>()(
       // État initial
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
       // Définir l'utilisateur
       setUser: (user) => set({ user }),
 
-      // Définir les tokens
-      setTokens: (accessToken, refreshToken) => {
-        syncAuthCookie(accessToken);
-        set({ accessToken, refreshToken });
-      },
+      // Définir le token d'accès (en mémoire)
+      setAccessToken: (accessToken) => set({ accessToken }),
 
       // Définir le chargement
       setLoading: (isLoading) => set({ isLoading }),
 
       // Connexion complète
-      login: (user, accessToken, refreshToken) => {
-        syncAuthCookie(accessToken);
+      login: (user, accessToken) => {
         set({
           user,
           accessToken,
-          refreshToken,
           isAuthenticated: true,
           isLoading: false,
         });
@@ -92,11 +77,9 @@ export const useAuthStore = create<AuthState>()(
 
       // Déconnexion
       logout: () => {
-        syncAuthCookie(null);
         set({
           user: null,
           accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
           isLoading: false,
         });
@@ -115,17 +98,13 @@ export const useAuthStore = create<AuthState>()(
           ? localStorage
           : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       ),
-      // Ne persister que les tokens et les infos user essentielles
+      // Ne persister QUE l'identité — jamais de token (P0.2). `isAuthenticated`
+      // persisté sert de repère UX immédiat au chargement ; la vraie
+      // authentification est re-vérifiée par `AuthBootstrap` (refresh).
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
-      // Au rechargement : re-synchroniser le cookie depuis l'état persisté
-      onRehydrateStorage: () => (state) => {
-        syncAuthCookie(state?.accessToken ?? null);
-      },
     }
   )
 );

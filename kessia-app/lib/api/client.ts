@@ -22,19 +22,14 @@ export type ApiResult<T = unknown> = {
 let refreshPromise: Promise<boolean> | null = null;
 
 async function doRefresh(): Promise<boolean> {
-  const { refreshToken, logout, setTokens, updateUser } = useAuthStore.getState();
-
-  if (!refreshToken) {
-    logout();
-    return false;
-  }
+  const { logout, setAccessToken, updateUser } = useAuthStore.getState();
 
   try {
-    const res = await fetch('/api/v1/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+    // P0.2 : plus de refresh token en JS — le cookie HttpOnly
+    // `kessia-refresh-token` (path /api/v1/auth/refresh) est envoyé
+    // automatiquement par le navigateur, `credentials: 'same-origin'` (défaut
+    // pour une requête same-origin) suffit à ce qu'il parte avec la requête.
+    const res = await fetch('/api/v1/auth/refresh', { method: 'POST' });
     const json = await res.json().catch(() => null);
 
     if (!res.ok || !json?.success || !json.data?.accessToken) {
@@ -42,7 +37,7 @@ async function doRefresh(): Promise<boolean> {
       return false;
     }
 
-    setTokens(json.data.accessToken, json.data.refreshToken);
+    setAccessToken(json.data.accessToken);
     if (json.data.user) updateUser(json.data.user);
     return true;
   } catch {

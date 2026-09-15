@@ -5,6 +5,7 @@ import { I18nProvider } from '@/lib/i18n';
 import { THEME_INIT_SCRIPT } from '@/store/themeStore';
 import { ACCENT_INIT_SCRIPT } from '@/store/accentStore';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
+import { AuthBootstrap } from '@/components/auth/AuthBootstrap';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -62,6 +63,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <I18nProvider>
+          <AuthBootstrap />
           {children}
           <Toaster />
           <ServiceWorkerRegister />
