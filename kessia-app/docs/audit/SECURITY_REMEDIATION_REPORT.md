@@ -78,10 +78,34 @@ l'authentification, hors périmètre P0.2.
 
 ---
 
-## P0.3 — Webhooks (non commencé)
+## P0.3 — Webhooks (clôturé 2026-09-16)
 
-Périmètre prévu : `verifyWebhook` fail-closed en production sans secret,
-journal `WebhookEvent` + rejeu, restriction de source IP (optionnelle).
+**Rapport détaillé** : [`P0_3_REMEDIATION_REPORT.md`](./P0_3_REMEDIATION_REPORT.md)
+
+### Vulnérabilités corrigées
+
+| Finding | Sévérité | Correctif |
+|---|---|---|
+| `if (!secret) return true` sur les 2 webhooks entrants (paiement, Miaride) — fail-open, **secret jamais configuré nulle part** → forge de crédit wallet / statut livraison sans authentification, exploitable sur le déploiement réel | Critique (audit #3) | Fail-closed en production (réplique le pattern approuvé `cron/tontine-tick`) |
+| Signature sans horodatage lié → une signature valide pouvait en théorie être rejouée indéfiniment | Moyenne | Format `t=<horodatage>,v1=<HMAC>` (lib/webhooks/verify.ts), fenêtre de tolérance 5 min |
+| Aucune idempotence au niveau transport (seule l'idempotence métier en aval existait) | Basse (défense en profondeur) | `WebhookEvent` — clé de dédup `@@unique`, insertion atomique |
+
+### Preuve de vérification
+
+Audit préalable : **zéro test et zéro code interne n'appelaient ces routes
+avant P0.3** (recherche exhaustive) → correctif appliqué sans aucun risque
+de régression sur l'existant, confirmé par la suite complète : `tsc`/`lint`/
+`vitest` 194/194/`test:integration` 62/62 (9 nouveaux tests de sécurité
+webhook, dont rejeu du même événement → idempotent, zéro double
+crédit/libération)/`build`/`test:e2e:isolated` 55/57 (8 nouveaux tests E2E
+tous verts, vrai serveur `next start`). Détail complet dans le rapport P0.3.
+
+### État résiduel (accepté, documenté)
+
+Pas de restriction IP par allowlist (HMAC jugé suffisant, non demandée) ;
+pas de route de rejeu admin (non demandée) ; fenêtre anti-rejeu fixe (5
+min) ; `WebhookEvent` ne persiste pas le corps brut (choix délibéré, cf.
+règle « jamais de données sensibles brutes en log »).
 
 ---
 

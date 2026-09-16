@@ -76,6 +76,13 @@ export default defineConfig({
           // La suite enchaîne les connexions depuis une seule IP.
           E2E_RATE_LIMIT_BYPASS: process.env.E2E_RATE_LIMIT_BYPASS ?? '1',
           ...(TEST_DB ? { DATABASE_URL: TEST_DB } : {}),
+          // Secrets de test pour les webhooks (P0.3) — permet à
+          // e2e/webhook-security.spec.ts de vérifier la signature
+          // valide/invalide en conditions réelles (serveur `next start`,
+          // vrai NODE_ENV=production). Valeurs fixes, sans rapport avec
+          // un quelconque secret réel de fournisseur.
+          PAYMENT_WEBHOOK_SECRET: 'e2e-payment-webhook-secret',
+          MIARIDE_WEBHOOK_SECRET: 'e2e-miaride-webhook-secret',
         },
       },
 });

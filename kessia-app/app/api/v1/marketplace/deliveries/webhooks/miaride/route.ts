@@ -2,21 +2,24 @@
 // KESSIA — POST /api/v1/marketplace/deliveries/webhooks/miaride
 // Notifications de statut du partenaire coursier (ADR 0042).
 //
-// Sécurité : HMAC-SHA256 du corps brut, header `x-miaride-signature`,
-// clé `MIARIDE_WEBHOOK_SECRET`. Sans secret configuré (démo), on
-// accepte mais on le trace — l'endpoint est l'interface réelle,
-// prête pour le jour du partenariat.
+// Sécurité (P0.3) : signature `t=<horodatage>,v1=<HMAC-SHA256>` du corps
+// brut, header `x-miaride-signature`, clé `MIARIDE_WEBHOOK_SECRET` (voir
+// `lib/webhooks/verify.ts`) — fail-closed en production si le secret est
+// absent (aucun partenariat réel connecté aujourd'hui). Idempotence
+// stricte au niveau transport (`WebhookEvent.eventKey` unique), en plus
+// de la garde de statut déjà en place sur `MarketplaceDelivery`.
 // ============================================================
 
 import { NextRequest } from 'next/server';
-import crypto from 'crypto';
 import { z } from 'zod';
 import prisma from '@/lib/db/prisma';
 import { settleOnDelivery } from '@/lib/delivery';
 import { refundEscrowToBuyer } from '@/lib/marketplace/escrow';
 import { notify } from '@/lib/notifications/notify';
-import { recordAudit } from '@/lib/audit/audit.service';
+import { recordAudit, requestMeta } from '@/lib/audit/audit.service';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
+import { verifyWebhookSignature } from '@/lib/webhooks/verify';
+import { recordWebhookAttempt, markWebhookProcessed, markWebhookFailed, recordWebhookRejection } from '@/lib/webhooks/journal';
 import { ok, badRequest, unauthorized, notFound, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 import type { DeliveryStatus } from '@prisma/client';
@@ -43,24 +46,24 @@ const eventSchema = z.object({
   courierName: z.string().max(120).optional(),
 });
 
-function verifySignature(rawBody: string, header: string | null): boolean {
-  const secret = process.env.MIARIDE_WEBHOOK_SECRET;
-  if (!secret) return true; // démo : accepté + tracé
-  if (!header) return false;
-  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  const a = Buffer.from(expected);
-  const b = Buffer.from(header);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
 export async function POST(request: NextRequest) {
   try {
     const limited = await enforceRateLimit(request, 'marketplace.delivery.webhook', { limit: 120, windowMs: 60_000 });
     if (limited) return limited;
 
     const raw = await request.text();
-    if (!verifySignature(raw, request.headers.get('x-miaride-signature'))) {
-      return unauthorized('Signature Miaride invalide.');
+    const { ipAddress } = requestMeta(request);
+
+    const verification = verifyWebhookSignature(
+      raw,
+      request.headers.get('x-miaride-signature'),
+      process.env.MIARIDE_WEBHOOK_SECRET
+    );
+
+    if (!verification.ok) {
+      void recordWebhookRejection({ provider: 'miaride', eventType: 'delivery.status', reason: verification.reason, ipAddress });
+      void recordAudit({ action: 'marketplace.delivery.webhook_rejected', entity: 'MarketplaceDelivery', metadata: { reason: verification.reason }, request });
+      return unauthorized('Signature Miaride invalide, absente ou expirée.');
     }
 
     let payload: unknown;
@@ -72,12 +75,30 @@ export async function POST(request: NextRequest) {
     const mapped = EXTERNAL_STATUS[status.toLowerCase()];
     if (!mapped) return badRequest(`Statut inconnu : ${status}`);
 
+    // Idempotence stricte au niveau transport : un rejeu exact de la
+    // même transition (référence + statut normalisé) n'est jamais
+    // retraité — en plus de la garde de statut terminal ci-dessous.
+    const attempt = await recordWebhookAttempt({
+      provider: 'miaride',
+      eventType: 'delivery.status',
+      eventKey: `miaride:${reference}:${mapped}`,
+      verified: verification.verified,
+      ipAddress,
+    });
+    if (attempt.duplicate) {
+      return ok({ duplicate: true });
+    }
+
     const delivery = await prisma.marketplaceDelivery.findFirst({
       where: { providerRef: reference },
       include: { order: { include: { item: { select: { title: true } } } } },
     });
-    if (!delivery) return notFound('Livraison introuvable pour cette référence.');
+    if (!delivery) {
+      await markWebhookFailed(attempt.eventId, 'delivery_not_found');
+      return notFound('Livraison introuvable pour cette référence.');
+    }
     if (delivery.status === 'DELIVERED' || delivery.status === 'CANCELLED') {
+      await markWebhookProcessed(attempt.eventId);
       return ok({ ignored: true }, 'Livraison déjà terminée.');
     }
 
@@ -101,6 +122,7 @@ export async function POST(request: NextRequest) {
       }
     }
     void recordAudit({ action: 'marketplace.delivery.webhook', entity: 'MarketplaceDelivery', entityId: delivery.id, metadata: { reference, status: mapped }, request });
+    await markWebhookProcessed(attempt.eventId);
 
     return ok({ status: mapped });
   } catch (err) {

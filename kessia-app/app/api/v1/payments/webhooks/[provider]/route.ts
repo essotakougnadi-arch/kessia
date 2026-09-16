@@ -2,10 +2,17 @@
 // KESSIA — POST /api/v1/payments/webhooks/[provider]
 // Réception des notifications de règlement des fournisseurs (cahier §44).
 //
-// Sécurité :
-//   - signature HMAC-SHA256 du corps brut, header `x-kessia-signature`,
-//     clé partagée `PAYMENT_WEBHOOK_SECRET` (par fournisseur en prod).
-//   - idempotent : rejouer le même événement est sans effet.
+// Sécurité (P0.3) :
+//   - signature `t=<horodatage>,v1=<HMAC-SHA256>` du corps brut, header
+//     `x-kessia-signature`, clé partagée `PAYMENT_WEBHOOK_SECRET` (voir
+//     `lib/webhooks/verify.ts`) — lie authenticité + horodatage, fenêtre
+//     de tolérance anti-rejeu de 5 min.
+//   - fail-closed en production : secret absent → 401 (aucun secret
+//     configuré = aucun fournisseur réel connecté, ADR 0005).
+//   - idempotence stricte au niveau transport (`WebhookEvent.eventKey`
+//     unique) EN PLUS de l'idempotence métier déjà en place
+//     (`settlePendingPayment`, clé ledger `PAYTX_<id>`) — rejouer le
+//     même événement est sans effet, quel que soit le niveau considéré.
 //   - jamais authentifié par session utilisateur.
 //
 // MVP : les fournisseurs sont simulés (ADR 0005). Cet endpoint est
@@ -13,12 +20,13 @@
 // ============================================================
 
 import { NextRequest } from 'next/server';
-import crypto from 'crypto';
 import { z } from 'zod';
 import { settlePendingPayment } from '@/lib/payments';
 import { notify } from '@/lib/notifications/notify';
-import { recordAudit } from '@/lib/audit/audit.service';
+import { recordAudit, requestMeta } from '@/lib/audit/audit.service';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
+import { verifyWebhookSignature } from '@/lib/webhooks/verify';
+import { recordWebhookAttempt, markWebhookProcessed, markWebhookFailed, recordWebhookRejection } from '@/lib/webhooks/journal';
 import { ok, badRequest, unauthorized, notFound, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 
@@ -33,17 +41,6 @@ const eventSchema = z.object({
   failureReason: z.string().max(300).optional(),
 });
 
-function verifySignature(rawBody: string, header: string | null): boolean {
-  const secret = process.env.PAYMENT_WEBHOOK_SECRET;
-  // Pas de secret configuré (MVP local) → on accepte mais on le trace.
-  if (!secret) return true;
-  if (!header) return false;
-  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  const a = Buffer.from(expected);
-  const b = Buffer.from(header);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
 export async function POST(request: NextRequest, props: { params: Promise<{ provider: string }> }) {
   const params = await props.params;
   try {
@@ -56,15 +53,23 @@ export async function POST(request: NextRequest, props: { params: Promise<{ prov
     if (limited) return limited;
 
     const rawBody = await request.text();
+    const { ipAddress } = requestMeta(request);
 
-    if (!verifySignature(rawBody, request.headers.get('x-kessia-signature'))) {
+    const verification = verifyWebhookSignature(
+      rawBody,
+      request.headers.get('x-kessia-signature'),
+      process.env.PAYMENT_WEBHOOK_SECRET
+    );
+
+    if (!verification.ok) {
+      void recordWebhookRejection({ provider: `payment:${provider}`, eventType: 'unknown', reason: verification.reason, ipAddress });
       void recordAudit({
         action: 'payment.webhook_rejected',
         entity: 'PaymentTransaction',
-        metadata: { provider, reason: 'bad_signature' },
+        metadata: { provider, reason: verification.reason },
         request,
       });
-      return unauthorized('Signature invalide.');
+      return unauthorized('Signature invalide, absente ou expirée.');
     }
 
     let json: unknown;
@@ -78,6 +83,20 @@ export async function POST(request: NextRequest, props: { params: Promise<{ prov
     if (!parsed.success) return badRequest('Événement non reconnu.');
     const { event, reference, externalRef, failureReason } = parsed.data;
 
+    // Idempotence stricte au niveau transport : un rejeu exact du même
+    // événement (même fournisseur+type+référence) n'est jamais retraité.
+    const attempt = await recordWebhookAttempt({
+      provider: `payment:${provider}`,
+      eventType: event,
+      eventKey: `payment:${provider}:${event}:${reference}`,
+      verified: verification.verified,
+      ipAddress,
+    });
+
+    if (attempt.duplicate) {
+      return ok({ settled: 'ALREADY_SETTLED', duplicate: true });
+    }
+
     const outcome = await settlePendingPayment({
       reference,
       result: event === 'payment.completed' ? 'COMPLETED' : 'FAILED',
@@ -86,9 +105,12 @@ export async function POST(request: NextRequest, props: { params: Promise<{ prov
     });
 
     if (!outcome.ok) {
+      await markWebhookFailed(attempt.eventId, outcome.error);
       if (outcome.code === 'NOT_FOUND') return notFound(outcome.error);
       return badRequest(outcome.error);
     }
+
+    await markWebhookProcessed(attempt.eventId);
 
     void recordAudit({
       userId: outcome.payment.userId,

@@ -3,6 +3,69 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.3 : Webhooks sécurisés (signature + horodatage + idempotence stricte)
+
+### Sécurité
+- **Fail-open supprimé sur les 2 webhooks entrants** (`payments/webhooks/[provider]`,
+  `marketplace/deliveries/webhooks/miaride`) : `if (!secret) return true`
+  acceptait toute requête non signée quand le secret n'était pas configuré
+  — **et il ne l'était nulle part** (ni CI, ni staging, ni local), rendant
+  le crédit de wallet ou le changement de statut de livraison forgeables
+  sans authentification sur le déploiement réel. Remplacé par un
+  comportement fail-closed en production (réplique le pattern déjà
+  approuvé de `cron/tontine-tick`).
+- **Nouveau format de signature** `t=<horodatage>,v1=<HMAC-SHA256>`
+  (`lib/webhooks/verify.ts`, pattern Stripe/GitHub) : lie authenticité +
+  intégrité (HMAC sur le corps) + horodatage en un seul mécanisme, fenêtre
+  de tolérance anti-rejeu de 5 min.
+- **Idempotence stricte au niveau transport** (`WebhookEvent`, nouveau
+  modèle + migration) : clé de dédup `@@unique`, insertion atomique — un
+  rejeu exact du même événement signé ne peut jamais être retraité deux
+  fois, en plus de l'idempotence métier déjà en place (Ledger `PAYTX_<id>`,
+  garde de statut `MarketplaceDelivery`) qui reste inchangée.
+
+### Ajouté
+- `lib/webhooks/verify.ts` + `lib/webhooks/journal.ts` (nouveau, mutualisé
+  entre les 2 endpoints).
+- `WebhookEvent` (migration `20260916090943_p0_3_webhook_events`) : journal
+  d'audit/dépannage de chaque requête reçue (vérifiée ou non, traitée ou
+  rejetée).
+
+### Vérification
+- `tsc` 0 erreur · `lint` 0 warning · `vitest` unit **194/194** (12
+  nouveaux, `verify.test.ts`) · `test:integration` (`USE_TEST_DB=1`) **16
+  fichiers, 62/62** (9 nouveaux, `webhook-security.itest.ts` — signature
+  absente/invalide/expirée → rejet sans effet ; signature valide → effet
+  métier réel ; **rejeu du même événement → idempotent, zéro double
+  crédit/libération**) · `build` OK.
+- `test:e2e:isolated` **55/57** — les **8 nouveaux tests**
+  (`webhook-security.spec.ts`, vrai serveur `next start`) passent tous ;
+  les 2 échecs restants sont la flakiness pré-existante déjà documentée
+  (sans rapport avec ce travail).
+- Audit préalable confirmé : **zéro test et zéro code interne n'appelaient
+  ces routes avant P0.3** → correctif sans aucun risque de régression sur
+  l'existant.
+- **Rapport complet** : `docs/audit/P0_3_REMEDIATION_REPORT.md`.
+  `SECURITY_REMEDIATION_REPORT.md` mis à jour.
+
+### Modifié (config de test, pas un workflow CI/CD)
+- `playwright.config.ts` (`webServer.env`) : ajout de secrets de test
+  `PAYMENT_WEBHOOK_SECRET`/`MIARIDE_WEBHOOK_SECRET` (valeurs fixes, sans
+  rapport avec un secret réel) — nécessaire pour que les tests E2E puissent
+  exercer la vérification de signature réussie, pas seulement le rejet.
+  Aucun fichier `.github/workflows/*.yml` modifié.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, règles métier Payments/Tontines/Marketplace, KYC, IA.
+`settlePendingPayment`/`settleOnDelivery`/`refundEscrowToBuyer` inchangés —
+seule la couche transport (vérification + dédup) a été ajoutée en amont.
+
+### Risques résiduels
+Pas de restriction IP par allowlist (non demandée, HMAC jugé suffisant sans
+fournisseur réel connecté) ; pas de route de rejeu admin (non demandée) ;
+fenêtre anti-rejeu fixe à 5 min ; `WebhookEvent` ne persiste pas le corps
+brut (choix délibéré). Détail complet dans `P0_3_REMEDIATION_REPORT.md`.
+
 ## [Non publié] — Phase 0 — P0.2 : Sessions/Tokens/Auth (cookies HttpOnly + collision Session.token)
 
 ### Sécurité

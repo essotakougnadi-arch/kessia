@@ -1478,3 +1478,25 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+
+// Journal des webhooks entrants (P0.3 — cahier §44, ADR 0007).
+// Une ligne par requête REÇUE (vérifiée ou non, traitée ou rejetée) —
+// sert à la fois d'idempotence stricte au niveau transport (clé unique
+// dérivée de l'événement, distincte de l'idempotence Ledger existante
+// sur PaymentTransaction/LedgerEntry) et de trace d'audit/dépannage.
+model WebhookEvent {
+  id           String   @id @default(cuid())
+  provider     String // 'payment:<fournisseur>' ou 'miaride'
+  eventType    String
+  eventKey     String // dédup : provider+eventType+référence (ou signature si pas de référence)
+  verified     Boolean // signature valide (ou secret non configuré hors prod = accepté mais non vérifié)
+  status       String // 'processed' | 'duplicate' | 'rejected' | 'failed'
+  rejectReason String?
+  ipAddress    String?
+  receivedAt   DateTime @default(now())
+  processedAt  DateTime?
+
+  @@unique([eventKey])
+  @@index([provider, receivedAt])
+  @@map("webhook_events")
+}
