@@ -201,7 +201,42 @@ l'application elle-même.
 
 ---
 
+## 8. Vérification finale CI/CD + staging (commit `5538160`)
+
+Vérification faite via la page de détail de **chaque** run individuellement :
+
+| Workflow | Run | Statut | Détail |
+|---|---|---|---|
+| `ci.yml` | #76 | ✅ Success | `verify` 2m1s |
+| `integration.yml` | — | ✅ Success | 1m20s |
+| `staging.yml` | #79 | ✅ Success | `migrate` 2m33s (migration `WebhookEvent` appliquée) + `deploy` 1m59s |
+| `e2e.yml` | — | ⚠️ Failure (statut GitHub) | **54 passed / 3 failed / 0 flaky** |
+
+Les 3 échecs (`marketplace-delivery.spec.ts:14`, `tontine.spec.ts:22` et
+`:37`) sont la flakiness pré-existante déjà documentée — **aucun n'est lié
+aux webhooks** ; les 8 tests `webhook-security.spec.ts` sont tous verts.
+
+**Staging vérifié en direct**, au-delà du statut du workflow :
+```
+$ curl https://kessia-staging.vercel.app/api/health
+{"status":"ok","db":"ok",...}
+
+$ curl -X POST https://kessia-staging.vercel.app/api/v1/payments/webhooks/simulator \
+    -d '{"event":"payment.completed","reference":"x"}'
+→ HTTP 401 (fail-closed confirmé en conditions réelles — la vulnérabilité
+  visée par ce correctif n'est plus exploitable sur le déploiement public)
+```
+
 ## Verdict
 
-**P0.3 = VALIDÉ — PRÊT POUR P0.4**, sous réserve de la vérification finale
-CI/staging documentée dans le commit de clôture.
+**P0.3 = VALIDÉ — PRÊT POUR P0.4.**
+
+Les deux webhooks entrants sont passés d'un fail-open actif en permanence
+sur le déploiement réel (vulnérabilité CRITIQUE exploitable) à un
+fail-closed vérifié en production, avec authenticité, intégrité,
+horodatage, protection anti-rejeu et idempotence stricte au niveau
+transport — tout en préservant l'idempotence métier existante, intacte.
+Aucune régression introduite (confirmé par l'absence totale de test/appelant
+préexistant sur ces routes, et par la suite complète verte). Périmètre
+strictement respecté : Ledger, Wallet, règles métier Payments/Tontines/
+Marketplace, KYC, IA non touchés ; aucun workflow CI/CD modifié.
