@@ -3,6 +3,81 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.2 : Sessions/Tokens/Auth (cookies HttpOnly + collision Session.token)
+
+### Sécurité
+- **Cookies HttpOnly côté serveur** (`lib/auth/cookies.ts`, nouveau) : les
+  tokens ne sont plus posés par le JavaScript du navigateur.
+  `kessia-access-token` (15 min) et le nouveau `kessia-refresh-token`
+  (`Path=/api/v1/auth/refresh` uniquement, 30 j) sont `HttpOnly` +
+  `SameSite` + `Secure` (dérivé du protocole réel de la requête, pas de
+  `NODE_ENV`). **Le refresh token — le risque le plus grave (30 j de
+  validité) — ne transite plus jamais par le JS**, ni en réponse JSON ni en
+  `localStorage` : corrige le finding CRITIQUE #2 de l'audit prod-readiness.
+- **Correction de la collision `Session.token`** (bug réservé depuis P0.0) :
+  la table stockait le JWT signé lui-même comme clé `@unique` ; deux
+  connexions du même utilisateur dans la même seconde produisaient un JWT
+  identique (HMAC déterministe) → violation de contrainte → **500** sur
+  `login`/`refresh`. Remplacé par un `jti` aléatoire (migration
+  `20260915105735_session_jti_revocation`) + colonne `revokedAt` (révocation
+  douce, ligne conservée pour audit).
+- **Révocation de session effective immédiatement** : `withAuth` vérifie
+  désormais la session en base (`jti`/`revokedAt`), plus seulement la
+  signature JWT — logout, changement de mot de passe et suspension admin
+  invalident la session sans attendre l'expiration naturelle (15 min).
+- **Détection de réutilisation de refresh token** (signal OWASP de vol de
+  token) : `rotateRefreshToken` révoque l'ancienne ligne et en crée une
+  nouvelle à chaque rotation ; la présentation d'un refresh token déjà
+  révoqué révoque **toutes** les sessions de l'utilisateur + audit
+  `auth.refresh_reuse_detected` + notification `SECURITY` priorité
+  `CRITICAL`.
+- `store/authStore.ts` : `accessToken` reste en mémoire (pour l'en-tête
+  `Authorization` de `apiClient`) mais n'est plus persisté en
+  `localStorage` ; `refreshToken` retiré du store. Nouveau
+  `components/auth/AuthBootstrap.tsx` : échange le cookie de refresh contre
+  un access token frais au chargement d'un onglet.
+
+### Corrigé (3 bugs E2E réels découverts en vérifiant le nouveau flux cookies)
+1. `e2e/helpers.ts::loginViaApi` utilisait le fixture `request` (isolé, ne
+   partage pas les cookies avec le navigateur) au lieu de `context.request`.
+2. `secure` sur les cookies dérivé de `NODE_ENV` au lieu du protocole réel —
+   cassait l'auth locale (`next start` = `NODE_ENV=production` sur HTTP simple).
+3. `context.setExtraHTTPHeaders({ Authorization })` figé au login dans les
+   E2E entrait en conflit avec la rotation de token (chaque rotation révoque
+   l'ancien token, mais l'en-tête Playwright figé continuait de le
+   présenter) → 401 permanent après le 1ᵉʳ rechargement de page.
+
+### Vérification
+- `tsc` 0 erreur · `lint` 0 warning · `vitest` unit **182/182** ·
+  `test:integration` (`USE_TEST_DB=1`) 14 fichiers **44/44** (nouveau
+  `session-security.itest.ts`, 8 tests reproduisant le bug original par
+  créations de session concurrentes) · `build` OK.
+- `test:e2e:isolated` **47/49** (vs 46/49 avant P0.2). Les 2 échecs restants
+  (`marketplace-delivery.spec.ts:14`, `tontine.spec.ts:37`) confirmés
+  **sans rapport avec l'authentification**, documentés dans
+  `docs/audit/TICKET_CI_E2E_FAILURES.md`.
+- **CI GitHub Actions vérifié run par run** (pas la vue liste, connue peu
+  fiable) : `ci.yml` ✓, `integration.yml` ✓, `staging.yml` ✓ (migrate 2m47s
+  + deploy 2m35s), `e2e.yml` 47 passed/2 failed/0 flaky (les 2 échecs
+  confirmés étrangers à l'auth). `/api/health` staging vérifié en direct.
+- **Preuve empirique du root-cause** : avant le correctif, `e2e.yml`
+  montrait 13-16 tests flaky avec `login → 500` sur 3 runs consécutifs
+  (dont un antérieur à P0.1) ; après, **0 flaky**, symptôme disparu.
+- **Rapport complet** : `docs/audit/P0_2_REMEDIATION_REPORT.md`.
+  `docs/audit/SECURITY_REMEDIATION_REPORT.md` mis à jour.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, Payments, Tontines métier, Marketplace métier, KYC
+métier, IA. Aucun workflow CI/CD modifié.
+
+### Risques résiduels
+Rotation de refresh token non strictement idempotente sous concurrence
+(choix assumé, risque bénin) ; `accessToken` en mémoire reste lisible par un
+XSS actif (le refresh token, risque le plus grave, est lui hors d'atteinte
+du JS) ; `tontine.spec.ts:22`/`:37` et `marketplace-delivery.spec.ts:14`
+restent ouverts dans le ticket CI dédié (hors périmètre P0.2). Détail complet
+dans `P0_2_REMEDIATION_REPORT.md`.
+
 ## [Non publié] — Phase 0 — P0.1 : Next.js 14.2.5 → 15.5.24 (2 RCE critiques corrigées)
 
 ### Sécurité

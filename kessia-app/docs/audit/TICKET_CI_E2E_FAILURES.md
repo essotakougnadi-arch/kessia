@@ -1,11 +1,11 @@
 ---
 title: "KESSIA — Ticket : échecs CI e2e.yml (pré-existants, confirmés antérieurs à P0.1)"
-date: "15 septembre 2026 (ouvert) — mis à jour pendant P0.2"
+date: "15 septembre 2026 (ouvert) — mis à jour à la clôture de P0.2 (16 sept.)"
 ---
 
 # Ticket — Échecs `e2e.yml` en CI (pré-existants)
 
-**Statut : PARTIELLEMENT RÉSOLU (mis à jour pendant P0.2, 2026-09-15).**
+**Statut : PARTIELLEMENT RÉSOLU — clôture P0.2 (2026-09-16).**
 Ouvert à la clôture de P0.1, suite à la découverte documentée dans
 `P0_1_REMEDIATION_REPORT.md` §6/§7. Non bloquant pour P0.1 (non-régression
 démontrée par comparaison avec le commit `3786926`, antérieur à tout
@@ -14,13 +14,25 @@ changement P0.1).
 **Mise à jour P0.2 — hypothèse confirmée empiriquement.** Après le correctif
 de la collision `Session.token` (commit `f0457d3`), le run `e2e.yml` associé
 montre **47 passed / 2 failed / 0 flaky** (contre 31-34 passed / 2 failed /
-13-16 flaky avant). Le symptôme dominant (`login → 500`) **a disparu**. Les
-2 échecs restants sont les mêmes `tontine.spec.ts:22`/`:37`, mais avec un
-**message d'erreur désormais clair et différent** : violation du mode strict
-Playwright (un locator de texte résout vers plusieurs éléments), sans rapport
-avec l'authentification — confirme qu'il s'agissait d'un problème de test
-distinct (point 2 ci-dessous), maintenant plus visible une fois le bruit
-`login → 500` éliminé.
+13-16 flaky avant). Le symptôme dominant (`login → 500`) **a disparu et n'est
+pas réapparu** sur le run de clôture de P0.2 (commit `8f9625c`, également
+47 passed / 2 failed / 0 flaky). Root-cause `Session.token` = **confirmée et
+close**.
+
+**Point 2 restant, précisé au fil des runs** : les 2 tests « failed » ne sont
+**pas toujours les mêmes deux** — run `f0457d3` : `tontine.spec.ts:22` +
+`:37` ; run `8f9625c` : `tontine.spec.ts:37` + `marketplace-delivery.spec.ts:14`
+(nouveau). `tontine.spec.ts:37` est le seul récurrent sur tous les runs
+post-correctif. Cohérent avec la flakiness E2E générale déjà documentée en
+P0.1 (1 à 3 tests différents et non reproductibles par run) plutôt qu'un bug
+déterministe unique — mais `tontine.spec.ts:37` mérite un œil plus attentif
+vu sa récurrence. Erreurs de ces 2 runs, toutes **confirmées étrangères à
+l'authentification** (aucun 401/session dans les traces) :
+- `tontine.spec.ts:37` : violation de mode strict Playwright (`getByText`
+  résout 2 éléments — un lien + un toast).
+- `marketplace-delivery.spec.ts:14` : `TypeError` sur `confirm.json().data`
+  undefined — timing métier (règlement à la livraison), pas un problème
+  d'auth.
 
 ## Constat
 
@@ -77,9 +89,14 @@ qui démarre à froid pour chaque run, vs. instance locale déjà chaude).
   fichier de test E2E lui-même (isolation/ordre). Sinon, reste ouvert pour un
   ticket dédié post-P0.x.
 
-## Clôture
+## Clôture P0.2
 
-Ce ticket sera mis à jour (statut, cause confirmée, correctif) à la clôture
-de P0.2, puis fermé une fois `e2e.yml` vert de façon stable sur au moins 2
-runs consécutifs — ou explicitement transféré à un ticket dédié si le
-point 2 dépasse le périmètre P0.2.
+- **Point 1 (`Session.token`) : FERMÉ.** Corrigé par `f0457d3`, vérifié sur
+  2 runs CI consécutifs (0 flaky à chaque fois). Détail complet dans
+  `P0_2_REMEDIATION_REPORT.md`.
+- **Point 2 (E2E business-logic, non-auth) : reste OUVERT, transféré hors
+  P0.x.** `tontine.spec.ts:37` (récurrent) et `marketplace-delivery.spec.ts:14`
+  (observé une fois) confirmés étrangers à l'authentification — hors
+  périmètre P0.2 (Tontines/Marketplace métier explicitement non modifiables
+  pendant cette phase). Root-cause et correctif à traiter dans un ticket
+  dédié post-P0.x, sans lien avec P0.3/P0.4/P0.5.

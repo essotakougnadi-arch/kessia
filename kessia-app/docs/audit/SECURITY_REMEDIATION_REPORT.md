@@ -42,18 +42,39 @@ le détail et le plan de traitement différé.
 
 ---
 
-## P0.2 — Sessions et tokens (non commencé)
+## P0.2 — Sessions et tokens (clôturé 2026-09-15/16)
 
-**Statut** : bloqué, en attente d'autorisation explicite de l'utilisateur
-après validation de P0.1.
+**Rapport détaillé** : [`P0_2_REMEDIATION_REPORT.md`](./P0_2_REMEDIATION_REPORT.md)
 
-Périmètre prévu (cf. `PHASE0_EXECUTION_PLAN.md` §P0.2) : cookies HttpOnly
-côté serveur, retrait des tokens de `localStorage`, vérification de session
-(pas seulement JWT) dans `withAuth`, CSRF (`Origin`/`Sec-Fetch-Site`),
-révocation effective (logout / changement de mot de passe / suspension
-admin), détection de réutilisation de refresh token. Inclut la correction du
-bug de collision `Session.token` identifié pendant P0.0/P0.1 et
-explicitement réservé à cette phase.
+### Vulnérabilités / findings corrigés
+
+| Finding | Sévérité | Correctif |
+|---|---|---|
+| Tokens (access+refresh+user) en clair dans `localStorage`, cookie non-HttpOnly | Critique (audit #2) | Cookies `HttpOnly`/`SameSite`/`Secure` posés côté serveur (`lib/auth/cookies.ts`) ; refresh token ne transite plus jamais par le JS |
+| `withAuth` ne vérifiait que le JWT, jamais la table `Session` → révocation inopérante 15 min | Critique (audit #2) | Vérification `jti`/`revokedAt` en base à chaque requête ; révocation immédiate (logout, changement mot de passe, suspension admin) |
+| Collision `Session.token` (JWT stocké comme clé `@unique`, HMAC déterministe à la seconde) → `login`/`refresh` en 500 sous connexions rapprochées | Bug fonctionnel + disponibilité (réservé depuis P0.0) | `jti` aléatoire remplace le JWT comme clé unique (migration `20260915105735_session_jti_revocation`) |
+| Pas de détection de réutilisation de refresh token (signal de vol) | Haute | Rotation = nouvelle ligne + révocation de l'ancienne ; réutilisation d'un token révoqué → révocation de toutes les sessions + audit + alerte `SECURITY` |
+
+### Preuve de vérification
+
+Root-cause de la collision `Session.token` confirmée **empiriquement**, pas
+supposée : le symptôme `login → 500` observé dans `e2e.yml` (13-16 tests
+flaky sur 3 runs CI consécutifs, dont un antérieur à P0.1) disparaît
+totalement après le correctif (0 flaky). `tsc`/`lint`/`vitest`
+182/182/`test:integration` 44/44 (dont 8 nouveaux tests de concurrence
+`session-security.itest.ts`)/`build`/`test:e2e:isolated` 47/49 (2 échecs
+restants confirmés étrangers à l'auth) : tous verts. CI/Staging vérifiés
+run par run + `/api/health` staging en direct. Détail complet dans le
+rapport P0.2.
+
+### État résiduel (accepté, documenté)
+
+Rotation de refresh token non strictement idempotente sous concurrence
+(risque bénin, choix assumé) ; `accessToken` reste en mémoire JS (lisible
+par un XSS actif — le refresh token, risque le plus grave, en est protégé).
+`e2e/tontine.spec.ts:22`/`:37` et `marketplace-delivery.spec.ts:14` restent
+ouverts dans `TICKET_CI_E2E_FAILURES.md`, confirmés étrangers à
+l'authentification, hors périmètre P0.2.
 
 ---
 
