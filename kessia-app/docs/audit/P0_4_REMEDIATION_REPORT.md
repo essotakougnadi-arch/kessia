@@ -183,12 +183,37 @@ avec ce travail.
 
 ---
 
-## Vérification finale CI/CD + staging (commit de clôture)
+## Vérification finale CI/CD + staging (commit `16f4213`)
 
-Voir la section correspondante ci-dessous, complétée après le push et la
-vérification run par run (méthode établie : jamais la vue liste/checks).
+Vérification faite via la page de détail de **chaque** run individuellement :
+
+| Workflow | Statut | Détail |
+|---|---|---|
+| `ci.yml` | ✅ Success | `verify` |
+| `integration.yml` | ✅ Success | |
+| `staging.yml` | ✅ Success | `migrate` 2m55s (colonne `idempotencyKey` appliquée) + `deploy` 1m59s |
+| `e2e.yml` | ⚠️ Failure (statut GitHub) | **54 passed / 3 failed / 0 flaky** |
+
+Les 3 échecs (`marketplace-delivery.spec.ts:14`, `tontine.spec.ts:22`,
+`tontine.spec.ts:37`) confirmés être la flakiness pré-existante déjà
+documentée dans `TICKET_CI_E2E_FAILURES.md` — **`webhook-security.spec.ts`
+(8/8) et `marketplace-cart.spec.ts` (flux modifié par ce correctif) restent
+tous les deux verts**, confirmés absents de la liste des échecs.
+
+**Staging vérifié en direct** :
+```
+$ curl https://kessia-staging.vercel.app/api/health
+{"status":"ok","db":"ok",...}
+```
 
 ## Verdict
 
-**P0.4 = VALIDÉ — PRÊT POUR P1**, sous réserve de la vérification finale
-CI/staging documentée dans le commit de clôture.
+**P0.4 = VALIDÉ — PRÊT POUR P1.**
+
+Le finding CRITIQUE (clé d'idempotence retry-unsafe permettant un double
+débit réel sur le déploiement public) est corrigé et vérifié par des tests
+de concurrence réelle (`Promise.all`), pas seulement séquentiels. Aucune
+régression introduite — confirmé par la suite complète verte et par le flux
+Marketplace modifié (`marketplace-cart.spec.ts`) qui reste vert en E2E
+réel. Ledger, Escrow, règles Wallet/Payments/Tontines/KYC/IA et P0.2/P0.3
+non touchés.
