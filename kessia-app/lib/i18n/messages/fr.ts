@@ -1768,6 +1768,9 @@ export const fr = {
   kycPage: {
     back: 'Retour',
     title: "Vérification d'identité",
+    demoNoticeTitle: 'Contrôle interne KESSIA.',
+    demoNoticeBody:
+      "Cette vérification débloque les paliers internes de l'application (plafonds, fonctionnalités). Elle ne constitue pas une vérification d'identité réglementaire : pas de détection du vivant (liveness) ni de filtrage sanctions/PPE par un prestataire habilité. Ces contrôles seront intégrés avant l'activation de tout service financier réel.",
     level1: 'Vérification de niveau 1 (identité)',
     loadError: 'Impossible de charger votre dossier KYC.',
     loading: 'Chargement de votre dossier…',

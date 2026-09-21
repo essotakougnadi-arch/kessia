@@ -7,7 +7,15 @@
 >
 > Légende : ✅ en place · 🟡 partiel / posture MVP · ⛔ bloquant avant prod · 📋 à rédiger
 
-_Dernière revue technique : 2026-09-09 (post-ADR 0043 — effacement RGPD encadré + purge de rétention automatique). Depuis ADR 0017 : pièces jointes de ticket (0018), tests d'intégration (0019), internationalisation FR/EN de tout l'espace membre et de la prose serveur (0020→0028), livraison marketplace (0042) — sans impact sur les bloquants réglementaires ci-dessous._
+_Dernière revue technique : 2026-09-21 (P0.5 — audit KYC/LAB-FT vérifié
+contre le code, pas seulement contre les intentions ; voir §3 et
+`docs/audit/P0_5_REMEDIATION_REPORT.md`). Revue précédente : 2026-09-09
+(post-ADR 0043 — effacement RGPD encadré + purge de rétention automatique).
+Depuis ADR 0017 : pièces jointes de ticket (0018), tests d'intégration
+(0019), internationalisation FR/EN de tout l'espace membre et de la prose
+serveur (0020→0028), livraison marketplace (0042), sécurité Next.js/
+sessions/webhooks/idempotence marketplace (P0.1→P0.4) — sans impact sur les
+bloquants réglementaires ci-dessous._
 
 ---
 
@@ -38,16 +46,22 @@ _Dernière revue technique : 2026-09-09 (post-ADR 0043 — effacement RGPD encad
 
 ## 3. KYC / LAB-FT (AML/CFT)
 
+> Revue technique P0.5 (2026-09-21) : chaque ligne ci-dessous a été
+> **vérifiée contre le code actuel**, pas seulement contre les intentions.
+> Détail complet : `docs/audit/P0_5_REMEDIATION_REPORT.md`.
+
 | Point | État | Détail |
 |---|---|---|
-| Recueil d'identité + pièce + selfie | ✅ | Flux `/profile/kyc` fonctionnel, 7 statuts (§30). |
-| Niveaux de vérification & plafonds associés | 🟡 | Paliers 0/1/2 (`lib/kyc/limits.ts`) : plafonds **par opération** et **mensuels sortants** désormais **appliqués côté serveur** (`wallet/transfer`, `payments`) — ADR 0013. ⛔ **Les valeurs réelles doivent être calées sur la réglementation** (aujourd'hui conservatrices). |
-| Liveness / vérification biométrique | ⛔ | Le « selfie » est une simple photo. Pas de détection du vivant ni de prestataire agréé → **à intégrer** (ex. prestataire IDV) avant activation des services financiers. |
-| Revue manuelle + motifs de rejet | ✅ | Back-office `/admin/kyc/[id]` : valider / rejeter (motif obligatoire) / action requise. |
-| Screening sanctions / PPE | ⛔ | **Stub local** (`lib/kyc/screening.ts`) : pose un drapeau pour la revue humaine, ne bloque rien. Screening habilité (ONU/UE/OFAC, PPE) à brancher. |
-| Conservation des dossiers KYC | 📋 | Durée légale à confirmer (souvent ≥ 5-10 ans après fin de relation). |
+| Recueil d'identité + pièce + selfie | ✅ | Flux `/profile/kyc` fonctionnel, 7 statuts (§30). Bandeau de transparence ajouté (P0.5) : précise que ce contrôle est interne, pas réglementaire. |
+| Statuts & transitions | ✅ (partiel) | Machine à états vérifiée : `NOT_STARTED→IN_PROGRESS→UNDER_REVIEW→VERIFIED/REJECTED/ACTION_REQUIRED` fonctionnelle et auditée. **`EXPIRED` est une transition morte** : définie dans le schéma, une branche d'affichage existe côté client, mais **rien dans le code ne la déclenche jamais** (pas de cron, pas de logique de péremption). Pas de réexamen périodique. |
+| Contrôle d'accès aux données sensibles | ✅ | Vérifié : `fileUrl`/URL signées réservés à `COMPLIANCE_ROLES` (`SUPER_ADMIN`/`ADMIN`/`COMPLIANCE`, pas « admin » au sens large) sur `GET/PATCH /admin/kyc/[id]`. `GET /kyc` (statut général) n'expose jamais `fileUrl`. Contenu des documents jamais journalisé en clair. |
+| Niveaux de vérification & plafonds associés | 🟡 | Paliers 0/1/2 (`lib/kyc/limits.ts`) : plafonds **par opération** et **mensuels sortants** appliqués côté serveur sur `wallet/transfer`, `payments`, **et désormais `marketplace/[id]/order` (mode WALLET) — P0.5** : un achat marketplace était auparavant possible sans aucun plafond, écart corrigé. ⛔ **Les valeurs réelles doivent être calées sur la réglementation** (aujourd'hui conservatrices). |
+| Liveness / vérification biométrique | ⛔ | Le « selfie » est une simple photo. Pas de détection du vivant ni de prestataire agréé → **à intégrer** (ex. prestataire IDV) avant activation des services financiers. **Désormais explicitement disclosé à l'utilisateur** sur `/profile/kyc` (P0.5, avant : aucune mention). |
+| Revue manuelle + motifs de rejet | ✅ | Back-office `/admin/kyc/[id]` : valider / rejeter (motif obligatoire **vérifié côté serveur**) / action requise. Audit + notification utilisateur à chaque décision. |
+| Screening sanctions / PPE | ⛔ | **Stub local** (`lib/kyc/screening.ts`), **et vérifié P0.5 : jamais appelé nulle part dans le code** — pas même branché pour poser un drapeau de revue. N'a pas été câblé volontairement (le câbler donnerait une fausse impression de filtrage alors qu'aucune liste réelle n'est utilisée). Screening habilité (ONU/UE/OFAC, PPE) à intégrer avec un vrai prestataire avant toute activation. |
+| Conservation des dossiers KYC | 📋 | Durée légale à confirmer (souvent ≥ 5-10 ans après fin de relation). **Vérifié P0.5** : `lib/privacy/retention.ts` ne purge jamais automatiquement les dossiers KYC (commentaire explicite dans le code) ; `eraseUserData` (RGPD) supprime les pièces (bucket + lignes) mais **conserve le dossier** (statut, décision, dates) comme preuve LCB-FT — conforme à la pratique attendue. |
 | Déclaration de soupçon / gel des avoirs | ⛔ | Procédure + interlocuteur CENTIF à définir. |
-| Journal d'audit KYC | ✅ | `audit_logs` (`kyc.*`, `kyc.review_*`). |
+| Journal d'audit KYC | ✅ | `audit_logs` (`kyc.case_opened`, `kyc.submit_document`, `kyc.review_*`) — vérifié présent sur chaque transition. |
 
 ## 4. Paiements
 
@@ -132,7 +146,7 @@ _Dernière revue technique : 2026-09-09 (post-ADR 0043 — effacement RGPD encad
 
 1. Entité juridique + statut vis-à-vis des services financiers + partenariats.
 2. Intégrations paiement réelles (sandbox puis prod) sous contrat.
-3. KYC : liveness/prestataire IDV + screening sanctions/PPE habilité (stub local + plafonds serveur déjà en place — ADR 0013) + calage des plafonds sur la réglementation.
+3. KYC : liveness/prestataire IDV + screening sanctions/PPE habilité (stub local **jamais appelé**, vérifié P0.5 + plafonds serveur désormais appliqués partout y compris marketplace — ADR 0013/P0.5) + calage des plafonds sur la réglementation.
 4. Procédures : déclaration de soupçon, gel des avoirs (runbook incident + DR ébauchés — ADR 0013, à formaliser).
 5. Pages légales : **brouillons publiés** (CGU, confidentialité, mentions légales — ADR 0015 ; tarifs dans le Trust Center). Restent la validation par un conseil juridique togolais et les informations de l'entité.
 6. ~~Migration du stockage des documents KYC hors base~~ → **fait** (Supabase Storage, ADR 0014). ~~Nettoyage du bucket à la suppression RGPD~~ → **fait** (`eraseUserData`, ADR 0043). Reste : validation de la fenêtre de rétractation / du délai d'effacement par un conseil.

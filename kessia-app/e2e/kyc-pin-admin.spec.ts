@@ -35,6 +35,23 @@ test.describe('Upload KYC', () => {
 
     // Nettoyage : retire la pièce ajoutée.
     await request.delete(`${baseURL}/api/v1/kyc/documents?type=NATIONAL_ID`, { headers: h });
+
+    // Effet de bord réel (P0.5, cf. `docs/audit/P0_5_REMEDIATION_REPORT.md`) :
+    // soumettre un document alors que le compte est déjà VERIFIED rouvre un
+    // dossier KYC et rétrograde `kycStatus` → IN_PROGRESS (palier 0), ce que
+    // `DELETE` ci-dessus ne défait pas. Ama sert de tier-2 vérifiée dans
+    // d'autres suites (marketplace-delivery, etc.) — restaurer explicitement
+    // son statut via la revue admin (même mécanisme légitime qu'un vrai
+    // dossier), pour ne pas polluer les tests exécutés après celui-ci.
+    const status = await (await request.get(`${baseURL}/api/v1/kyc`, { headers: h })).json();
+    const caseId = status.data?.activeCase?.id as string | undefined;
+    if (caseId) {
+      const adminT = await token(request, baseURL!, SEED.admin);
+      await request.patch(`${baseURL}/api/v1/admin/kyc/${caseId}`, {
+        headers: { Authorization: `Bearer ${adminT}` },
+        data: { decision: 'VERIFIED', level: 2 },
+      });
+    }
   });
 });
 

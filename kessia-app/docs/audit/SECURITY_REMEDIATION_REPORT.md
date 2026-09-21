@@ -144,15 +144,66 @@ documenté en P0.2/P0.3).
 
 ---
 
-## P0.5 — Configuration de production (non commencé)
+## P0.5 — KYC / conformité / LAB-FT (clôturé 2026-09-21)
 
-Périmètre prévu : garde de démarrage (variables d'environnement), CSP sans
-`unsafe-inline`/`unsafe-eval` (nonces), HSTS, restriction `images.remotePatterns`.
+> Note de numérotation : `PHASE0_EXECUTION_PLAN.md` prévoyait initialement
+> « P0.5 = Configuration de production » (CSP/HSTS/garde de démarrage — voir
+> ce plan pour le détail, toujours à traiter). Le déroulement réel de la
+> phase 0, phase par phase, a placé l'audit KYC/LAB-FT à ce numéro — c'est
+> ce travail qui est documenté ci-dessous. La configuration de production
+> reste à faire, sans numéro P0.x fixe pour l'instant (voir note de fin de
+> document).
+
+**Rapport détaillé** : [`P0_5_REMEDIATION_REPORT.md`](./P0_5_REMEDIATION_REPORT.md)
+
+### Constats (audit vérifié contre le code, pas seulement la documentation)
+
+Le document `docs/compliance/matrix.md` §3 existait déjà mais datait d'avant
+P0.0→P0.4 ; chaque ligne a été revérifiée contre le code actuel.
+
+| Constat | Sévérité | Nature |
+|---|---|---|
+| `marketplace/[id]/order` (mode WALLET) ne vérifiait pas les plafonds KYC, contrairement à `wallet/transfer`/`payments` | Moyenne (contournement de plafond réel) | Correction |
+| Aucune divulgation à l'utilisateur que la vérification KYC est un contrôle interne, pas réglementaire | Moyenne (risque de conformité perçue) | Correction |
+| Le stub de screening sanctions/PPE n'est appelé nulle part (documentation antérieure inexacte) | Faible (déjà non fonctionnel, juste mal documenté) | Documentation corrigée |
+| Transition `EXPIRED` jamais déclenchée (dead code) | Faible (fonctionnalité absente, pas défaillante) | Documenté comme manquant |
+
+### Correctifs
+
+- `checkOutboundLimit` étendu à `marketplace/[id]/order` (mode WALLET) —
+  même pattern que `wallet/transfer`/`payments`. `SALE_PAYMENT` ajouté à
+  `OUTBOUND_TYPES` pour une agrégation mensuelle correcte.
+- Bandeau de transparence ajouté sur `/profile/kyc` (FR+EN) — même motif
+  déjà utilisé par `/insurance`/`/tontine/garantie`.
+- `docs/compliance/matrix.md` §3 corrigé ligne par ligne.
+
+### Délibérément non fait
+
+Screening non câblé (câbler une liste factice créerait une fausse
+conformité) ; `EXPIRED` non implémenté (nécessite une politique de
+péremption à définir avec la conformité, hors portée technique).
+
+### Preuve de vérification
+
+3 nouveaux tests d'intégration (`marketplace-kyc-limits.itest.ts`), base
+réelle, dont un vérifiant explicitement que les achats marketplace sont
+comptés dans l'agrégation mensuelle (pas de contournement par achats
+répétés). Suite complète verte (`tsc`/`lint`/`vitest`/`test:integration`/
+`build`/E2E). Détail complet dans le rapport P0.5.
+
+### État résiduel (accepté, documenté)
+
+Screening sanctions/PPE et liveness réels toujours absents (bloquants déjà
+connus avant activation de services financiers réels, désormais disclosés
+à l'utilisateur) ; `EXPIRED` non implémenté ; valeurs de plafonds non
+calées sur la réglementation réelle ; déclaration de soupçon/gel des
+avoirs à définir.
 
 ---
 
-*Les phases P1.x (réconciliation, concurrence, staging, secrets, pool de
-connexions, rate limiting, observabilité, backup/DR, KYC, protection des
-données, tests de sécurité) sont détaillées dans
-`PHASE0_EXECUTION_PLAN.md` et seront ajoutées à ce document au fur et à
-mesure de leur traitement.*
+*Configuration de production (CSP/HSTS/garde de démarrage — périmètre
+initialement prévu sous P0.5, voir `PHASE0_EXECUTION_PLAN.md`) et les
+phases P1.x (réconciliation, concurrence, staging, secrets, pool de
+connexions, rate limiting, observabilité, backup/DR, protection des
+données, tests de sécurité) restent à traiter et seront ajoutées à ce
+document au fur et à mesure.*

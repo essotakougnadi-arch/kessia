@@ -16,6 +16,10 @@
 //     ensuite (perdu la course à un acheteur concurrent), l'acheteur est
 //     remboursé immédiatement (reversal symétrique via `postDoubleEntry`,
 //     même mécanisme que le reversal de `wallet/transfer`).
+//
+// Plafonds KYC (P0.5, §30) : un achat mode WALLET est désormais soumis à
+// `checkOutboundLimit`, comme `wallet/transfer` et `payments` — un compte
+// non vérifié ne peut plus dépenser sans plafond via la marketplace.
 // ============================================================
 
 import { NextRequest } from 'next/server';
@@ -32,6 +36,7 @@ import { generateInviteCode } from '@/lib/utils/crypto';
 import { recordTontineEvent } from '@/lib/tontine/events';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { notify } from '@/lib/notifications/notify';
+import { checkOutboundLimit } from '@/lib/kyc/limits';
 import { Prisma, type MarketplaceOrder } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -119,6 +124,14 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       if (!buyerWallet || !item.seller.wallet) {
         return badRequest('Wallet manquant pour finaliser le paiement.');
       }
+
+      // Plafonds KYC (§30, P0.5) — appliqués côté serveur, même contrôle
+      // que wallet/transfer et payments. Un achat marketplace est un
+      // débit sortant comme un autre ; il ne doit pas contourner le
+      // palier de l'acheteur.
+      const limit = await checkOutboundLimit(context.userId, price);
+      if (!limit.allowed) return badRequest(limit.reason ?? 'Plafond de transaction atteint.');
+
       const onDelivery = item.settlement === 'ON_DELIVERY';
       // Clé stable si le client fournit Idempotency-Key ; à défaut, repli
       // non rejouable (même limite acceptée par wallet/transfer sans

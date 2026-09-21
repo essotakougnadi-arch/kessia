@@ -3,6 +3,98 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.5 : KYC / conformité / LAB-FT — audit et corrections ciblées
+
+### Audit (contre le code actuel, pas seulement la documentation)
+Chaque ligne de `docs/compliance/matrix.md` §3 (KYC/LAB-FT) vérifiée dans le
+code. **Confirmé réel** : machine à états KYC (7 statuts), revue humaine
+avec motif obligatoire **vérifié côté serveur**, accès aux pièces
+strictement réservé à `COMPLIANCE_ROLES`, `fileUrl` jamais exposé hors
+back-office conformité, plafonds par palier appliqués côté serveur, audit
+complet, effacement RGPD qui conserve le dossier (preuve LAB-FT) tout en
+supprimant les pièces, rétention KYC jamais auto-purgée, modules
+réglementés (Invest/Insurance/Loans) toujours désactivés.
+
+**2 écarts réels trouvés entre la documentation et le code** :
+- Le stub de screening sanctions/PPE (`lib/kyc/screening.ts`) n'est **appelé
+  nulle part** — pas même branché pour poser un drapeau, contrairement à ce
+  que le document décrivait.
+- La page `/profile/kyc` ne disait nulle part à l'utilisateur que la
+  vérification est un contrôle interne, pas une vérification d'identité
+  réglementaire (pas de liveness, pas de screening réel) — contraste avec
+  `/insurance`/`/tontine/garantie` qui ont déjà ce type de bandeau.
+
+**Manquant confirmé** : la transition de statut `EXPIRED` est définie dans
+le schéma et a une branche d'affichage côté client, mais **rien ne la
+déclenche jamais** — dead code, pas une fonctionnalité cassée.
+
+**Comportement réel notable trouvé pendant la vérification finale** :
+soumettre un document KYC alors que le compte est déjà `VERIFIED`
+rétrograde silencieusement `kycStatus` → `IN_PROGRESS` (perte du palier),
+sans chemin automatique de retour à `VERIFIED` — comportement du code réel
+(`POST /api/v1/kyc/documents`), pas un bug d'infra. Décision de politique
+KYC non tranchée ici (voir Risques résiduels) ; seul son effet de bord sur
+les tests E2E a été corrigé.
+
+### Corrigé
+- **Plafond KYC ajouté à la commande Marketplace** (mode WALLET) : un
+  compte non vérifié pouvait dépenser sans aucun plafond via un achat
+  marketplace, contrairement à `wallet/transfer`/`payments` qui appellent
+  déjà `checkOutboundLimit`. `SALE_PAYMENT` ajouté à `OUTBOUND_TYPES`
+  (`lib/kyc/limits.ts`) pour que l'agrégation mensuelle compte bien ces
+  achats (sinon contournable par achats répétés sous le plafond unitaire).
+- **Bandeau de transparence ajouté sur `/profile/kyc`** (FR + EN) — même
+  motif déjà utilisé par `/tontine/garantie`/`/insurance`, appliqué à un
+  endroit qui en manquait. Précise : contrôle interne, pas réglementaire ;
+  pas de liveness ni de screening habilité ; ces contrôles seront intégrés
+  avant activation de tout service financier réel.
+- **Pollution d'état E2E révélée par le correctif ci-dessus** (test
+  uniquement, aucun code applicatif) : `kyc-pin-admin.spec.ts` faisait
+  perdre à Ama (SEED.ama) son palier KYC 2 sans jamais le restaurer,
+  cassant `marketplace-delivery.spec.ts` maintenant que le plafond KYC y
+  est vérifié. Corrigé en restaurant explicitement son statut via la
+  revue admin existante (`PATCH /admin/kyc/[id]`) après le test.
+
+### Délibérément non fait (pour ne pas créer de fausse conformité)
+Screening sanctions/PPE non câblé (le brancher sur une liste locale
+factice donnerait l'illusion d'un filtrage réel) ; transition `EXPIRED` non
+implémentée (exigerait une politique de péremption à définir avec la
+conformité, hors portée d'une correction technique) ; rétrogradation
+`VERIFIED → IN_PROGRESS` à la resoumission non modifiée (décision produit/
+conformité, pas un bug technique évident).
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning · `vitest` unit **194/194** (inchangé) ·
+`test:integration` (`USE_TEST_DB=1`) **17 fichiers, 63/63** (3 nouveaux,
+`marketplace-kyc-limits.itest.ts` — dont un test dédié confirmant que les
+achats marketplace sont bien agrégés dans le plafond mensuel) · `build` OK
+· `test:e2e:isolated` **55 passed / 2 failed** sur 57 — les 2 échecs
+(`marketplace-delivery.spec.ts:14`, `tontine.spec.ts:37`) reproduisent des
+signatures d'erreur préexistantes et déjà documentées, sans lien avec
+P0.5 (détail `TICKET_CI_E2E_FAILURES.md`). Un 3ᵉ symptôme observé en cours
+de route (`auth.spec.ts:12`) a été vérifié par comparaison A/B rigoureuse
+(`git stash`, 4 runs de chaque côté) : préexistant, confirmé sans lien
+avec P0.5. **Rapport complet** : `docs/audit/P0_5_REMEDIATION_REPORT.md`.
+`docs/compliance/matrix.md` §3 mis à jour ligne par ligne.
+
+### Hors périmètre (confirmé non touché)
+`lib/ledger/ledger.service.ts`, Wallet, Escrow, règles Payments, Tontines,
+flux de capture KYC lui-même (seul un bandeau de copie ajouté, le
+comportement de rétrogradation n'a pas été modifié), P0.2, P0.3.
+Marketplace touché uniquement pour la dépendance indispensable justifiée
+(plafond KYC) — aucune règle métier modifiée.
+
+### Risques résiduels
+Screening sanctions/PPE et liveness toujours absents (bloquants déjà
+documentés avant activation de services financiers réels — désormais
+disclosés à l'utilisateur pour le second) ; `EXPIRED` non implémenté ;
+valeurs de plafonds non calées sur la réglementation réelle ; déclaration
+de soupçon/gel des avoirs à définir ; rétrogradation silencieuse
+`VERIFIED → IN_PROGRESS` à la resoumission d'un document, à trancher
+explicitement ; `auth.spec.ts:12` (déconnexion) flaky préexistant
+caractérisé mais non résolu. Détail complet dans
+`P0_5_REMEDIATION_REPORT.md`.
+
 ## [Non publié] — Phase 0 — P0.4 : Marketplace — idempotence et prévention des doubles opérations
 
 ### Sécurité / fiabilité

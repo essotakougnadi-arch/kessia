@@ -32,7 +32,11 @@ export function tierFor(kycStatus: KycStatus, kycLevel: number): KycTier {
   return kycLevel >= 2 ? 2 : 1;
 }
 
-const OUTBOUND_TYPES: TransactionType[] = ['TRANSFER_OUT', 'WITHDRAWAL', 'FEE'];
+// SALE_PAYMENT (P0.5) : achats marketplace payés par wallet — désormais
+// soumis au même plafond sortant que les transferts (checkOutboundLimit
+// est maintenant aussi appelé par marketplace/[id]/order). Sans cette
+// entrée, l'agrégation mensuelle ignorerait ces débits.
+const OUTBOUND_TYPES: TransactionType[] = ['TRANSFER_OUT', 'WITHDRAWAL', 'FEE', 'SALE_PAYMENT'];
 
 export type LimitCheck = {
   allowed: boolean;

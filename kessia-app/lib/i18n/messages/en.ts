@@ -1741,6 +1741,9 @@ export const en: Catalog = {
   kycPage: {
     back: 'Back',
     title: 'Identity verification',
+    demoNoticeTitle: 'KESSIA internal check.',
+    demoNoticeBody:
+      "This verification unlocks the app's internal tiers (limits, features). It is not a regulatory identity verification: no liveness detection and no sanctions/PEP screening by a licensed provider. These controls will be integrated before any real financial service is activated.",
     level1: 'Level 1 verification (identity)',
     loadError: 'Could not load your KYC case.',
     loading: 'Loading your case…',

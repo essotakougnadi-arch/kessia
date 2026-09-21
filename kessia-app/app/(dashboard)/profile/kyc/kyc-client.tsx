@@ -101,6 +101,10 @@ export default function KycClient() {
         <div className={styles.headerPct}>{pct}%</div>
       </header>
 
+      <div className={styles.demoBanner}>
+        <strong>{t('kycPage.demoNoticeTitle')}</strong> {t('kycPage.demoNoticeBody')}
+      </div>
+
       <div className={styles.progressSection}>
         <div className={styles.progressTrack}>
           <div className={styles.progressFill} style={{ width: `${pct}%` }} />

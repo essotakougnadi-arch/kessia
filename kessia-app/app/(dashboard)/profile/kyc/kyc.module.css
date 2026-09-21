@@ -7,6 +7,10 @@
 .headerTitle { font-size: 17px; font-weight: 800; color: var(--color-text); letter-spacing: -0.3px; }
 .headerPct { font-size: 16px; font-weight: 900; color: var(--color-primary); }
 
+/* Bandeau de transparence (P0.5) — vérification interne, pas réglementaire */
+.demoBanner { margin: 14px 20px 0; background: var(--color-warning-light, #f3ebd8); border: 1px solid var(--color-warning, #d6a84f); border-radius: 12px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5; color: var(--color-text-secondary); }
+.demoBanner strong { color: var(--color-warning, #b45309); }
+
 /* PROGRESS */
 .progressSection { padding: 16px 20px 0; }
 .progressTrack { height: 8px; background: var(--color-border); border-radius: 100px; overflow: hidden; margin-bottom: 8px; }

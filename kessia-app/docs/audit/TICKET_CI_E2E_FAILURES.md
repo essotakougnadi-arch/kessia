@@ -1,11 +1,13 @@
 ---
 title: "KESSIA — Ticket : échecs CI e2e.yml (pré-existants, confirmés antérieurs à P0.1)"
-date: "15 septembre 2026 (ouvert) — mis à jour à la clôture de P0.2 (16 sept.)"
+date: "15 septembre 2026 (ouvert) — mis à jour à la clôture de P0.5 (21 sept.)"
 ---
 
 # Ticket — Échecs `e2e.yml` en CI (pré-existants)
 
-**Statut : PARTIELLEMENT RÉSOLU — clôture P0.2 (2026-09-16).**
+**Statut : PARTIELLEMENT RÉSOLU — clôture P0.2 (2026-09-16). Nouveau cas
+`auth.spec.ts:12` caractérisé (préexistant, non-régression) à la clôture de
+P0.5 (2026-09-21).**
 Ouvert à la clôture de P0.1, suite à la découverte documentée dans
 `P0_1_REMEDIATION_REPORT.md` §6/§7. Non bloquant pour P0.1 (non-régression
 démontrée par comparaison avec le commit `3786926`, antérieur à tout
@@ -100,3 +102,39 @@ qui démarre à froid pour chaque run, vs. instance locale déjà chaude).
   périmètre P0.2 (Tontines/Marketplace métier explicitement non modifiables
   pendant cette phase). Root-cause et correctif à traiter dans un ticket
   dédié post-P0.x, sans lien avec P0.3/P0.4/P0.5.
+
+## Mise à jour P0.5 — nouveau cas observé : `auth.spec.ts:12`
+
+Pendant la vérification finale de P0.5 (`npm run test:e2e:isolated`, 57
+tests), un 3e symptôme est apparu, jamais vu sur les runs P0.1-P0.4 :
+
+- **`e2e/auth.spec.ts:12`** — « connexion par mot de passe → accueil, puis
+  déconnexion ». Échec sur `expect(page).toHaveURL(/\/login/)` après le clic
+  sur le bouton de déconnexion : l'URL reste sur `/home` au lieu de basculer
+  vers `/login` (timeout 15 s).
+
+**Vérification rigoureuse effectuée avant d'écarter l'hypothèse d'une
+régression P0.5** (méthode A/B par `git stash`, identique à celle utilisée en
+P0.1/P0.4) :
+
+1. `auth.spec.ts` seul, 4 exécutions sur le code **avec** les changements
+   P0.5 → **3/4 échecs**, trace identique à chaque fois.
+2. `git stash push -u` (retire tous les changements P0.5) + `npm run build`
+   (succès) + `auth.spec.ts` seul, 4 exécutions sur le code **sans** P0.5 →
+   **3/4 échecs également**, trace strictement identique.
+3. `git stash pop` (restauration propre, `git status` conforme) + rebuild
+   (succès).
+
+**Conclusion : préexistant, sans lien avec P0.5** (P0.5 ne touche ni
+`lib/auth/*`, ni `AuthBootstrap`, ni les cookies — aucun fichier du
+périmètre P0.2/P0.3 n'a été modifié). Taux de reproduction en isolation
+(~75%) nettement plus élevé que `tontine.spec.ts:37` ou
+`marketplace-delivery.spec.ts:14`, qui n'apparaissent que de façon
+intermittente en suite complète. Mérite un ticket de root-cause dédié
+(piste : interaction entre `AuthBootstrap` et le clic de déconnexion en
+environnement E2E — la révocation de session P0.2 étant maintenant
+vérifiée en base à chaque requête, un appel en vol au moment du clic
+pourrait retarder la redirection), **hors périmètre P0.5** (KYC/conformité
+uniquement) et hors périmètre de tout P0.x déjà clos. Non bloquant pour la
+clôture de P0.5 : comportement identique avant/après, donc non-régression
+démontrée.
