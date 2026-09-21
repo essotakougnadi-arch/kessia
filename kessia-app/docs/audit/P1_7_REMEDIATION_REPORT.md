@@ -175,12 +175,25 @@ cette phase :
 
 ---
 
-## Vérification finale CI/CD + staging (commit de clôture)
+## Vérification finale CI/CD + staging (commit `fe4b1b6`)
 
-Voir la section correspondante ci-dessous, complétée après le push et la
-vérification run par run (méthode établie : jamais la vue liste/checks).
+Vérifié run par run via l'API GitHub (page de détail de chaque run,
+jamais la vue liste/checks) :
+
+| Workflow | Run | Conclusion |
+|---|---|---|
+| CI | [`35623207005`](https://github.com/essotakougnadi-arch/kessia/actions/runs/35623207005) | ✅ success |
+| Integration | [`35623206914`](https://github.com/essotakougnadi-arch/kessia/actions/runs/35623206914) | ✅ success |
+| Staging | [`35623206867`](https://github.com/essotakougnadi-arch/kessia/actions/runs/35623206867) | ✅ success |
+| E2E | [`35623207010`](https://github.com/essotakougnadi-arch/kessia/actions/runs/35623207010) | ⚠️ failure — **55 passed / 2 failed**, vérifié test par test : `tontine.spec.ts:22` (violation de mode strict, famille déjà documentée) et `marketplace-delivery.spec.ts:14` (item de test introuvable — variante CI de la flakiness métier déjà documentée). Aucun des deux n'est lié aux verrous de concurrence introduits (activation, adhésion, cron) — **non-régression confirmée**, pas supposée. |
+
+**Staging en direct** : `curl https://kessia-staging.vercel.app/api/health`
+→ `200 {"status":"ok","db":"ok",...}`, déploiement confirmé.
 
 ## Verdict
 
-**P1.7 = VALIDÉ**, sous réserve de la vérification finale CI/staging
-documentée dans le commit de clôture.
+**P1.7 = VALIDÉ.** Les 3 verrous de concurrence demandés sont en place et
+prouvés par des tests réels sous `Promise.all` (rejoués 4× localement,
+0 flakiness). Aucun fichier hors périmètre touché. CI/Integration/Staging
+verts ; E2E dans l'état préexistant déjà documenté, vérifié test par test
+pour exclure toute régression.
