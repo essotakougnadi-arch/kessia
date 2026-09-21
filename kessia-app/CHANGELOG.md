@@ -3,6 +3,63 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 1 — P1.9 (Lot B) : Garde contre les commandes de base de données destructives
+
+Inspection préalable de `package.json`, `prisma/seed.ts`, `scripts/`, les
+workflows CI/CD et l'usage des variables d'environnement — présentée
+avant toute modification. **Découverte critique** : `prisma/seed.ts`
+efface (`deleteMany`) la quasi-totalité des tables — y compris les
+utilisateurs — avant de réensemencer ; `.env`/`.env.local` pointent
+aujourd'hui sur le projet Supabase de production/démo (pas de base
+locale/dev séparée). `npm run db:seed` lancé par erreur en l'état
+détruirait donc irréversiblement les données réelles.
+
+### Ajouté
+- Nouveau `scripts/guard-db-command.mjs` — refuse l'exécution d'une
+  commande si `DATABASE_URL` (résolu exactement comme Prisma CLI :
+  `process.env`, puis `.env`, jamais `.env.local`) contient la référence
+  du projet Supabase de production connue — même motif que la garde déjà
+  en place et prouvée en CI (`staging.yml`, `e2e.yml`,
+  `integration.yml`). N'affiche jamais l'URL complète (identifiants
+  compris) dans ses messages, y compris en cas de refus.
+- `package.json` : `db:seed`, `db:push`, `db:migrate`,
+  `db:migrate:deploy`, `db:studio` passent désormais par cette garde.
+  `db:test:reset`, `db:generate`, `db:backup`, `privacy:purge`
+  volontairement non concernés (déjà protégé autrement, sans connexion
+  DB, non destructif, ou destiné à tourner en production).
+- `docs/development/testing.md` : section dédiée expliquant la garde et
+  son périmètre.
+
+### Tests
+Nouveau `scripts/guard-db-command.test.ts` (10 tests) : détection d'une
+URL de production connue, acceptation des URLs locale/test/staging,
+traitement sûr d'une URL malformée ou absente (jamais d'exception),
+non-exposition des identifiants dans les messages, résolution
+`process.env` puis `.env`. Vérification manuelle non destructive
+supplémentaire : une cible de production simulée est bloquée (code de
+sortie 1, aucun secret dans le message, commande jamais exécutée) ; une
+cible sûre est correctement exécutée.
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning · `vitest` unit **213/213** (203
+précédents + 10 nouveaux) · `test:integration` **18 fichiers, 68/68**
+(inchangé — `db:seed` de `db-test-reset.mjs` appelle `tsx` directement,
+hors périmètre de cette garde, sans impact) · `build` OK ·
+`test:e2e:isolated` **53 passed / 4 failed** — les 4 échecs
+(`auth.spec.ts:12`, `marketplace-delivery.spec.ts:14`,
+`tontine.spec.ts:22`, `tontine.spec.ts:37`) correspondent chacun
+individuellement à une signature déjà documentée comme préexistante
+dans `TICKET_CI_E2E_FAILURES.md` (dont `auth.spec.ts:12`, déjà vérifié
+préexistant par comparaison A/B `git stash` en P0.5) ; aucun des
+fichiers modifiés par ce lot n'est sur leur chemin de code.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, Payments, Tontines métier, Marketplace, KYC, AI,
+authentification/sessions (P0.2), P0.3. Aucune donnée réelle supprimée
+ou modifiée. Lot C (CSP/HSTS) reste hors périmètre. Base locale/dev
+séparée explicitement non créée (décision validée : garde stricte
+seule pour l'instant).
+
 ## [Non publié] — Phase 1 — P1.9 (Lot A) : Secrets & configuration — correctifs sûrs et additifs
 
 Audit en lecture seule préalable (variables d'environnement, `.env*`,

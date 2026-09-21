@@ -63,3 +63,26 @@ USE_TEST_DB=1 npm run test:integration   # charge .env.test par-dessus .env.loca
 
 Utile pour rejouer une suite lourde (`platform.itest.ts`) sans toucher la
 démo. Le nettoyage `itest_` reste actif de toute façon.
+
+## Garde contre les commandes de base de données destructives (P1.9, Lot B)
+
+`.env`/`.env.local` de ce dépôt pointent aujourd'hui sur le projet
+Supabase de **production/démo** — il n'existe pas (encore) de base
+locale/dev séparée. `npm run db:seed` en particulier efface la
+quasi-totalité des tables (`prisma/seed.ts`) avant de réensemencer : lancé
+par erreur contre cette cible, il détruirait irréversiblement les
+données réelles.
+
+`db:seed`, `db:push`, `db:migrate`, `db:migrate:deploy` et `db:studio`
+passent donc tous par `scripts/guard-db-command.mjs`, qui refuse
+l'exécution si `DATABASE_URL` (résolu comme le fait Prisma CLI :
+`process.env`, puis `.env`) contient la référence du projet Supabase de
+production — même motif que la garde déjà en place et prouvée en CI
+(`.github/workflows/staging.yml`, `e2e.yml`, `integration.yml`). Les
+bases locales, de test, éphémères (CI) et de staging passent sans
+encombre : seule la référence de production précise est bloquée.
+
+`db:test:reset`, `db:generate`, `db:backup` et `privacy:purge` ne
+passent volontairement **pas** par cette garde (respectivement déjà
+protégé autrement, sans connexion DB, non destructif, et destiné à
+tourner un jour en production).
