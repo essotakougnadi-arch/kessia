@@ -125,6 +125,15 @@ P0.1/P0.4) :
 3. `git stash pop` (restauration propre, `git status` conforme) + rebuild
    (succès).
 
+**Confirmation CI de clôture P0.5** (commit `4390ee3`, run `e2e.yml` #35619003890) :
+`auth.spec.ts:12` **absent** des échecs — 3 failed / 54 passed, tous les 3
+échecs restants correspondant exactement au périmètre déjà connu
+(`marketplace-delivery.spec.ts:14` — cette fois erreur « Missing
+marketplace item with pickupZone property », variante CI de la même
+flakiness métier déjà documentée en local ; `tontine.spec.ts:22` et
+`:37` — violation de mode strict Playwright, récurrente). Cohérent avec
+la nature intermittente déjà établie plutôt qu'une régression.
+
 **Conclusion : préexistant, sans lien avec P0.5** (P0.5 ne touche ni
 `lib/auth/*`, ni `AuthBootstrap`, ni les cookies — aucun fichier du
 périmètre P0.2/P0.3 n'a été modifié). Taux de reproduction en isolation
