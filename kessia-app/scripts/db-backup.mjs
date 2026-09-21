@@ -49,7 +49,11 @@ try {
   });
   console.log('✅ Sauvegarde terminée.');
 } catch (e) {
+  // Ne JAMAIS journaliser e.message/e.cmd ici : Node inclut par défaut la
+  // commande complète (donc DATABASE_URL, identifiants compris) dans le
+  // message d'erreur d'un execFileSync échoué (P1.9, Lot A). pg_dump a
+  // déjà écrit son propre diagnostic sur stderr via `stdio: 'inherit'`.
   console.error('❌ Échec de pg_dump. Est-il installé et dans le PATH ?');
-  console.error(String(e.message ?? e));
+  console.error(`Code de sortie : ${typeof e.status === 'number' ? e.status : 'inconnu'}.`);
   process.exit(1);
 }

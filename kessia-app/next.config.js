@@ -1,17 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: {
-      allowedOrigins: ['localhost:3000'],
-    },
-  },
+  // Aucune image distante servie par l'app (KYC/avatars/marketplace passent
+  // par des data-URI ou des URLs signées Supabase, jamais par next/image) —
+  // liste vide = la route framework /_next/image ne proxifie aucune URL
+  // externe (P1.9, Lot A : `hostname: '**'` exposait un SSRF potentiel).
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    remotePatterns: [],
   },
   async headers() {
     return [

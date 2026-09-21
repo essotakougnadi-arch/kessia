@@ -3,6 +3,77 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 1 — P1.9 (Lot A) : Secrets & configuration — correctifs sûrs et additifs
+
+Audit en lecture seule préalable (variables d'environnement, `.env*`,
+workflows CI/CD, `next.config.js`, usages de `SUPABASE_SERVICE_ROLE_KEY`,
+journalisation) — rapport complet présenté avant toute modification.
+**Aucun secret n'a été trouvé committé** dans l'historique git (vérifié
+en entier). Ce lot ne traite que les correctifs à risque de régression
+quasi nul, validés explicitement ; le reste (environnement local isolé,
+clé Supabase Storage à portée réduite, CSP/HSTS) reste hors périmètre.
+
+### Corrigé
+- **`images.remotePatterns` grand ouvert** (`next.config.js`,
+  `{hostname:'**'}`) : la route framework `/_next/image` proxifiait
+  n'importe quelle URL https fournie en paramètre, indépendamment de
+  l'usage applicatif (SSRF/déni de service potentiel). Passé à `[]` —
+  confirmé qu'aucune image distante n'est servie par l'app (KYC/
+  avatars/marketplace passent par data-URI ou URLs signées Supabase).
+- **Bloc `serverActions.allowedOrigins` inerte** retiré de
+  `next.config.js` — confirmé 0 occurrence de `'use server'` dans tout
+  le code, résidu de configuration sans usage.
+- **Aucune rédaction des secrets dans les logs.** `lib/logger.ts` :
+  nouvelle fonction `redact()` (+ application récursive à tout objet
+  journalisé) qui masque les identifiants d'une chaîne de connexion
+  (`scheme://user:pass@host` → `scheme://***@host`) et la valeur des
+  champs `password`/`secret`/`token`/`apiKey`. Motivation concrète : une
+  erreur Prisma de connexion peut embarquer `DATABASE_URL` (mot de passe
+  compris) dans son message — sans rédaction, un incident DB transitoire
+  pouvait faire fuiter le mot de passe vers les logs Vercel.
+- **`scripts/db-backup.mjs`** : en cas d'échec de `pg_dump`,
+  `e.message` (qui peut inclure la commande complète, donc
+  `DATABASE_URL`) n'est plus journalisé — seul un message générique +
+  le code de sortie le sont désormais.
+- **Aucune garde contre `DEMO_MODE=1` en production.** Nouveau
+  `lib/config/env.ts` : validation minimale (variables critiques
+  signalées si absentes en production, sans bloquer) + blocage explicite
+  d'une seule combinaison dangereuse — `DEMO_MODE=1` en
+  `NODE_ENV=production` sans `ALLOW_DEMO_IN_PRODUCTION=1` (opt-in nommé,
+  même convention que `E2E_RATE_LIMIT_BYPASS`). Ce module n'est pas
+  câblé dans le cycle de démarrage de l'application dans ce lot (hors
+  périmètre) — il est complet et testé, prêt à être importé.
+
+### Tests
+Nouveaux `lib/logger.test.ts` (3 tests) et `lib/config/env.test.ts`
+(6 tests) — rédaction des chaînes de connexion et des champs sensibles,
+blocage/autorisation de `DEMO_MODE` selon l'opt-in, non-blocage hors
+production.
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning · `vitest` unit **203/203** (194
+précédents + 9 nouveaux) · `test:integration` **18 fichiers, 68/68**
+(inchangé) · `build` OK · `test:e2e:isolated` **54 passed / 3 failed** —
+les 3 échecs (`marketplace-delivery.spec.ts:14`, `tontine.spec.ts:22`,
+`tontine.spec.ts:37`) correspondent chacun individuellement à des
+signatures déjà documentées comme préexistantes dans
+`TICKET_CI_E2E_FAILURES.md` ; aucun fichier modifié par ce lot n'est sur
+le chemin de code de ces tests (secrets/config vs. tontines/marketplace-
+livraison) — non-régression confirmée.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, Payments, Tontines métier, Marketplace, KYC, AI,
+P0.2 (sessions/tokens/cookies/refresh/révocation/`createSession`), P0.3.
+Lot B (environnement local isolé, clé Supabase Storage à portée
+réduite, nettoyage `.env.local`) et Lot C (CSP/HSTS) explicitement
+laissés de côté — voir rapport pour le détail.
+
+### Risques résiduels (nouveaux, propres à ce lot)
+`lib/config/env.ts` n'est pas encore importé/câblé dans le cycle de
+démarrage réel de l'application — la protection contre `DEMO_MODE=1` en
+production n'est donc pas encore active tant qu'aucun point d'entrée ne
+l'importe. Lot B et Lot C restent ouverts (voir audit initial).
+
 ## [Non publié] — Phase 1 — P1.7 : Concurrence Tontines (activation, adhésion, cron)
 
 ### Corrigé
