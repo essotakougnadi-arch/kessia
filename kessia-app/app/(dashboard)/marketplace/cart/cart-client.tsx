@@ -58,8 +58,16 @@ export default function CartClient() {
       let failed = 0;
       let lastError: string | undefined;
       for (let i = 0; i < line.qty; i++) {
+        // Idempotency-Key (P0.4) par unité : protège chaque achat contre un
+        // rejeu réseau ou un double appel de checkout() avant que l'état
+        // "processing" ne désactive le bouton. Générée à chaque tentative
+        // (pas persistée entre rechargements de page) — cas résiduel
+        // documenté : un échec perçu côté client suivi d'une nouvelle
+        // tentative MANUELLE après avoir quitté puis rouvert la page
+        // n'est pas dédupliqué (protection proportionnée au risque le
+        // plus fréquent, pas une garantie absolue — voir P0_4_REMEDIATION_REPORT.md).
         // eslint-disable-next-line no-await-in-loop
-        const res = await order(line.itemId, { mode: 'WALLET' });
+        const res = await order(line.itemId, { mode: 'WALLET' }, crypto.randomUUID());
         if (res.success) {
           ok += 1;
           const d = res.data as { orderId?: string } | undefined;

@@ -109,11 +109,38 @@ règle « jamais de données sensibles brutes en log »).
 
 ---
 
-## P0.4 — Marketplace : idempotence des commandes (non commencé)
+## P0.4 — Marketplace : idempotence des commandes (clôturé 2026-09-21)
 
-Périmètre prévu : clé d'idempotence stable côté client, chemin
-transactionnel unique (verrou + débit + stock + commande dans une seule
-transaction).
+**Rapport détaillé** : [`P0_4_REMEDIATION_REPORT.md`](./P0_4_REMEDIATION_REPORT.md)
+
+### Vulnérabilités / findings corrigés
+
+| Finding | Sévérité | Correctif |
+|---|---|---|
+| Clé d'idempotence `Date.now()` sur `POST /marketplace/[id]/order` — retry-unsafe, un rejeu produit un second débit réel | Critique (audit #9/#14) | En-tête `Idempotency-Key` (convention déjà établie ADR 0007 §3) → `MarketplaceOrder.idempotencyKey` `@unique` |
+| Stock lu une fois, jamais verrouillé — survente possible entre acheteurs concurrents | Haute (audit #14) | `SELECT ... FOR UPDATE` sur `marketplace_items` dans la transaction de décrément, mirroir de `lockWallets` |
+| Paiement et commande dans deux transactions séparées — crash possible entre les deux (argent débité, aucune commande) | Haute | Auto-guérison par la clé stable (un rejeu complète l'étape manquante sans re-débiter) + reversal immédiat si conflit de stock découvert après paiement |
+| Mode TONTINE sans idempotence — double tontine/commande possible sur rejeu | Moyenne | Même vérification `idempotencyKey` en amont |
+
+### Preuve de vérification
+
+Audit préalable : `postDoubleEntry` (Ledger), `releaseEscrowToSeller`/
+`refundEscrowToBuyer` (Escrow) et `confirmDelivered` (Delivery) déjà sains
+et idempotents — confirmés, **non modifiés**. Correctif vérifié par
+`test:integration` (7 nouveaux tests dont 2 de **concurrence réelle** via
+`Promise.all` : rejeu concurrent avec la même clé → une seule commande
+créée ; deux acheteurs concurrents du dernier exemplaire → un seul réussit,
+l'autre remboursé, stock jamais négatif) + suite complète verte
+(`tsc`/`lint`/`vitest`/`build`/E2E). Détail complet dans le rapport P0.4.
+
+### État résiduel (accepté, documenté)
+
+Panier : clés d'idempotence non persistées entre rechargements de page
+(protection efficace contre le rejeu réseau automatique, pas contre un
+abandon-puis-nouvelle-tentative après fermeture d'onglet — jugé
+disproportionné à corriger) ; notification vendeur en double sous
+concurrence sur l'escrow (cosmétique, sans impact financier, déjà
+documenté en P0.2/P0.3).
 
 ---
 

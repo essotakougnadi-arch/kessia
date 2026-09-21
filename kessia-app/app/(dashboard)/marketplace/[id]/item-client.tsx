@@ -5,7 +5,7 @@
 //  tontine → crée un plan d'épargne (tontine Achat SOLO) pré-rempli
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
@@ -37,6 +37,11 @@ export default function ItemClient({ id }: { id: string }) {
   const [mode, setMode] = useState<'WALLET' | 'TONTINE' | null>(null);
   const [installments, setInstallments] = useState(6);
   const [busy, setBusy] = useState(false);
+  // Idempotency-Key (P0.4) : générée à la première tentative de cette
+  // intention d'achat, réutilisée si l'appel échoue et que l'utilisateur
+  // retente — un rejeu réseau ou un double-clic ne débite jamais deux fois.
+  // Effacée après un succès (la prochaine commande est une intention neuve).
+  const orderKeyRef = useRef<string | null>(null);
 
   if (isLoading) {
     return <div className={styles.page}><div className={styles.detailSkeleton} /></div>;
@@ -61,15 +66,23 @@ export default function ItemClient({ id }: { id: string }) {
   async function confirm() {
     if (!mode) return;
     setBusy(true);
-    const res = await order(id, mode === 'WALLET' ? { mode: 'WALLET' } : { mode: 'TONTINE', installments });
+    if (!orderKeyRef.current) orderKeyRef.current = crypto.randomUUID();
+    const res = await order(
+      id,
+      mode === 'WALLET' ? { mode: 'WALLET' } : { mode: 'TONTINE', installments },
+      orderKeyRef.current
+    );
     setBusy(false);
     addToast({ type: res.success ? 'success' : 'error', message: res.message });
     if (res.success) {
+      orderKeyRef.current = null; // prochaine commande = nouvelle intention
       setMode(null);
       const d = res.data as { tontineId?: string } | undefined;
       if (mode === 'TONTINE' && d?.tontineId) router.push(`/tontine/${d.tontineId}`);
       else { refresh(); router.push('/marketplace/mine'); }
     }
+    // Échec : orderKeyRef conservée — un nouveau clic sur "Confirmer" est
+    // traité comme le même rejeu, pas une nouvelle commande.
   }
 
   return (

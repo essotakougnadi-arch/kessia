@@ -7,7 +7,7 @@
 
 import useSWR from 'swr';
 import { useAuthStore } from '@/store/authStore';
-import { apiGet, apiSend, type ApiResult } from '@/lib/api/client';
+import { apiGet, apiSend, apiRequest, type ApiResult } from '@/lib/api/client';
 
 export type MarketItem = {
   id: string;
@@ -237,9 +237,19 @@ export function useMarketplaceActions() {
   }
   async function order(
     id: string,
-    body: { mode: 'WALLET' } | { mode: 'TONTINE'; installments: number }
+    body: { mode: 'WALLET' } | { mode: 'TONTINE'; installments: number },
+    idempotencyKey?: string
   ): Promise<ActionResult> {
-    return toResult(await apiSend(`/api/v1/marketplace/${id}/order`, 'POST', body));
+    // Idempotency-Key (P0.4) : une tentative d'achat identifiée par la
+    // même clé (rejeu réseau, double-clic échappant à la garde d'interface)
+    // renvoie la commande déjà créée au lieu d'en créer/débiter une seconde.
+    return toResult(
+      await apiRequest(`/api/v1/marketplace/${id}/order`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        ...(idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : {}),
+      })
+    );
   }
   return { createItem, updateItem, archiveItem, order };
 }

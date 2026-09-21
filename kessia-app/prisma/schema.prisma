@@ -873,6 +873,11 @@ model MarketplaceOrder {
   amount              Decimal                @db.Decimal(18, 2)
   currency            String                 @default("XOF")
   status              MarketplaceOrderStatus
+  // Idempotence de bout en bout de la création de commande (P0.4) —
+  // dérivée de l'en-tête `Idempotency-Key` si fourni par le client.
+  // Un rejeu avec la même clé renvoie la commande existante sans
+  // retraiter le paiement ni le stock.
+  idempotencyKey      String?                @unique
   // mode WALLET : clé d'idempotence de l'écriture ledger (achat).
   ledgerRef           String?
   // mode TONTINE : la tontine Achat SOLO créée pour financer l'achat.

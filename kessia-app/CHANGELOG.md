@@ -3,6 +3,71 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.4 : Marketplace — idempotence et prévention des doubles opérations
+
+### Sécurité / fiabilité
+- **Clé d'idempotence retry-unsafe corrigée** : `POST /api/v1/marketplace/[id]/order`
+  dérivait sa clé ledger de `Date.now()` — changeait à chaque appel, donc
+  un rejeu réseau ou un double-clic échappant à la garde d'interface
+  produisait un **second débit réel**, non détecté comme doublon. Étend à
+  Marketplace la convention `Idempotency-Key` déjà établie pour
+  `wallet/transfer`/`tontine/contribute` (ADR 0007 §3) — pas un nouveau
+  pattern. Nouveau champ `MarketplaceOrder.idempotencyKey` (`@unique`,
+  migration) : un rejeu avec la même clé renvoie la commande existante sans
+  retraiter paiement ni stock.
+- **Stock verrouillé sous transaction** (`SELECT ... FOR UPDATE` sur
+  `marketplace_items`, mirroir du pattern déjà utilisé par `lockWallets`
+  dans le Ledger) : deux acheteurs concurrents du dernier exemplaire ne
+  peuvent plus tous les deux réussir. Si le paiement a déjà réussi quand le
+  stock s'avère épuisé sous verrou, **remboursement immédiat** (reversal
+  symétrique via `postDoubleEntry`, mirroir du reversal de
+  `wallet/transfer`) — l'acheteur reçoit un `409` explicite, jamais un
+  solde débité sans commande.
+- Course sur la création de commande elle-même (deux requêtes strictement
+  concurrentes, même clé) : la requête perdante bute sur la contrainte
+  d'unicité, interceptée pour renvoyer la commande de la requête gagnante
+  (`200`) au lieu d'un `500`. Idem en mode TONTINE — aucune tontine
+  orpheline possible (toute la transaction, y compris la tontine, est
+  annulée pour la requête perdante).
+- Câblage client (`hooks/useMarketplace.ts`, `item-client.tsx` — clé
+  générée à la confirmation, conservée si l'appel échoue, effacée après
+  succès —, `cart-client.tsx` — clé fraîche par unité achetée) pour que la
+  protection soit réellement effective, pas seulement disponible côté
+  serveur.
+
+### Audit préalable (avant toute modification)
+Confirmé déjà sains et **non modifiés** : `postDoubleEntry` (Ledger) gère
+déjà la course entre appels concurrents via contrainte `@unique` + capture
+`P2002` ; `releaseEscrowToSeller`/`refundEscrowToBuyer` ont déjà des clés
+stables et une garde de statut ; `confirmDelivered` a déjà une garde de
+statut terminal.
+
+### Vérification
+- `tsc` 0 erreur · `lint` 0 warning · `vitest` unit **194/194** (inchangé)
+  · `test:integration` (`USE_TEST_DB=1`) **16 fichiers, 60/60** (7
+  nouveaux, `marketplace-order-idempotency.itest.ts` — dont 2 tests de
+  **concurrence réelle** via `Promise.all` : rejeu concurrent avec la même
+  clé → une seule commande créée ; deux acheteurs concurrents du dernier
+  exemplaire → un seul réussit, l'autre remboursé, stock jamais négatif) ·
+  `build` OK.
+- `test:e2e:isolated` : voir le commit de clôture.
+- **Rapport complet** : `docs/audit/P0_4_REMEDIATION_REPORT.md`.
+  `SECURITY_REMEDIATION_REPORT.md` mis à jour.
+
+### Hors périmètre (confirmé non touché)
+`lib/ledger/ledger.service.ts` (Ledger), règles fondamentales du Wallet,
+`lib/marketplace/escrow.ts` (déjà sain), règles métier Payments, Tontines
+métier, KYC, IA, P0.2 (Auth), P0.3 (Webhooks).
+
+### Risques résiduels
+Panier : les clés d'idempotence par unité ne sont pas persistées entre
+rechargements de page (protection efficace contre le rejeu réseau
+automatique et un double appel rapproché, pas contre un abandon-puis-
+nouvelle-tentative après fermeture de l'onglet — jugé disproportionné à
+corriger vu le risque réel résiduel) ; notification vendeur en double sous
+concurrence sur l'escrow (cosmétique, déjà documenté en P0.2/P0.3, aucun
+impact financier). Détail complet dans `P0_4_REMEDIATION_REPORT.md`.
+
 ## [Non publié] — Phase 0 — P0.3 : Webhooks sécurisés (signature + horodatage + idempotence stricte)
 
 ### Sécurité
