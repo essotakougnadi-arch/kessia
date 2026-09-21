@@ -3,6 +3,62 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 1 — P1.7 : Concurrence Tontines (activation, adhésion, cron)
+
+### Corrigé
+- **Double activation d'une tontine** : `activateTontine()` lisait le
+  statut hors verrou avant sa propre transaction (démarrage manuel
+  organisateur + auto-activation au dernier membre pouvaient toutes deux
+  passer avant qu'aucune n'écrive). Restructuré autour d'un `SELECT ...
+  FOR UPDATE` sur la ligne tontine en tête de transaction (même schéma
+  que le verrou de stock Marketplace, P0.4), statut et membres relus à
+  l'intérieur du verrou.
+- **Dépassement de `maxMembers` / collision de position à l'adhésion** :
+  `POST /tontine/[id]/members` lisait le compte de membres et calculait
+  la position hors verrou. Capacité et position désormais revérifiées
+  dans la même transaction verrouillée que la création du membre.
+- **Double exécution concurrente du cron** : `cron.yml` (GitHub Actions,
+  horaire) et Vercel Cron (quotidien) appellent la même route sans
+  coordination entre eux. Nouveau verrou consultatif Postgres
+  `pg_try_advisory_xact_lock` (transaction-scoped — pas la variante
+  session-scoped, dangereuse sous pooling de connexions) : un tick déjà
+  en cours fait sortir le second appel en no-op tracé (`skipped: true`),
+  jamais une erreur.
+
+### Vérifié comme déjà protégé (aucun nouveau verrou ajouté)
+`settleContribution()` (cotisation) et `checkAndAdvanceRound()`
+(versement de fin de tour) utilisent déjà des clés d'idempotence Ledger
+stables — même mécanique `@unique`/`P2002` que partout ailleurs. Un test
+de concurrence réelle le prouve plutôt que de le supposer.
+
+### Tests
+Nouveau `test/integration/tontine-concurrency.itest.ts` (5 tests,
+`Promise.all`, base réelle) : double démarrage manuel, adhésions
+concurrentes sans dépassement, adhésions concurrentes dépassant la
+capacité, double invocation du cron, preuve de non-régression sur la
+cotisation. Rejoué 4× d'affilée avant intégration : 0 flakiness. Les 4
+suites tontine préexistantes restent vertes sans modification.
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning · `vitest` unit **194/194** (inchangé) ·
+`test:integration` (`USE_TEST_DB=1`) **18 fichiers, 68/68** (5 nouveaux) ·
+`build` OK · `test:e2e:isolated` **55 passed / 2 failed** — tally
+identique à la référence de clôture P0.5, mêmes 2 échecs préexistants déjà
+documentés, aucune régression. **Rapport complet** :
+`docs/audit/P1_7_REMEDIATION_REPORT.md`.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, règles métier Payments, `settleContribution()`,
+`checkAndAdvanceRound()`, P0.2, P0.3, Marketplace.
+
+### Risques résiduels
+Double requête d'adhésion strictement concurrente du **même** utilisateur
+non couverte par le nouveau verrou (protège la capacité/position
+collective, pas l'idempotence par utilisateur) — déjà sans risque
+d'intégrité grâce à la contrainte `@@unique([tontineId, userId])`
+existante, hors périmètre explicite de ce chantier. Détail complet dans
+`P1_7_REMEDIATION_REPORT.md`.
+
 ## [Non publié] — Phase 0 — P0.5 : KYC / conformité / LAB-FT — audit et corrections ciblées
 
 ### Audit (contre le code actuel, pas seulement la documentation)

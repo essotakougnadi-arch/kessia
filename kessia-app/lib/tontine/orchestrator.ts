@@ -31,65 +31,87 @@ export type OrchestratorResult = {
   currentRound?: number;
 };
 
+type ActivationOutcome =
+  | { ok: false; message: string }
+  | {
+      ok: true;
+      tontine: { name: string; currency: string; createdById: string; type: string };
+      members: { userId: string }[];
+      isSolo: boolean;
+      totalRounds: number;
+      amount: number;
+      firstDue: Date;
+      meta: ReturnType<typeof tontineTypeMeta>;
+    };
+
 // ------------------------------------------------------------
 // Activation
 // ------------------------------------------------------------
 export async function activateTontine(tontineId: string): Promise<OrchestratorResult> {
-  const tontine = await prisma.tontine.findUnique({
-    where: { id: tontineId },
-    include: {
-      members: {
-        where: { status: 'ACTIVE' },
-        orderBy: { joinedAt: 'asc' },
-        include: { user: { select: { firstName: true, lastName: true } } },
+  // Verrou de ligne (P1.7) : deux déclencheurs concurrents (adhésion du
+  // dernier membre → auto-activation, et démarrage manuel par
+  // l'organisateur) ne doivent jamais activer deux fois la même tontine.
+  // Même schéma que le verrou de stock Marketplace (P0.4) : `FOR UPDATE`
+  // en tête de transaction, revérification du statut à l'intérieur du
+  // verrou — le second appel concurrent voit `status = 'ACTIVE'` une fois
+  // le premier commité et ressort proprement en échec, sans rien écrire.
+  const outcome: ActivationOutcome = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM tontines WHERE id = ${tontineId} FOR UPDATE`;
+
+    const tontine = await tx.tontine.findUnique({
+      where: { id: tontineId },
+      include: {
+        members: {
+          where: { status: 'ACTIVE' },
+          orderBy: { joinedAt: 'asc' },
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
       },
-    },
-  });
-  if (!tontine) return { ok: false, message: 'Tontine introuvable.' };
-  if (tontine.status !== 'PENDING') {
-    return { ok: false, message: 'Cette tontine a déjà démarré ou est clôturée.' };
-  }
-
-  const distribution = resolveDistribution(tontine.type, tontine.purchaseMode);
-  const isSolo = distribution === 'solo';
-
-  if (isSolo) {
-    if (tontine.members.length < 1) {
-      return { ok: false, message: 'Aucun membre — impossible de démarrer.' };
+    });
+    if (!tontine) return { ok: false, message: 'Tontine introuvable.' };
+    if (tontine.status !== 'PENDING') {
+      return { ok: false, message: 'Cette tontine a déjà démarré ou est clôturée.' };
     }
-  } else if (tontine.members.length < 2) {
-    return { ok: false, message: 'Il faut au moins 2 membres pour démarrer.' };
-  }
 
-  const members = tontine.members;
-  const amount = Number(tontine.amount);
-  const firstDue = new Date(Math.max(Date.now(), new Date(tontine.startDate).getTime()));
-  const meta = tontineTypeMeta(tontine.type);
-  // Achat solo : le nombre de versements est fixé à la création
-  // (`totalRounds`), il ne dépend pas du nombre de membres.
-  const totalRounds = isSolo
-    ? Math.max(1, tontine.totalRounds)
-    : totalRoundsForType(tontine.type, members.length);
+    const distribution = resolveDistribution(tontine.type, tontine.purchaseMode);
+    const isSolo = distribution === 'solo';
 
-  // Contrat numérique (§6.4) — snapshot figé à l'activation
-  const positioned = members.map((m, i) => ({
-    userId: m.userId,
-    orderPosition: i + 1,
-    joinedAt: m.joinedAt,
-    user: m.user,
-  }));
-  const agreement = buildAgreementTerms(
-    { ...tontine, totalRounds },
-    positioned,
-    firstDue
-  );
+    if (isSolo) {
+      if (tontine.members.length < 1) {
+        return { ok: false, message: 'Aucun membre — impossible de démarrer.' };
+      }
+    } else if (tontine.members.length < 2) {
+      return { ok: false, message: 'Il faut au moins 2 membres pour démarrer.' };
+    }
 
-  // Compte séquestre (§6.5) créé hors transaction : c'est un compte vide,
-  // il n'a pas besoin d'être cohérent transactionnellement avec l'activation,
-  // et `getOrCreateEscrowWallet` est idempotent (unicité `tontineId`).
-  await getOrCreateEscrowWallet(tontineId, tontine.currency);
+    const members = tontine.members;
+    const amount = Number(tontine.amount);
+    const firstDue = new Date(Math.max(Date.now(), new Date(tontine.startDate).getTime()));
+    const meta = tontineTypeMeta(tontine.type);
+    // Achat solo : le nombre de versements est fixé à la création
+    // (`totalRounds`), il ne dépend pas du nombre de membres.
+    const totalRounds = isSolo
+      ? Math.max(1, tontine.totalRounds)
+      : totalRoundsForType(tontine.type, members.length);
 
-  await prisma.$transaction(async (tx) => {
+    // Contrat numérique (§6.4) — snapshot figé à l'activation
+    const positioned = members.map((m, i) => ({
+      userId: m.userId,
+      orderPosition: i + 1,
+      joinedAt: m.joinedAt,
+      user: m.user,
+    }));
+    const agreement = buildAgreementTerms(
+      { ...tontine, totalRounds },
+      positioned,
+      firstDue
+    );
+
+    // Compte séquestre (§6.5) — créé dans la même transaction verrouillée
+    // (`getOrCreateEscrowWallet` accepte un client transactionnel pour
+    // exactement cet usage), idempotent (unicité `tontineId`).
+    await getOrCreateEscrowWallet(tontineId, tontine.currency, tx);
+
     // 1. Attribuer / normaliser les positions (1..N) selon l'ordre d'adhésion
     for (let i = 0; i < members.length; i++) {
       if (members[i].orderPosition !== i + 1 || members[i].agreementAcceptedAt === null) {
@@ -140,7 +162,18 @@ export async function activateTontine(tontineId: string): Promise<OrchestratorRe
         agreementGeneratedAt: new Date(),
       },
     });
+
+    return {
+      ok: true,
+      tontine: { name: tontine.name, currency: tontine.currency, createdById: tontine.createdById, type: tontine.type },
+      members: members.map((m) => ({ userId: m.userId })),
+      isSolo, totalRounds, amount, firstDue, meta,
+    };
   }, { timeout: 20_000, maxWait: 10_000 });
+
+  if (!outcome.ok) return { ok: false, message: outcome.message };
+
+  const { tontine, members, isSolo, totalRounds, amount, firstDue, meta } = outcome;
 
   void recordTontineEvent({
     tontineId,

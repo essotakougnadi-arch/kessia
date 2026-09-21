@@ -81,26 +81,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const { inviteCode } = parsed.data;
 
-    const tontine = await prisma.tontine.findFirst({
-      where: { id: params.id, inviteCode },
-      include: {
-        _count: { select: { members: { where: { status: 'ACTIVE' } } } },
-      },
-    });
-
-    if (!tontine) {
-      return notFound('Code d\'invitation invalide ou tontine introuvable.');
-    }
-
-    if (tontine.status !== 'PENDING') {
-      return badRequest('Cette tontine a déjà démarré et n\'accepte plus de nouveaux membres.');
-    }
-
-    if (tontine._count.members >= tontine.maxMembers) {
-      return badRequest('Cette tontine est complète. Elle n\'accepte plus de membres.');
-    }
-
-    // Vérifier que l'utilisateur n'est pas déjà membre
+    // Vérifier que l'utilisateur n'est pas déjà membre (lecture rapide,
+    // hors verrou — le cas de double-requête concurrente du MÊME
+    // utilisateur reste couvert en dernier recours par la contrainte
+    // `@@unique([tontineId, userId])`, hors périmètre P1.7).
     const existingMember = await prisma.tontineMember.findFirst({
       where: { tontineId: params.id, userId: context.userId },
     });
@@ -114,23 +98,58 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       }
     }
 
-    // Rejoindre
-    const nextPosition = tontine._count.members + 1;
-    const member = await prisma.tontineMember.create({
-      data: {
-        tontineId: params.id,
-        userId: context.userId,
-        orderPosition: nextPosition,
-        agreementAcceptedAt: new Date(),
-      },
-    });
+    // Verrou (P1.7) : capacité (`maxMembers`) et position d'adhésion
+    // revérifiées À L'INTÉRIEUR du verrou de ligne — deux adhésions
+    // concurrentes ne peuvent plus toutes deux lire le même compte de
+    // membres avant qu'aucune ne s'écrive (dépassement de capacité /
+    // collision de position). Même schéma que `activateTontine`.
+    const joinResult = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM tontines WHERE id = ${params.id} FOR UPDATE`;
+
+      const tontine = await tx.tontine.findUnique({
+        where: { id: params.id },
+        include: { _count: { select: { members: { where: { status: 'ACTIVE' } } } } },
+      });
+      if (!tontine || tontine.inviteCode !== inviteCode) {
+        return { ok: false as const, code: 'NOT_FOUND' as const };
+      }
+      if (tontine.status !== 'PENDING') {
+        return { ok: false as const, code: 'STARTED' as const };
+      }
+      if (tontine._count.members >= tontine.maxMembers) {
+        return { ok: false as const, code: 'FULL' as const };
+      }
+
+      const nextPosition = tontine._count.members + 1;
+      const member = await tx.tontineMember.create({
+        data: {
+          tontineId: params.id,
+          userId: context.userId,
+          orderPosition: nextPosition,
+          agreementAcceptedAt: new Date(),
+        },
+      });
+      return {
+        ok: true as const, member, nextPosition,
+        maxMembers: tontine.maxMembers, tontineName: tontine.name,
+      };
+    }, { timeout: 15_000, maxWait: 8_000 });
+
+    if (!joinResult.ok) {
+      if (joinResult.code === 'NOT_FOUND') return notFound('Code d\'invitation invalide ou tontine introuvable.');
+      if (joinResult.code === 'STARTED') return badRequest('Cette tontine a déjà démarré et n\'accepte plus de nouveaux membres.');
+      return badRequest('Cette tontine est complète. Elle n\'accepte plus de membres.');
+    }
+
+    const { member, nextPosition, maxMembers, tontineName } = joinResult;
+
     void recordTontineEvent({
       tontineId: params.id, type: 'MEMBER_JOINED', actorId: context.userId,
       metadata: { position: nextPosition, via: 'invite' },
     });
 
     let started = false;
-    if (nextPosition >= tontine.maxMembers) {
+    if (nextPosition >= maxMembers) {
       const r = await activateTontine(params.id).catch(() => null);
       started = r?.ok ?? false;
     }
@@ -143,8 +162,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         started,
       },
       started
-        ? `Vous avez rejoint "${tontine.name}" — complète, la tontine a démarré !`
-        : `Vous avez rejoint la tontine "${tontine.name}" avec succès !`
+        ? `Vous avez rejoint "${tontineName}" — complète, la tontine a démarré !`
+        : `Vous avez rejoint la tontine "${tontineName}" avec succès !`
     );
   } catch (error) {
     logApiError('/v1/tontine/[id]/members', error);

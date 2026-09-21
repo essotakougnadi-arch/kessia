@@ -19,6 +19,7 @@ import { runRetentionPurge } from '@/lib/privacy/retention';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { ok, unauthorized, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
+import { withAdvisoryLock } from '@/lib/db/advisory-lock';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -34,35 +35,47 @@ async function handle(request: NextRequest) {
   try {
     if (!authorized(request)) return unauthorized('Secret cron invalide ou absent.');
 
-    const [tontine, reminders, deliveries, escrow, retention] = await Promise.all([
-      runTontineTick(),
-      runCustomerReminders().catch((e) => {
-        logApiError('/v1/cron/tontine-tick:reminders', e);
-        return { checked: 0, notified: 0 };
-      }),
-      runDeliveryTick().catch((e) => {
-        logApiError('/v1/cron/tontine-tick:deliveries', e);
-        return { advanced: 0 };
-      }),
-      runMarketplaceEscrowTick().catch((e) => {
-        logApiError('/v1/cron/tontine-tick:escrow', e);
-        return { released: 0 };
-      }),
-      runRetentionPurge().catch((e) => {
-        logApiError('/v1/cron/tontine-tick:retention', e);
-        return { otps: 0, sessions: 0, notifications: 0, auditLogs: 0 };
-      }),
-    ]);
-    const result = { tontine, reminders, deliveries, escrow, retention };
+    // Verrou consultatif (P1.7) : `cron.yml` (GitHub Actions, horaire) et
+    // Vercel Cron (`vercel.json`, quotidien) appellent cette même route
+    // sans coordination entre eux. Un tick déjà en cours (autre
+    // ordonnanceur, relance manuelle, requête lente) fait sortir le
+    // second appel en no-op tracé plutôt que de traiter les mêmes
+    // tontines/livraisons/relances deux fois en parallèle.
+    const lock = await withAdvisoryLock('kessia:cron:tontine-tick', async () => {
+      const [tontine, reminders, deliveries, escrow, retention] = await Promise.all([
+        runTontineTick(),
+        runCustomerReminders().catch((e) => {
+          logApiError('/v1/cron/tontine-tick:reminders', e);
+          return { checked: 0, notified: 0 };
+        }),
+        runDeliveryTick().catch((e) => {
+          logApiError('/v1/cron/tontine-tick:deliveries', e);
+          return { advanced: 0 };
+        }),
+        runMarketplaceEscrowTick().catch((e) => {
+          logApiError('/v1/cron/tontine-tick:escrow', e);
+          return { released: 0 };
+        }),
+        runRetentionPurge().catch((e) => {
+          logApiError('/v1/cron/tontine-tick:retention', e);
+          return { otps: 0, sessions: 0, notifications: 0, auditLogs: 0 };
+        }),
+      ]);
+      return { tontine, reminders, deliveries, escrow, retention };
+    });
+
+    if (lock.skipped) {
+      return ok({ skipped: true }, 'Tick déjà en cours ailleurs — ignoré (verrou consultatif).');
+    }
 
     void recordAudit({
       action: 'cron.tontine_tick',
       entity: 'Tontine',
-      metadata: result,
+      metadata: lock.result,
       request,
     });
 
-    return ok(result, 'Tick exécuté (tontines + relances + livraisons + séquestre marketplace + purge rétention).');
+    return ok(lock.result, 'Tick exécuté (tontines + relances + livraisons + séquestre marketplace + purge rétention).');
   } catch (e) {
     logApiError('/v1/cron/tontine-tick', e);
     return serverError();
