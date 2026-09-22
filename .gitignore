@@ -23,3 +23,6 @@ kessia-app/backups/
 
 # Claude Code (état de session local — pas du contenu projet)
 .claude/
+
+.vercel
+.env*

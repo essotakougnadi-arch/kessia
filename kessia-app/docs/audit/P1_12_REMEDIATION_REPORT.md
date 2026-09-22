@@ -9,7 +9,117 @@ date: "22 septembre 2026"
 avant implémentation.
 
 **⚠️ STATUT : implémenté, testé localement, COMMITÉ LOCALEMENT,
-**NON POUSSÉ** vers `origin main`, NON DÉPLOYÉ.** Voir §6.
+**NON POUSSÉ** vers `origin main`.** Déployé sur **Staging uniquement**
+via Vercel CLI (hors pipeline Git) le 22 septembre 2026 — voir §0bis.
+Production (`kessia`) jamais touchée.
+
+---
+
+## 0bis. Validation Staging réelle via Vercel CLI (22 septembre 2026, sans push)
+
+**Méthode** : le pipeline Git normal (`staging.yml`) ne peut se déclencher
+que sur `push: branches: [main]`, ce qui déploierait simultanément la
+Production. Pour valider `afd23ef` sur Staging sans push, déploiement
+direct du répertoire local via `vercel deploy --prod --project
+kessia-staging` (le flag `--prod` cible l'environnement Production **du
+projet Vercel `kessia-staging` uniquement**, jamais le projet `kessia`).
+
+### Identité du projet ciblé — triple confirmée avant tout déploiement
+1. `vercel project ls` → seuls deux projets existent :
+   `kessia` (→ `kessia-dun.vercel.app`) et `kessia-staging`
+   (→ `kessia-staging.vercel.app`).
+2. `vercel link --project kessia-staging` →
+   `.vercel/project.json` : `"projectName":"kessia-staging"`.
+3. `vercel env ls production` (sur le projet lié) : confirme
+   `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` présentes
+   (ajoutées ~5h avant ce test), valeurs affichées **« Hidden »**,
+   jamais révélées.
+
+Le projet `kessia` (production) n'a été ni déployé, ni interrogé, ni
+modifié à aucun moment.
+
+### Déploiement
+- 1ʳᵉ tentative (depuis `kessia-app/`) : échec —
+  `Root Directory "kessia-app" does not exist` (le projet attend un
+  upload depuis la racine du dépôt, avec `kessia-app` comme sous-
+  dossier ; problème d'invocation de ma part, pas de configuration
+  Vercel modifiée).
+- 2ᵉ tentative (depuis la racine du dépôt) : échec transitoire —
+  `"message": "fetch failed"` pendant l'étape de lint/typecheck du build
+  Vercel, sans détail de code (le typecheck/lint local venait de passer
+  sans erreur). Vercel suggère lui-même `vercel deploy` en nouvelle
+  tentative.
+- 3ᵉ tentative (commande strictement identique, aucune modification) :
+  **succès**. `readyState: READY`, `target: production` (du projet
+  `kessia-staging`), aliasé sur `https://kessia-staging.vercel.app`.
+  Log de build : `[SECURITY] Rate limiting : Upstash Redis (partagé).`
+  affiché deux fois — confirme la détection des variables Upstash au
+  démarrage.
+
+### Étape 5 — Smoke test
+`curl https://kessia-staging.vercel.app/api/health` → **200**
+`{"status":"ok","db":"ok",...}`. Application accessible, aucune erreur
+serveur.
+
+### Étape 6 — Test du rate limiting P1.12 : ÉCHEC RÉVÉLATEUR (cause identifiée, hors code)
+
+9 requêtes envoyées à `POST /api/v1/auth/request-otp` (limite 8/15 min),
+numéros de téléphone distincts à chaque appel : **les 9 ont renvoyé
+`429`**, y compris la 1ʳᵉ (qui aurait dû passer, la limite n'étant pas
+encore atteinte).
+
+Le corps de réponse de la 1ʳᵉ requête est **le message du chemin
+fail-closed** (`"Service momentanément limité. Réessayez dans quelques
+instants."`), pas celui d'un dépassement normal
+(`"Trop de tentatives. Réessayez dans X seconde(s)."`) — signal que ce
+n'est pas la limite qui est atteinte, mais le fail-closed qui s'active
+dès la 1ʳᵉ requête.
+
+**Cause confirmée via `vercel logs`** (aucun secret affiché) :
+
+```
+[RATE-LIMIT] Erreur du fournisseur Upstash, repli mémoire.
+Error [UpstashError]: WRONGPASS invalid or missing auth token.
+[SECURITY] Rate limiting distribué indisponible pour une route
+protégée (auth.request-otp) en production — refus (fail-closed).
+```
+
+**`WRONGPASS` = Upstash rejette lui-même le token comme invalide.**
+C'est un problème de **configuration des identifiants Upstash côté
+Vercel/Upstash** (URL/TOKEN probablement mal appairés, ou token
+expiré/incorrect) — **pas un défaut du code `afd23ef`**. Le mécanisme de
+garde a d'ailleurs très exactement fait ce pour quoi il a été conçu :
+détecter l'échec du fournisseur et refuser plutôt que de retomber
+silencieusement sur la mémoire.
+
+**Vérification complémentaire (point 8 du mandat)** : sous la **même**
+panne Upstash, une route non-auth (`GET /api/v1/discover`, testée 2×) a
+répondu **200 normalement** — confirme que le fail-closed reste bien
+scopé aux seules routes `auth.*`, y compris en conditions réelles de
+panne du fournisseur.
+
+**Aucun HTTP 500 sur aucune requête.** Aucun secret dans les logs, les
+réponses HTTP ou les messages d'erreur (vérifié explicitement — le
+message Upstash `WRONGPASS` ne révèle jamais la valeur du token).
+
+**Conséquence** : les points 1, 2, 4, 7 (routes sous la limite, dépassement
+normal via Upstash, persistance du compteur, test des 6 autres routes
+`auth.*`) **n'ont pas pu être validés en conditions nominales** — toutes
+les routes `auth.*` sont actuellement en fail-closed permanent sur
+Staging tant que le token Upstash n'est pas corrigé. Interrompre les
+tests supplémentaires à ce stade (relancer les 6 autres routes `auth.*`
+aurait reproduit exactement la même panne, sans information nouvelle).
+
+### Classification et action requise
+
+**P1 — configuration externe (Upstash/Vercel), pas un défaut de code.**
+Conformément au mandat (« Aucun changement Upstash », « Aucun changement
+de variables Vercel »), **aucune tentative de correction n'a été
+effectuée** de ma part. Action requise de votre part : vérifier dans le
+dashboard Upstash de la base `kessia-staging-ratelimit` que le
+`UPSTASH_REDIS_REST_TOKEN` correspond bien à celui affiché sur **cette
+même base** (pas une autre), et re-coller la paire URL/TOKEN exacte dans
+Vercel → `kessia-staging` → Environment Variables si besoin.
 
 ---
 
