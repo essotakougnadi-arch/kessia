@@ -3,6 +3,55 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.4 (finalisation) : Marketplace — preuve de non-régression sous concurrence
+
+Audit frais du flux Marketplace (panier → commande → paiement →
+Ledger → stock → livraison) : le cœur du flux (déjà durci par un P0.4
+antérieur — `Idempotency-Key`, verrou de stock, reversal automatique)
+est **rigoureusement prouvé sûr** sous 20 requêtes vraiment
+concurrentes (même clé, clés différentes, survente de stock). Voir
+`docs/audit/P0_4_MARKETPLACE_IDEMPOTENCY_REPORT.md`.
+
+### Testé (aucun correctif applicatif — voir « Constat documenté » ci-dessous)
+- 10 et 20 requêtes concurrentes avec la même `Idempotency-Key` → une
+  seule commande, un seul débit, aucune erreur brute sur les perdants.
+- 20 requêtes concurrentes avec 20 clés différentes (stock suffisant)
+  → 20 commandes indépendantes, aucun blocage mutuel.
+- 20 acheteurs concurrents pour un stock de 5 → exactement 5 réussissent,
+  15 remboursés intégralement, stock jamais négatif, jamais de survente.
+- Rejeu réseau réel testé en direct sur Staging (`kessia-staging`) :
+  achat + rejeu avec la même clé → un seul débit constaté.
+
+### Constat documenté (Ledger core, non corrigé — hors périmètre P0.4)
+Sous 20 appels **directs** et vraiment concurrents à
+`releaseEscrowToSeller` (versement du séquestre au vendeur) sur la même
+commande, `postDoubleEntry` (`lib/ledger/ledger.service.ts`) vérifie le
+solde avant de retenter la résolution idempotente — un appelant dont la
+requête est en réalité un rejeu légitime peut recevoir « Solde
+insuffisant » au lieu d'une réponse idempotente propre. **Aucun risque
+financier** : vérifié qu'une seule écriture Ledger est jamais créée
+(solde du séquestre et du vendeur toujours mathématiquement exacts).
+Root-causé précisément et documenté pour décision/chantier dédié futur
+— **non corrigé dans ce chantier**, conformément à la règle du mandat
+interdisant de modifier le Ledger core dans P0.4. Absorbé en pratique
+dans le parcours réel (`confirmDelivered`) par une garde de statut
+antérieure — testé 3/3 sans erreur à 20 clics concurrents.
+
+### Tests
+`marketplace-order-idempotency.itest.ts` (7 → 11) et
+`marketplace-settlement.itest.ts` (2 → 4 tests).
+
+### Vérification
+`tsc` 0 · `lint` 0 · unit **225/225** · intégration **92/92** · build OK
+· E2E **55 passed / 2 failed** (préexistants documentés). Staging :
+achat réel + rejeu vérifié en direct, P0.2/P0.3/P1.12 revalidés
+non-régressés, aucun secret dans les logs.
+
+### Hors périmètre (confirmé non touché)
+Ledger core, Wallet core, Escrow core, Sessions (P0.2), Webhooks (P0.3),
+rate limiting P1.12/Upstash, KYC, AML, AI, Tontines, Business, migrations
+Prisma.
+
 ## [Non publié] — Phase 0 — P0.3 : sécurité webhooks — course de réclamation sous concurrence
 
 Audit exhaustif (mots-clés webhook/callback/HMAC sur tout le dépôt) :

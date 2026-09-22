@@ -109,6 +109,110 @@ describe('POST /api/v1/marketplace/[id]/order — idempotence WALLET (P0.4)', ()
     expect(await prisma.marketplaceOrder.count({ where: { itemId: item.id } })).toBe(1);
   });
 
+  it('dix requêtes VRAIMENT concurrentes avec la même clé : une seule commande, un seul débit (P0.4 finalisation)', async () => {
+    const seller = await makeUser({ balance: 0 });
+    const buyer = await makeUser({ balance: 500_000 });
+    userIds.push(seller.id, buyer.id);
+    const item = await makeItem(seller.id, { price: 20_000, stock: 20 });
+    const token = signAccessToken({ sub: buyer.id, phone: buyer.phone, role: 'USER' });
+    const key = crypto.randomUUID();
+
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, () => orderRequest(item.id, token, { mode: 'WALLET' }, key))
+    );
+    expect(responses.every((r) => r.status === 200 || r.status === 201)).toBe(true);
+    const bodies = (await Promise.all(responses.map((r) => r.json()))) as Array<{ data: { duplicate?: boolean; orderId: string } }>;
+    const winners = bodies.filter((b) => !b.data.duplicate);
+    expect(winners).toHaveLength(1);
+    expect(new Set(bodies.map((b) => b.data.orderId)).size).toBe(1); // même orderId partout
+
+    expect(await getWalletBalance(buyer.walletId)).toBe(480_000); // un seul débit de 20 000
+    const after = await prisma.marketplaceItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(after.stock).toBe(19); // une seule décrémentation
+    expect(await prisma.marketplaceOrder.count({ where: { itemId: item.id } })).toBe(1);
+  });
+
+  it('vingt requêtes VRAIMENT concurrentes avec la même clé : une seule commande, un seul débit, aucune erreur brute (P0.4 finalisation)', async () => {
+    const seller = await makeUser({ balance: 0 });
+    const buyer = await makeUser({ balance: 1_000_000 });
+    userIds.push(seller.id, buyer.id);
+    const item = await makeItem(seller.id, { price: 20_000, stock: 50 });
+    const token = signAccessToken({ sub: buyer.id, phone: buyer.phone, role: 'USER' });
+    const key = crypto.randomUUID();
+
+    const responses = await Promise.all(
+      Array.from({ length: 20 }, () => orderRequest(item.id, token, { mode: 'WALLET' }, key))
+    );
+    // Jamais de 400/500 — même les perdants de la course reçoivent une
+    // réponse idempotente propre (200, duplicate:true), jamais une erreur
+    // Prisma brute.
+    expect(responses.every((r) => r.status === 200 || r.status === 201)).toBe(true);
+
+    const bodies = (await Promise.all(responses.map((r) => r.json()))) as Array<{ data: { duplicate?: boolean; orderId: string } }>;
+    const winners = bodies.filter((b) => !b.data.duplicate);
+    expect(winners).toHaveLength(1);
+    expect(new Set(bodies.map((b) => b.data.orderId)).size).toBe(1);
+
+    expect(await getWalletBalance(buyer.walletId)).toBe(980_000); // un seul débit
+    const after = await prisma.marketplaceItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(after.stock).toBe(49);
+    expect(await prisma.marketplaceOrder.count({ where: { itemId: item.id } })).toBe(1);
+  });
+
+  it('vingt requêtes concurrentes avec VINGT clés différentes, stock suffisant : toutes réussissent indépendamment', async () => {
+    const seller = await makeUser({ balance: 0 });
+    const buyer = await makeUser({ balance: 1_000_000 });
+    userIds.push(seller.id, buyer.id);
+    const item = await makeItem(seller.id, { price: 10_000, stock: 30 }); // largement suffisant pour 20
+    const token = signAccessToken({ sub: buyer.id, phone: buyer.phone, role: 'USER' });
+
+    const responses = await Promise.all(
+      Array.from({ length: 20 }, () => orderRequest(item.id, token, { mode: 'WALLET' }, crypto.randomUUID()))
+    );
+    expect(responses.every((r) => r.status === 201)).toBe(true); // 20 commandes réellement distinctes
+
+    const bodies = (await Promise.all(responses.map((r) => r.json()))) as Array<{ data: { orderId: string } }>;
+    expect(new Set(bodies.map((b) => b.data.orderId)).size).toBe(20); // 20 orderId distincts
+
+    expect(await getWalletBalance(buyer.walletId)).toBe(800_000); // 20 × 10 000 débités, exactement
+    const after = await prisma.marketplaceItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(after.stock).toBe(10); // 30 - 20
+    expect(await prisma.marketplaceOrder.count({ where: { itemId: item.id } })).toBe(20);
+  });
+
+  it('vingt acheteurs concurrents, clés différentes, stock = 5 : exactement 5 réussissent, 15 remboursés, jamais de survente (P0.4 finalisation, Étape 6)', async () => {
+    const seller = await makeUser({ balance: 0 });
+    userIds.push(seller.id);
+    const STOCK = 5;
+    const PRICE = 15_000;
+    const item = await makeItem(seller.id, { price: PRICE, stock: STOCK });
+
+    const buyers = await Promise.all(Array.from({ length: 20 }, () => makeUser({ balance: 100_000 })));
+    userIds.push(...buyers.map((b) => b.id));
+    const tokens = buyers.map((b) => signAccessToken({ sub: b.id, phone: b.phone, role: 'USER' }));
+
+    const responses = await Promise.all(
+      tokens.map((token) => orderRequest(item.id, token, { mode: 'WALLET' }, crypto.randomUUID()))
+    );
+    const succeeded = responses.filter((r) => r.status === 201);
+    const rejected = responses.filter((r) => r.status !== 201);
+    expect(succeeded).toHaveLength(STOCK); // exactement 5, jamais plus
+    expect(rejected).toHaveLength(20 - STOCK);
+    expect(rejected.every((r) => r.status === 409)).toBe(true); // conflit propre, jamais 500
+
+    const after = await prisma.marketplaceItem.findUniqueOrThrow({ where: { id: item.id } });
+    expect(after.stock).toBe(0); // jamais négatif, jamais de survente
+    expect(after.status).toBe('SOLD_OUT');
+    expect(await prisma.marketplaceOrder.count({ where: { itemId: item.id } })).toBe(STOCK);
+
+    // Chaque acheteur perdant a été intégralement remboursé (aucun effet financier résiduel).
+    const balances = await Promise.all(buyers.map((b) => getWalletBalance(b.walletId)));
+    const spent = balances.filter((b) => b === 100_000 - PRICE);
+    const untouched = balances.filter((b) => b === 100_000);
+    expect(spent).toHaveLength(STOCK);
+    expect(untouched).toHaveLength(20 - STOCK);
+  });
+
   it('sans Idempotency-Key, deux appels distincts créent bien deux commandes séparées (pas de sur-blocage)', async () => {
     const seller = await makeUser({ balance: 0 });
     const buyer = await makeUser({ balance: 100_000 });

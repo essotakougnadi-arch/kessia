@@ -14,6 +14,7 @@ import {
   releaseEscrowToSeller,
   refundEscrowToBuyer,
 } from '@/lib/marketplace/escrow';
+import { confirmDelivered } from '@/lib/delivery';
 import { makeUser, cleanup, settle } from './helpers';
 
 const userIds: string[] = [];
@@ -126,5 +127,73 @@ describe('Séquestre marketplace (intégration)', () => {
     // Après remboursement, on ne peut plus régler le vendeur.
     const late = await releaseEscrowToSeller(order.id, 'auto_release');
     expect(late.ok).toBe(false);
+  });
+
+  it('vingt appels VRAIMENT concurrents à releaseEscrowToSeller (même commande) : un seul versement réel, jamais de double débit (P0.4 finalisation — cf. rapport §Constat Ledger)', async () => {
+    const seller = await makeUser({ balance: 0 });
+    const buyer = await makeUser({ balance: 300_000 });
+    userIds.push(seller.id, buyer.id);
+
+    const item = await makeItem(seller.id, 120_000);
+    const order = await buyOnDelivery(buyer, item);
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => releaseEscrowToSeller(order.id, 'buyer_confirmed'))
+    );
+
+    // Constat empirique (P0.4 finalisation) : `postDoubleEntry` (Ledger
+    // core, hors périmètre de ce chantier — RÈGLE FINALE) vérifie le
+    // solde AVANT de retenter la création idempotente ; sous course
+    // vraiment concurrente, un appel qui a lu `existing === null` avant
+    // que le gagnant n'ait committé, mais qui acquiert le verrou wallet
+    // APRÈS lui, voit un solde déjà consommé et échoue en "Solde
+    // insuffisant" au lieu de résoudre proprement vers l'entrée déjà
+    // créée. CE TEST NE VÉRIFIE DONC PAS `every(r => r.ok)` (non garanti
+    // aujourd'hui par le Ledger) — il vérifie l'invariant qui compte
+    // réellement et qui, lui, est TOUJOURS respecté : aucun double
+    // débit, jamais de solde négatif, jamais de versement en double.
+    const idem = `MKT_SETTLE_${order.id}`;
+    const outCount = await prisma.ledgerEntry.count({ where: { idempotencyKey: `${idem}:out` } });
+    const inCount = await prisma.ledgerEntry.count({ where: { idempotencyKey: `${idem}:in` } });
+    expect(outCount).toBe(1); // une seule écriture débit réelle, quel que soit le nombre d'appels
+    expect(inCount).toBe(1); // une seule écriture crédit réelle
+
+    const trueSuccesses = results.filter((r) => r.ok);
+    expect(trueSuccesses.length).toBeGreaterThanOrEqual(1); // au moins un appel réussit proprement
+
+    const sellerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: seller.id } });
+    expect(Number(sellerWallet.balance)).toBe(120_000); // pas 2 400 000 : jamais de double versement
+
+    const after = await prisma.marketplaceOrder.findUniqueOrThrow({ where: { id: order.id } });
+    expect(after.status).toBe('PAID');
+  });
+
+  it('double-clic « j’ai reçu mon colis » : vingt appels concurrents à confirmDelivered → une seule libération, un seul versement (P0.4 finalisation)', async () => {
+    const seller = await makeUser({ balance: 0 });
+    const buyer = await makeUser({ balance: 300_000 });
+    userIds.push(seller.id, buyer.id);
+
+    const item = await makeItem(seller.id, 90_000);
+    const order = await buyOnDelivery(buyer, item);
+    const delivery = await prisma.marketplaceDelivery.create({
+      data: {
+        orderId: order.id, buyerId: buyer.id, mode: 'SIMULATED', status: 'IN_TRANSIT',
+        pickupLabel: 'Vendeur itest', dropoffAddress: 'Zone itest', dropoffArea: 'Lomé',
+        recipientPhone: buyer.phone, feeAmount: 0,
+      },
+    });
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => confirmDelivered(delivery.id, buyer.id))
+    );
+    expect(results.every((r) => r.ok)).toBe(true); // jamais d'échec/500 pour un double-clic légitime
+
+    const sellerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: seller.id } });
+    expect(Number(sellerWallet.balance)).toBe(90_000); // un seul versement, pas 1 800 000
+
+    const after = await prisma.marketplaceDelivery.findUniqueOrThrow({ where: { id: delivery.id } });
+    expect(after.status).toBe('DELIVERED');
+    const orderAfter = await prisma.marketplaceOrder.findUniqueOrThrow({ where: { id: order.id } });
+    expect(orderAfter.status).toBe('PAID');
   });
 });
