@@ -10,8 +10,54 @@ avant implémentation.
 
 **⚠️ STATUT : implémenté, testé localement, COMMITÉ LOCALEMENT,
 **NON POUSSÉ** vers `origin main`.** Déployé sur **Staging uniquement**
-via Vercel CLI (hors pipeline Git) le 22 septembre 2026 — voir §0bis.
-Production (`kessia`) jamais touchée.
+via Vercel CLI (hors pipeline Git) le 22 septembre 2026 — voir §0bis et
+§0ter. Production (`kessia`) jamais touchée.
+
+**Verdict de ce cycle : `BLOCKED`** — voir §0ter. La correction Upstash
+annoncée n'a pas résolu le problème (même erreur `WRONGPASS`, reconfirmée
+après redéploiement complet garantissant des instances fraîches).
+
+## 0ter. Deuxième tentative de validation (22 septembre, après correction Upstash annoncée)
+
+**Contexte** : configuration Upstash de `kessia-staging` déclarée
+corrigée entre-temps. Nouvelle tentative de validation demandée.
+
+**Résultat : `BLOCKED`, cause identique à la précédente tentative.**
+
+1. Déploiement Staging confirmé disponible (`/api/health` → 200).
+2. Requête de sonde sur `auth.request-otp` → **429**, message du
+   chemin fail-closed (pas d'un dépassement normal).
+3. `vercel logs` → **même erreur exacte** : `Error [UpstashError]:
+   WRONGPASS invalid or missing auth token`.
+4. **Hypothèse écartée par un test dédié** : une instance serverless
+   « chaude » aurait pu conserver en cache un client Redis initialisé
+   avec les anciens identifiants avant la correction. Nouveau
+   déploiement complet forcé (`vercel deploy --prod --project
+   kessia-staging`, commande déjà autorisée, aucun changement de code)
+   pour garantir des instances entièrement fraîches → **`READY`**,
+   nouvelle requête de sonde → **429 identique**, `vercel logs` → **la
+   même erreur `WRONGPASS` exacte, à la même seconde près de
+   réapparition**. La mise en cache d'instance est donc exclue comme
+   explication : les identifiants actuellement configurés sont
+   **réellement invalides côté Upstash**, pas un problème de
+   propagation/cache.
+
+**Aucune tentative de correction des identifiants n'a été effectuée**
+(hors mandat). Aucun test supplémentaire (limite/dépassement/
+persistance/comportement distribué/7 routes) n'a été exécuté — cela
+aurait reproduit la même panne sans apporter d'information nouvelle.
+
+### Piste la plus probable (à vérifier de votre côté, non exécutée par moi)
+
+Upstash expose **deux couples d'identifiants distincts** pour une même
+base : le mot de passe de connexion Redis directe (section « Redis
+Connect », format `redis://...`) et le jeton de l'API REST (section
+« REST API », c'est cette valeur précise qu'attend
+`UPSTASH_REDIS_REST_TOKEN`). Une confusion entre les deux — copier le
+mot de passe Redis au lieu du jeton REST — produit exactement l'erreur
+observée (`WRONGPASS`). À vérifier en priorité dans le dashboard de la
+base `kessia-staging-ratelimit`, section **REST API**, avant toute autre
+hypothèse (base différente, jeton expiré, faute de frappe).
 
 ---
 
