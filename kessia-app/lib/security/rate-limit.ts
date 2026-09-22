@@ -8,6 +8,18 @@
 //  • Sinon : compteur en mémoire (mono-instance) — suffisant en dev
 //    et pour la suite de tests.
 //
+// P1.12 — garde fail-closed : en production, si Upstash est absent OU
+// en erreur, les routes d'authentification (préfixe `auth.` du nom
+// passé à enforceRateLimit — login, register, 2FA, PIN, OTP,
+// changement de mot de passe) refusent explicitement plutôt que de
+// retomber silencieusement sur le compteur mémoire (inefficace en
+// serverless : chaque invocation peut tourner sur une instance
+// différente, donc sans protection anti-brute-force réelle). Les
+// routes non-auth gardent le repli mémoire existant, inchangé — aucun
+// changement de comportement pour elles. Hors production (dev/test/
+// CI), comportement strictement inchangé : jamais de fail-closed, pas
+// de dépendance obligatoire à Upstash.
+//
 // Voir docs/decisions/0004 et 0014.
 // ============================================================
 
@@ -42,20 +54,40 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { ok: true, remaining: limit - b.count, retryAfter: 0 };
 }
 
+// ── Configuration d'exécution — lue à chaque appel, jamais figée au
+// chargement du module : les tests peuvent ainsi faire varier NODE_ENV /
+// les variables Upstash sans réimporter le module. ────────────────────
+
+function isProductionEnv(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+function isUpstashConfigured(): boolean {
+  return !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+}
+
+function isE2eBypass(): boolean {
+  return process.env.E2E_RATE_LIMIT_BYPASS === '1';
+}
+
+/** Routes protégées par la garde fail-closed (P1.12) — toutes les routes d'authentification. */
+export function isCriticalRoute(name: string): boolean {
+  return name.startsWith('auth.');
+}
+
 // ── Upstash Redis (production serverless) ──────────────────
 
 type UpstashLimiter = {
   limit: (id: string) => Promise<{ success: boolean; remaining: number; reset: number }>;
 };
 
-const UPSTASH_ENABLED =
-  !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
-
+// Le client Redis et les limiteurs sont mis en cache (coûteux à créer) —
+// seule la DÉCISION d'y recourir (isUpstashConfigured) est réévaluée à
+// chaque appel.
 let redisClient: unknown = null;
 const limiterCache = new Map<string, UpstashLimiter>();
 
-async function upstashLimiter(limit: number, windowMs: number): Promise<UpstashLimiter | null> {
-  if (!UPSTASH_ENABLED) return null;
+async function getUpstashLimiter(limit: number, windowMs: number): Promise<UpstashLimiter | null> {
   const cacheKey = `${limit}:${windowMs}`;
   const cached = limiterCache.get(cacheKey);
   if (cached) return cached;
@@ -73,27 +105,59 @@ async function upstashLimiter(limit: number, windowMs: number): Promise<UpstashL
     limiterCache.set(cacheKey, rl);
     return rl;
   } catch (e) {
-    console.error('[RATE-LIMIT] Upstash indisponible, repli mémoire.', e);
+    console.error('[RATE-LIMIT] Échec d\'initialisation du client Upstash.', e);
     return null;
   }
 }
 
-/** Vérifie la limite (Upstash si configuré, sinon mémoire). */
-export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
-  const rl = await upstashLimiter(limit, windowMs);
-  if (rl) {
-    try {
-      const r = await rl.limit(key);
-      return {
+type RateLimitSource = 'upstash' | 'memory';
+type RateLimitOutcome = {
+  result: RateLimitResult;
+  source: RateLimitSource;
+  /** Pourquoi le repli mémoire a été utilisé — absent si source === 'upstash'. */
+  fallbackReason?: 'not_configured' | 'provider_error';
+};
+
+/** Évalue la limite et rapporte QUELLE source a répondu (utilisé par enforceRateLimit pour la garde fail-closed). */
+async function evaluateRateLimit(key: string, limit: number, windowMs: number): Promise<RateLimitOutcome> {
+  if (!isUpstashConfigured()) {
+    return { result: rateLimit(key, limit, windowMs), source: 'memory', fallbackReason: 'not_configured' };
+  }
+  const rl = await getUpstashLimiter(limit, windowMs);
+  if (!rl) {
+    return { result: rateLimit(key, limit, windowMs), source: 'memory', fallbackReason: 'provider_error' };
+  }
+  try {
+    const r = await rl.limit(key);
+    return {
+      source: 'upstash',
+      result: {
         ok: r.success,
         remaining: Math.max(0, r.remaining),
         retryAfter: r.success ? 0 : Math.max(1, Math.ceil((r.reset - Date.now()) / 1000)),
-      };
-    } catch (e) {
-      console.error('[RATE-LIMIT] échec Upstash, repli mémoire.', e);
-    }
+      },
+    };
+  } catch (e) {
+    console.error('[RATE-LIMIT] Erreur du fournisseur Upstash, repli mémoire.', e);
+    return { result: rateLimit(key, limit, windowMs), source: 'memory', fallbackReason: 'provider_error' };
   }
-  return rateLimit(key, limit, windowMs);
+}
+
+/** Vérifie la limite (Upstash si configuré et opérationnel, sinon mémoire). Signature/comportement inchangés. */
+export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
+  return (await evaluateRateLimit(key, limit, windowMs)).result;
+}
+
+// Diagnostic de démarrage (informatif uniquement — n'est utilisé par
+// aucune décision de rate limiting, qui relit toujours l'environnement
+// à chaque appel via isE2eBypass()/isUpstashConfigured() ci-dessus).
+if (isE2eBypass()) {
+  console.warn(
+    '[SECURITY] Rate limiting DÉSACTIVÉ (E2E_RATE_LIMIT_BYPASS=1). ' +
+      'Ne doit apparaître que dans un environnement de test.'
+  );
+} else if (isUpstashConfigured()) {
+  console.info('[SECURITY] Rate limiting : Upstash Redis (partagé).');
 }
 
 // ── Helpers requête ────────────────────────────────────────
@@ -106,35 +170,36 @@ export function clientIp(request: NextRequest): string {
   );
 }
 
-// Contournement réservé aux tests automatisés (la suite E2E tourne sur un
-// build de production et enchaîne les connexions depuis une seule IP).
-// Opt-in EXPLICITE via `E2E_RATE_LIMIT_BYPASS=1` — à ne JAMAIS définir sur
-// un déploiement réel. Non défini = rate limiting pleinement actif.
-const E2E_BYPASS = process.env.E2E_RATE_LIMIT_BYPASS === '1';
-if (E2E_BYPASS) {
-  console.warn(
-    '[SECURITY] Rate limiting DÉSACTIVÉ (E2E_RATE_LIMIT_BYPASS=1). ' +
-      'Ne doit apparaître que dans un environnement de test.'
-  );
-} else if (UPSTASH_ENABLED) {
-  console.info('[SECURITY] Rate limiting : Upstash Redis (partagé).');
-}
-
 /**
- * À appeler en tête d'un handler. Renvoie une réponse 429 si la limite
- * est dépassée, sinon `null` (on continue). Asynchrone.
+ * À appeler en tête d'un handler. Renvoie une réponse d'erreur si la
+ * limite est dépassée OU (production + route `auth.*` + repli mémoire)
+ * si la protection distribuée n'est pas opérationnelle — sinon `null`
+ * (on continue). Asynchrone.
  */
 export async function enforceRateLimit(
   request: NextRequest,
   name: string,
   opts: { limit: number; windowMs: number; by?: string }
 ): Promise<Response | null> {
-  if (E2E_BYPASS) return null;
+  if (isE2eBypass()) return null;
   const subject = opts.by ?? clientIp(request);
-  const res = await checkRateLimit(`${name}:${subject}`, opts.limit, opts.windowMs);
-  if (!res.ok) {
+  const outcome = await evaluateRateLimit(`${name}:${subject}`, opts.limit, opts.windowMs);
+
+  if (outcome.source === 'memory' && isProductionEnv() && isCriticalRoute(name)) {
+    // Fail-closed (P1.12) : ne jamais protéger une route d'authentification
+    // par un compteur mémoire en production — celui-ci n'offre aucune
+    // protection anti-brute-force réelle en environnement serverless
+    // multi-instance. Aucun détail interne (raison, fournisseur) n'est
+    // renvoyé au client.
+    console.error(
+      `[SECURITY] Rate limiting distribué indisponible pour une route protégée (${name}) en production — refus (fail-closed).`
+    );
+    return tooManyRequests('Service momentanément limité. Réessayez dans quelques instants.');
+  }
+
+  if (!outcome.result.ok) {
     return tooManyRequests(
-      `Trop de tentatives. Réessayez dans ${res.retryAfter} seconde(s).`
+      `Trop de tentatives. Réessayez dans ${outcome.result.retryAfter} seconde(s).`
     );
   }
   return null;

@@ -3,6 +3,84 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 1 — P1.12 : Rate limiting distribué (Upstash) & garde fail-closed — NON DÉPLOYÉ
+
+**⚠️ Ce changement est committé mais volontairement NON poussé vers `origin
+main`.** Upstash n'est configuré ni en Staging ni en Production (vérifié :
+aucune référence dans `staging.yml`/`vercel.json`/`smoke.mjs`, aucune
+variable dans `.env.local`/`.env.test`). Un push vers `main` déclenche à
+la fois `staging.yml` et le déploiement continu Vercel de la production
+(`kessia-dun.vercel.app`) — les deux étant déclenchés par le même
+événement `push: branches: [main]`, il n'existe aucun moyen de déployer
+sur Staging seul. Pousser maintenant activerait le fail-closed sur
+`login`/`register`/`2FA`/`PIN`/`OTP`/`changement de mot de passe` **en
+production**, sans Upstash pour les servir : ces routes deviendraient
+inutilisables pour de vrais utilisateurs. Voir
+`docs/audit/P1_12_REMEDIATION_REPORT.md` pour le détail complet et ce
+qui reste à faire avant un déploiement.
+
+### Corrigé
+- **Rate limiting inefficace en production.** `lib/security/rate-limit.ts`
+  retombait silencieusement sur un compteur en mémoire quand Upstash
+  n'est pas configuré — sans protection anti-brute-force réelle en
+  environnement serverless (chaque invocation peut tourner sur une
+  instance différente). Upstash n'étant configuré nulle part
+  aujourd'hui, `login`/`register`/`2FA`/`PIN`/OTP/changement de mot de
+  passe n'ont actuellement **aucune** protection anti-brute-force
+  distribuée effective sur le déploiement en ligne.
+
+### Ajouté
+- **Garde fail-closed** (nouvelle logique interne à
+  `lib/security/rate-limit.ts`, aucun autre fichier touché) : en
+  production, si Upstash est absent **ou** en erreur, les routes
+  d'authentification (identifiées par le seul préfixe `auth.` du nom
+  déjà passé à `enforceRateLimit` — `auth.login`, `auth.register`,
+  `auth.2fa`, `auth.pin_verify`, `auth.request-otp`,
+  `auth.verify-otp`, `auth.change-password`) refusent explicitement
+  (429, message générique, aucun détail interne) plutôt que de
+  retomber silencieusement sur le compteur mémoire. Les 18 autres
+  routes (wallet, marketplace, KYC, IA…) gardent leur repli mémoire
+  existant, strictement inchangé. Hors production (dev/test/CI),
+  comportement strictement inchangé — jamais de fail-closed, pas de
+  dépendance obligatoire à Upstash.
+- Configuration d'exécution (`NODE_ENV`, présence Upstash, bypass E2E)
+  désormais relue à chaque appel plutôt que figée au chargement du
+  module — permet de tester tous les environnements sans réimporter le
+  module ; comportement observable inchangé.
+
+### Tests
+`lib/security/rate-limit.test.ts` étendu à 16 tests (4 existants
+inchangés + 12 nouveaux) : Upstash opérationnel (respect de
+`limit`/`windowMs`, dépassement → 429), Upstash absent en production
+sur route protégée → fail-closed, Upstash absent en dev/test → mémoire
+inchangée, erreur fournisseur Upstash → fail-closed sur route protégée
+/ repli mémoire sur route non protégée, aucun secret ni détail interne
+dans les réponses, isolation stricte des compteurs entre utilisateurs,
+bypass E2E toujours prioritaire.
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning · `vitest` unit **225/225** (213
+précédents + 12 nouveaux) · `test:integration` **18 fichiers, 68/68**
+(inchangé) · `build` OK · `test:e2e:isolated` **54 passed / 3 failed**
+— 3 échecs correspondant chacun à une signature déjà documentée comme
+préexistante, `E2E_RATE_LIMIT_BYPASS=1` confirmé neutraliser
+entièrement le nouveau fail-closed (aucun nouvel échec lié à
+l'authentification). **Staging/Production : non vérifiés — non
+déployés, voir avertissement ci-dessus.**
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, règles métier Payments/Tontines/Marketplace,
+KYC/AML, IA, P0.2 (sessions/tokens/cookies/`createSession`/refresh/
+révocation), P0.3, CSP/HSTS (Lot C de P1.9), schéma Prisma/migrations,
+contrats API métier. Aucun des 25 fichiers appelant `enforceRateLimit`
+n'a été modifié — la garde est identifiée uniquement par le préfixe du
+nom déjà transmis (`auth.*`).
+
+### Variables manquantes (bloquantes pour le déploiement)
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — absentes de
+Staging et de Production. Tant qu'elles ne sont pas configurées et
+vérifiées, ce commit reste local, non poussé.
+
 ## [Non publié] — Phase 1 — P1.9 (Lot B) : Garde contre les commandes de base de données destructives
 
 Inspection préalable de `package.json`, `prisma/seed.ts`, `scripts/`, les
