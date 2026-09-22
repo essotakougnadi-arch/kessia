@@ -13,6 +13,87 @@ avant implémentation.
 
 ---
 
+## 0. Cycle de validation Staging du 22 septembre 2026 — tentative
+
+**Objectif** : valider `afd23ef` en environnement Staging réel avant tout
+push vers `main`, Upstash Staging/Production ayant été configurés
+manuellement par l'utilisateur dans les deux projets Vercel
+(`kessia-staging`, `kessia`) entre-temps.
+
+**Commit testé** : `afd23ef2779503350dcdb6a91f83f9043479940d` (inchangé
+depuis sa création).
+
+### Étape 1 — Inspection
+`git status` propre (rien au-delà d'`afd23ef`) ; `main` toujours 1 commit
+en avance sur `origin/main` (`5caaf2c`) ; `afd23ef` confirmé ne toucher
+que 4 fichiers (`lib/security/rate-limit.ts`, son test, `CHANGELOG.md`,
+ce rapport) — aucun workflow/fichier CI-CD. `staging.yml` reconfirmé :
+`on: push: branches: [main]` + `workflow_dispatch`.
+
+### Étape 2 — Variables Staging
+**Non vérifiable directement** : aucun accès à l'API/dashboard Vercel ou
+Upstash depuis cet environnement d'exécution. La configuration manuelle
+déclarée par l'utilisateur (Upstash `kessia-staging-ratelimit` /
+`kessia-production-ratelimit`, variables posées sur les projets Vercel
+`kessia-staging` et `kessia`) est prise en compte mais reste **non
+vérifiée par ce rapport**.
+
+### Étape 3 — Validation locale (résultats réels)
+
+| Vérification | Résultat |
+|---|---|
+| `npm run typecheck` | ✅ 0 erreur |
+| `npm run lint` | ✅ 0 warning |
+| `npm run test` | ✅ 225/225 |
+| `npm run test:integration` (`USE_TEST_DB=1`) | ✅ 18 fichiers, 68/68 |
+| `npm run build` | ✅ succès |
+| `npm run test:e2e:isolated` | ⚠️ **55 passed / 2 failed** |
+
+Détail E2E : `marketplace-delivery.spec.ts:14` et `tontine.spec.ts:37` —
+chacun correspond à une signature déjà documentée comme préexistante
+dans `TICKET_CI_E2E_FAILURES.md` (timing métier livraison ; violation de
+mode strict Playwright, famille tontine déjà connue). `auth.spec.ts:12`
+est passé sur ce run (cohérent avec sa nature intermittente déjà
+caractérisée). **Aucun nouvel échec, aucune régression liée à P1.12.**
+
+### Étape 4 — Déploiement Staging : BLOQUÉ, conformément au mandat
+
+`staging.yml` ne se déclenche que sur `push: branches: [main]` (le
+`workflow_dispatch` ne permet pas de contourner cela : `afd23ef`
+n'existe sur aucune référence du dépôt distant, donc rien à exécuter
+contre). Aucun mécanisme du dépôt ne permet de déployer ce commit sur
+Staging sans un `git push`. Conformément à l'instruction explicite de
+l'utilisateur, **aucun push n'a été effectué**.
+
+> **Staging ne peut pas être validé sans pousser le commit sur main, et
+> aucun push n'est autorisé à cette étape.**
+
+### Étapes 5, 6, 7 — Non exécutées
+
+Ces étapes nécessitent un déploiement Staging réel et joignable
+(requêtes HTTP contre les routes `auth.*`, vérification des commandes
+Redis Upstash, non-régression en conditions réelles). Le déploiement
+n'ayant pas eu lieu (Étape 4), **elles n'ont pas pu être exécutées** —
+aucun résultat n'est inventé ou supposé.
+
+### Classification de ce qui bloque
+
+Ce n'est **pas un défaut du code** de `afd23ef` (Étapes 1-3 entièrement
+vertes) — c'est une **contrainte d'infrastructure préexistante**, déjà
+identifiée dans le plan initial (`PHASE0_EXECUTION_PLAN.md`, item P1.9
+« Staging » d'origine : « désactiver l'auto-deploy prod sur push main »,
+jamais traité). Sévérité : **P1 infrastructure**, pas P0 — n'affecte pas
+l'application elle-même, seulement la capacité à valider un changement
+sur Staging isolément.
+
+**Correction minimale envisageable** (non implémentée, hors périmètre de
+ce cycle) : découpler le déclenchement de `staging.yml`/Staging de celui
+de la production — par exemple domaine Vercel Production limité à une
+branche dédiée, ou un `Ignored Build Step` sur le projet `kessia`. Décision
+et implémentation à traiter séparément, sur autorisation explicite.
+
+---
+
 ## 1. Phase 1 — Inspection préalable (résumé)
 
 - `enforceRateLimit()` est appelé depuis **25 fichiers** (auth, wallet,
