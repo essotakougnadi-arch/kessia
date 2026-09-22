@@ -3,6 +3,55 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.3 : sécurité webhooks — course de réclamation sous concurrence
+
+Audit exhaustif (mots-clés webhook/callback/HMAC sur tout le dépôt) :
+exactement 2 endpoints webhook (`payments/webhooks/[provider]`,
+`marketplace/deliveries/webhooks/miaride`), déjà solides (HMAC-SHA256 +
+horodatage, comparaison temps constant, fail-closed en production —
+vérifié en direct sur Staging : 401 systématique, aucun secret
+configuré). En testant rigoureusement la concurrence exigée par le
+mandat (20 requêtes du même événement), un vrai problème trouvé et
+corrigé. Voir `docs/audit/P0_3_WEBHOOK_SECURITY_REPORT.md`.
+
+### Corrigé
+- **Idempotence webhook non atomique sous concurrence réelle.**
+  `recordWebhookAttempt` (`lib/webhooks/journal.ts`) rouvrait sans
+  condition une ligne `WebhookEvent` en statut `processing`/`failed` —
+  sous 20 requêtes vraiment concurrentes du même événement, 7 appels
+  sur 20 obtenaient `duplicate: false` et déclenchaient tous la logique
+  métier en parallèle. **Aucune faille financière** : la contrainte
+  `LedgerEntry.idempotencyKey @unique` a absorbé le risque (solde
+  toujours correct, une seule écriture réelle) ; le vrai problème était
+  une erreur Prisma brute renvoyée en 400 aux appels perdants (fuite
+  mineure de détail interne + réponse non idempotente). Corrigé par une
+  réclamation atomique conditionnelle (`updateMany` avec compare-and-swap
+  au niveau base, même mécanisme que le correctif P0.2 sur la rotation
+  de refresh token) — un `processing` récent (< 60 s) est traité comme
+  « en cours de traitement par un concurrent » sans aucune écriture, un
+  `processing` ancien ou `failed` déclenche une réclamation atomique où
+  un seul concurrent peut gagner.
+
+### Tests
+`test/integration/webhook-security.itest.ts` : 9 → 17 tests. Ajout de 4
+tests de concurrence (20× même événement / 20× événements différents,
+pour chaque webhook), payload altéré après signature, signature absente
+et secret absent en production pour Miaride (déjà présents côté
+paiement).
+
+### Vérification
+`tsc` 0 · `lint` 0 · unit **225/225** · intégration **86/86** · build OK
+· E2E **55 passed / 2 failed** (préexistants documentés). **Staging** :
+fail-closed vérifié en direct sur les 2 webhooks (401 sans secret
+configuré), P0.2 (login/wallet/logout) et P1.12 (Upstash, 429 avec
+délai réel calculé) revérifiés non-régressés, aucun secret dans les
+logs.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, Payments (logique métier), Tontines,
+Marketplace (métier), KYC, AI, RBAC, Sessions/Tokens (P0.2), rate
+limiting P1.12/Upstash, migrations Prisma.
+
 ## [Non publié] — Phase 0 — P0.2 (finalisation) : sessions/tokens — course de rotation & session supprimée
 
 Audit frais du mandat historique (20 connexions concurrentes → 500) :

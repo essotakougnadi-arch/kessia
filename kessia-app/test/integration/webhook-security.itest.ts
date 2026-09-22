@@ -112,6 +112,22 @@ describe('POST /api/v1/payments/webhooks/[provider] (intégration, P0.3)', () =>
     expect(await getWalletBalance(u.walletId)).toBe(0);
   });
 
+  it('payload altéré après signature (signature valide sur un AUTRE corps) → 401, aucun crédit', async () => {
+    const u = await makeUser({ balance: 0 });
+    userIds.push(u.id);
+    const tx = await pendingDeposit(u.id, u.walletId, 10_000);
+    const originalBody = JSON.stringify({ event: 'payment.completed', reference: tx.id });
+    // Signature calculée sur le corps ORIGINAL, mais le corps envoyé est modifié
+    // après coup (ex. un attaquant change la référence en transit) — la
+    // vérification porte sur le corps brut réellement reçu, donc doit échouer.
+    const sig = signWebhookPayload(originalBody, PAY_SECRET);
+    const tamperedBody = JSON.stringify({ event: 'payment.completed', reference: tx.id, failureReason: 'injected' });
+
+    const res = await paymentWebhook(webhookRequest(url, tamperedBody, 'x-kessia-signature', sig), { params });
+    expect(res.status).toBe(401);
+    expect(await getWalletBalance(u.walletId)).toBe(0);
+  });
+
   it('signature valide → 200, wallet crédité, WebhookEvent vérifié + traité', async () => {
     const u = await makeUser({ balance: 0 });
     userIds.push(u.id);
@@ -162,6 +178,49 @@ describe('POST /api/v1/payments/webhooks/[provider] (intégration, P0.3)', () =>
     const res = await paymentWebhook(webhookRequest(url, body, 'x-kessia-signature', null), { params });
     expect(res.status).toBe(401);
     expect(await getWalletBalance(u.walletId)).toBe(0);
+  });
+});
+
+describe('POST /api/v1/payments/webhooks/[provider] — concurrence (intégration, P0.3)', () => {
+  const url = 'http://localhost/api/v1/payments/webhooks/simulator';
+  const params = Promise.resolve({ provider: 'simulator' });
+
+  it('20 requêtes concurrentes du MÊME événement → un seul crédit, aucun HTTP 500', async () => {
+    const u = await makeUser({ balance: 0 });
+    userIds.push(u.id);
+    const tx = await pendingDeposit(u.id, u.walletId, 12_000);
+    const body = JSON.stringify({ event: 'payment.completed', reference: tx.id });
+
+    const responses = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        paymentWebhook(webhookRequest(url, body, 'x-kessia-signature', signWebhookPayload(body, PAY_SECRET)), { params })
+      )
+    );
+    expect(responses.every((r) => r.status === 200)).toBe(true);
+
+    const bodies = (await Promise.all(responses.map((r) => r.json()))) as Array<{ data: { duplicate?: boolean } }>;
+    const nonDuplicates = bodies.filter((b) => !b.data.duplicate);
+    expect(nonDuplicates).toHaveLength(1); // exactement un traitement effectif
+
+    expect(await getWalletBalance(u.walletId)).toBe(12_000); // pas 240 000
+    expect(await eventCount(`payment:simulator:payment.completed:${tx.id}`)).toBe(1);
+  });
+
+  it('20 événements DIFFÉRENTS concurrents → chacun traité une fois, aucune contamination croisée', async () => {
+    const users = await Promise.all(Array.from({ length: 20 }, () => makeUser({ balance: 0 })));
+    userIds.push(...users.map((u) => u.id));
+    const txs = await Promise.all(users.map((u) => pendingDeposit(u.id, u.walletId, 5_000)));
+
+    const responses = await Promise.all(
+      txs.map((tx) => {
+        const body = JSON.stringify({ event: 'payment.completed', reference: tx.id });
+        return paymentWebhook(webhookRequest(url, body, 'x-kessia-signature', signWebhookPayload(body, PAY_SECRET)), { params });
+      })
+    );
+    expect(responses.every((r) => r.status === 200)).toBe(true);
+
+    const balances = await Promise.all(users.map((u) => getWalletBalance(u.walletId)));
+    expect(balances.every((b) => b === 5_000)).toBe(true); // chaque wallet crédité UNE fois, jamais un autre montant
   });
 });
 
@@ -217,6 +276,46 @@ describe('POST /api/v1/marketplace/deliveries/webhooks/miaride (intégration, P0
     expect(after.status).toBe('REQUESTED');
   });
 
+  it('signature absente → 401, statut inchangé', async () => {
+    const reference = `MIA-${Date.now()}-absente`;
+    const { delivery } = await makeDeliveryFixture(reference);
+    const body = JSON.stringify({ event: 'delivery.status', reference, status: 'delivered' });
+
+    const res = await miarideWebhook(webhookRequest(url, body, 'x-miaride-signature', null));
+    expect(res.status).toBe(401);
+    const after = await prisma.marketplaceDelivery.findUniqueOrThrow({ where: { id: delivery.id } });
+    expect(after.status).toBe('REQUESTED');
+  });
+
+  it('sans secret configuré, en production → 401 (fail-closed), statut inchangé', async () => {
+    delete process.env.MIARIDE_WEBHOOK_SECRET;
+    vi.stubEnv('NODE_ENV', 'production');
+    const reference = `MIA-${Date.now()}-nosecret`;
+    const { delivery } = await makeDeliveryFixture(reference);
+    const body = JSON.stringify({ event: 'delivery.status', reference, status: 'delivered' });
+
+    const res = await miarideWebhook(webhookRequest(url, body, 'x-miaride-signature', null));
+    expect(res.status).toBe(401);
+    const after = await prisma.marketplaceDelivery.findUniqueOrThrow({ where: { id: delivery.id } });
+    expect(after.status).toBe('REQUESTED');
+  });
+
+  it('payload altéré après signature (statut changé en transit) → 401, statut inchangé', async () => {
+    const reference = `MIA-${Date.now()}-tamper`;
+    const { delivery } = await makeDeliveryFixture(reference);
+    const originalBody = JSON.stringify({ event: 'delivery.status', reference, status: 'in_transit' });
+    const sig = signWebhookPayload(originalBody, MIA_SECRET);
+    // Un attaquant intercepte une notification "in_transit" légitimement
+    // signée et la remplace par "delivered" (déclenche un versement) tout en
+    // réutilisant l'ancienne signature.
+    const tamperedBody = JSON.stringify({ event: 'delivery.status', reference, status: 'delivered' });
+
+    const res = await miarideWebhook(webhookRequest(url, tamperedBody, 'x-miaride-signature', sig));
+    expect(res.status).toBe(401);
+    const after = await prisma.marketplaceDelivery.findUniqueOrThrow({ where: { id: delivery.id } });
+    expect(after.status).toBe('REQUESTED');
+  });
+
   it('signature valide, statut « delivered » → libère le séquestre vers le vendeur', async () => {
     const reference = `MIA-${Date.now()}-A`;
     const { seller, delivery } = await makeDeliveryFixture(reference);
@@ -253,5 +352,47 @@ describe('POST /api/v1/marketplace/deliveries/webhooks/miaride (intégration, P0
     const after = await prisma.marketplaceDelivery.findUniqueOrThrow({ where: { id: delivery.id } });
     expect(after.status).toBe('DELIVERED');
     expect(await eventCount(eventKey)).toBe(1);
+  });
+});
+
+describe('POST /api/v1/marketplace/deliveries/webhooks/miaride — concurrence (intégration, P0.3)', () => {
+  const url = 'http://localhost/api/v1/marketplace/deliveries/webhooks/miaride';
+
+  it('20 requêtes concurrentes du MÊME événement → une seule libération de séquestre, aucun HTTP 500', async () => {
+    const reference = `MIA-${Date.now()}-conc-same`;
+    const { seller, delivery } = await makeDeliveryFixture(reference);
+    const body = JSON.stringify({ event: 'delivery.status', reference, status: 'delivered' });
+
+    const responses = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        miarideWebhook(webhookRequest(url, body, 'x-miaride-signature', signWebhookPayload(body, MIA_SECRET)))
+      )
+    );
+    expect(responses.every((r) => r.status === 200)).toBe(true);
+
+    const sellerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: seller.id } });
+    expect(Number(sellerWallet.balance)).toBe(100_000); // pas 2 000 000
+
+    const after = await prisma.marketplaceDelivery.findUniqueOrThrow({ where: { id: delivery.id } });
+    expect(after.status).toBe('DELIVERED');
+    expect(await eventCount(`miaride:${reference}:DELIVERED`)).toBe(1);
+  });
+
+  it('20 livraisons DIFFÉRENTES concurrentes → chacune traitée une fois, aucune contamination croisée', async () => {
+    const references = Array.from({ length: 20 }, (_, i) => `MIA-${Date.now()}-conc-diff-${i}`);
+    const fixtures = await Promise.all(references.map((ref) => makeDeliveryFixture(ref)));
+
+    const responses = await Promise.all(
+      fixtures.map(({ delivery }) => {
+        const body = JSON.stringify({ event: 'delivery.status', reference: delivery.providerRef, status: 'delivered' });
+        return miarideWebhook(webhookRequest(url, body, 'x-miaride-signature', signWebhookPayload(body, MIA_SECRET)));
+      })
+    );
+    expect(responses.every((r) => r.status === 200)).toBe(true);
+
+    const sellerBalances = await Promise.all(
+      fixtures.map(({ seller }) => prisma.wallet.findUniqueOrThrow({ where: { userId: seller.id } }))
+    );
+    expect(sellerBalances.every((w) => Number(w.balance) === 100_000)).toBe(true);
   });
 });
