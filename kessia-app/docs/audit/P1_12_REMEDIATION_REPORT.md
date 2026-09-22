@@ -13,9 +13,49 @@ avant implémentation.
 via Vercel CLI (hors pipeline Git) le 22 septembre 2026 — voir §0bis et
 §0ter. Production (`kessia`) jamais touchée.
 
-**Verdict de ce cycle : `BLOCKED`** — voir §0ter. La correction Upstash
-annoncée n'a pas résolu le problème (même erreur `WRONGPASS`, reconfirmée
-après redéploiement complet garantissant des instances fraîches).
+**Verdict (3ᵉ tentative, après 2ᵉ correction annoncée) : `BLOCKED`** —
+voir §0quater. Diagnostic **désormais précis** : le jeton contient un
+espace/saut de ligne parasite.
+
+## 0quater. Troisième tentative de validation (22 septembre, après 2ᵉ correction Upstash)
+
+**Résultat : `BLOCKED` — diagnostic précis obtenu.**
+
+1. `/api/health` → 200, déploiement confirmé à jour.
+2. Sonde `auth.request-otp` sous la limite → **429**, message
+   fail-closed (identique aux tentatives précédentes).
+3. `vercel logs` révèle cette fois une ligne **absente des captures
+   précédentes** :
+
+   ```
+   [Upstash Redis] The redis token contains whitespace or newline,
+   which can cause errors!
+   Error [UpstashError]: WRONGPASS invalid or missing auth token.
+   ```
+
+**Diagnostic exact** : ce n'est pas un jeton incorrect ou une base mal
+appairée — le SDK Upstash détecte lui-même que la valeur de
+`UPSTASH_REDIS_REST_TOKEN` telle que configurée sur Vercel **contient un
+caractère d'espace ou de saut de ligne**. C'est un artefact de
+copier-coller très courant (un retour à la ligne final inclus par
+inadvertance en copiant depuis le dashboard Upstash, un terminal, ou un
+fichier texte). Upstash compare le jeton de façon stricte (octet à
+octet) — un seul caractère invisible en trop suffit à provoquer
+`WRONGPASS`, alors que la valeur « semble » correcte à l'œil.
+
+**Action requise, précise** : dans Vercel → `kessia-staging` →
+Environment Variables, ré-ouvrir `UPSTASH_REDIS_REST_TOKEN`, **supprimer
+la valeur entièrement puis la recoller en vérifiant qu'aucun espace/
+retour à la ligne ne suit le dernier caractère** (un simple `trim()`
+manuel avant collage, ou coller dans un éditeur de texte brut d'abord
+pour vérifier, résout généralement ce problème). Revérifier
+`UPSTASH_REDIS_REST_URL` de la même façon par précaution.
+
+**Aucun test supplémentaire exécuté** (sous limite en régime normal,
+dépassement, persistance, comportement distribué, 7 routes `auth.*`,
+non-régression) — tous bloqués tant que cette dernière anomalie de
+copier-coller n'est pas corrigée. Aucune tentative de correction de ma
+part (hors mandat). `kessia` (production) jamais touchée.
 
 ## 0ter. Deuxième tentative de validation (22 septembre, après correction Upstash annoncée)
 
