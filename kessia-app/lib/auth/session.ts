@@ -131,6 +131,18 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
  * (`undefined`) — dans ce cas on ne bloque pas (il expirera naturellement
  * sous 15 min et sera remplacé par un JWT avec `jti` au prochain
  * login/refresh). Pas de déconnexion de masse au déploiement.
+ *
+ * P0.2 (finalisation) : un `jti` PRÉSENT mais introuvable en base est
+ * désormais traité comme révoqué. Avant ce correctif, une session dont la
+ * ligne était supprimée physiquement (`session.deleteMany`, ex. purge RGPD
+ * `lib/privacy/erasure.ts::eraseUserAccount`) restait acceptée par
+ * `withAuth` jusqu'à l'expiration naturelle du JWT (15 min) — le token
+ * émis avant la suppression continuait de fonctionner. Sans risque de
+ * régression pour la rétro-compatibilité ci-dessus : ce cas ne s'applique
+ * qu'aux JWT qui PORTENT un `jti` (émis par `createSession`/
+ * `rotateRefreshToken`, donc avec une ligne `Session` créée dans la même
+ * opération) — jamais aux anciens JWT sans `jti` du tout, qui restent
+ * couverts par le `if (!jti) return false` ci-dessus.
  */
 export async function isSessionRevoked(jti: string | undefined): Promise<boolean> {
   if (!jti) return false;
@@ -138,11 +150,8 @@ export async function isSessionRevoked(jti: string | undefined): Promise<boolean
     where: { jti },
     select: { revokedAt: true },
   });
-  // Session introuvable (jamais émise, base réinitialisée) : ne bloque pas
-  // ici — la signature/expiration du JWT reste la garde principale pour ce
-  // cas ; seule une révocation *explicite* (trouvée + revokedAt renseigné)
-  // fait échouer l'authentification.
-  return session?.revokedAt != null;
+  if (!session) return true;
+  return session.revokedAt != null;
 }
 
 // ---- Rotate refresh token ----
@@ -154,6 +163,22 @@ export async function isSessionRevoked(jti: string | undefined): Promise<boolean
  * (donc déjà tourné une fois) est présenté à nouveau, c'est le signal
  * standard d'un vol de token → toutes les sessions de l'utilisateur sont
  * révoquées par précaution, un audit + une notification SECURITY sont émis.
+ *
+ * P0.2 (finalisation) — course corrigée : la lecture initiale
+ * (`session.revokedAt` ci-dessous) détecte une VRAIE réutilisation (token
+ * déjà révoqué avant même cet appel). Mais deux rotations concurrentes
+ * LÉGITIMES du même token (double onglet/appareil) peuvent toutes deux
+ * lire `revokedAt: null` avant qu'aucune n'ait écrit (TOCTOU) — l'ancienne
+ * version révoquait alors sans condition, si bien que l'appel arrivé en
+ * second lisait souvent la ligne déjà révoquée par le premier et
+ * déclenchait à tort la détection de vol (`revokeAllUserSessions`),
+ * déconnectant l'utilisateur légitime de partout. Corrigé en rendant la
+ * transition elle-même atomique et conditionnelle (`updateMany` avec
+ * `WHERE revokedAt IS NULL`, verrou de ligne Postgres) : le perdant de la
+ * course concurrente obtient `count === 0` et retourne `null` SANS jamais
+ * passer par la détection de vol — seule une ligne déjà révoquée AVANT cet
+ * appel (`session.revokedAt` non nul dès la lecture initiale) déclenche
+ * encore ce signal, exactement comme avant.
  */
 export async function rotateRefreshToken(rawRefreshToken: string) {
   const hashed = hashToken(rawRefreshToken);
@@ -166,7 +191,9 @@ export async function rotateRefreshToken(rawRefreshToken: string) {
   if (!session) return null;
 
   if (session.revokedAt) {
-    // Réutilisation d'un refresh token déjà tourné/révoqué : signal de vol.
+    // Déjà révoquée AVANT cet appel (pas une course avec un concurrent
+    // arrivé en même temps) : réutilisation d'un refresh token déjà
+    // tourné/révoqué, signal de vol.
     await revokeAllUserSessions(session.userId);
     void recordAudit({
       userId: session.userId,
@@ -198,15 +225,27 @@ export async function rotateRefreshToken(rawRefreshToken: string) {
   });
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  // Révoque la ligne courante + insère la nouvelle dans une transaction :
-  // en cas de double rotation concurrente (ex. double onglet), les deux
-  // trouvent la même ligne non-révoquée et créent chacune une nouvelle
-  // session valide — pas de 500, au pire une session en double (bénin),
-  // jamais de perte de session ni de collision (jti/refreshToken sont des
-  // tokens aléatoires indépendants, pas de risque de collision entre eux).
-  await prisma.$transaction([
-    prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } }),
-    prisma.session.create({
+  return prisma.$transaction(async (tx) => {
+    // Compare-and-swap atomique : ne révoque QUE si la ligne est encore
+    // active AU MOMENT DE L'ÉCRITURE (verrou de ligne Postgres), pas
+    // seulement au moment de la lecture ci-dessus. Élimine la fenêtre de
+    // course entre deux rotations concurrentes du même refresh token.
+    const claim = await tx.session.updateMany({
+      where: { id: session.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    if (claim.count === 0) {
+      // Un appel concurrent a gagné la course entre notre lecture et notre
+      // écriture (pas AVANT notre lecture, sinon le `if` ci-dessus l'aurait
+      // déjà détecté) : perdant légitime d'une course, PAS un vol. Aucune
+      // révocation en cascade, aucun audit/alerte — le client concerné
+      // devra simplement se reconnecter (le concurrent gagnant, lui,
+      // détient déjà une session valide).
+      return null;
+    }
+
+    await tx.session.create({
       data: {
         userId: session.userId,
         jti: newJti,
@@ -215,14 +254,14 @@ export async function rotateRefreshToken(rawRefreshToken: string) {
         ipAddress: session.ipAddress,
         expiresAt,
       },
-    }),
-  ]);
+    });
 
-  return {
-    accessToken: newAccessToken,
-    refreshToken: newRawRefreshToken,
-    user: session.user,
-  };
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRawRefreshToken,
+      user: session.user,
+    };
+  });
 }
 
 // ---- Extract token from request ----

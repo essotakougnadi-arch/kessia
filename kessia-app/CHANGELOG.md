@@ -3,6 +3,62 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.2 (finalisation) : sessions/tokens — course de rotation & session supprimée
+
+Audit frais du mandat historique (20 connexions concurrentes → 500) :
+déjà corrigé par un P0.2 antérieur, déjà en production (`Session.jti`
+aléatoire au lieu du JWT en `@unique`). Revérifié avec une charge
+doublée (20, pas 10) et au niveau de la vraie route `/login`. En testant
+rigoureusement la matrice de sécurité complète du mandat, deux angles
+morts réels trouvés et corrigés. Voir
+`docs/audit/P0_2_SESSIONS_TOKENS_AUTH_REPORT.md` pour le détail complet.
+
+### Corrigé
+- **Session supprimée physiquement (purge RGPD) restait acceptée**
+  jusqu'à l'expiration naturelle du JWT (15 min) au lieu d'être refusée
+  immédiatement. `lib/auth/session.ts::isSessionRevoked` traite
+  désormais un `jti` présent mais introuvable en base comme révoqué —
+  sans impact sur la rétro-compatibilité des JWT pré-P0.2 (sans `jti` du
+  tout), qui reste inchangée.
+- **Rotation concurrente de refresh token (double onglet/appareil)
+  déclenchait une fausse détection de vol.** Course TOCTOU dans
+  `rotateRefreshToken` : la lecture de `revokedAt` et son écriture
+  n'étaient pas atomiques, si bien que l'appel concurrent arrivé en
+  second lisait souvent la ligne déjà révoquée par le premier et
+  déclenchait `revokeAllUserSessions`, déconnectant l'utilisateur
+  légitime de partout avec une fausse alerte « activité suspecte ».
+  Corrigé par un `updateMany` conditionnel (`WHERE revokedAt IS NULL`)
+  dans une transaction interactive — compare-and-swap atomique au
+  niveau base. Le perdant d'une course légitime obtient désormais `null`
+  proprement, sans jamais déclencher la détection de vol. La vraie
+  réutilisation séquentielle (token déjà révoqué avant l'appel) continue
+  d'être détectée et bloquée à l'identique — aucune protection
+  affaiblie.
+
+### Tests
+`test/integration/session-security.itest.ts` : 18 tests (8 existants +
+10 nouveaux/étendus). Notamment : 20 créations de session concurrentes,
+20 connexions concurrentes via la vraie route `/login`, rotation de
+refresh token concurrente répétée 10× par test (30 itérations sur 3
+runs, 0 fausse détection), matrice complète des 10 scénarios de
+sécurité du mandat (token manquant/invalide/expiré/altéré/d'un autre
+utilisateur/session supprimée/révoqué/replay).
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning · unit **225/225** · intégration
+**78/78** · build OK · E2E isolé **56 passed / 1 failed** (échec
+préexistant documenté, sans lien avec l'authentification). **Staging**
+(`kessia-staging`, Vercel CLI, hors pipeline Git) : matrice complète
+vérifiée en direct dont 20 logins concurrents réels (10×200 + 10×429
+Upstash, 0×500), 2 refresh concurrents réels (1 gagnant reste
+authentifié, 1 perdant propre), rejeu séquentiel d'un ancien refresh
+token toujours détecté et bloqué. Aucun secret dans les logs.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, Payments, Tontines, Marketplace, KYC/AML, IA,
+rate limiting P1.12/Upstash (revérifié fonctionnel, non modifié),
+schéma Prisma/migrations.
+
 ## [Non publié] — Phase 0 — P0.1 (finalisation) : sécurité Next.js
 
 Audit frais de l'état actuel (sans supposer des anciens rapports) :
