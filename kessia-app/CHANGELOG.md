@@ -3,6 +3,40 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 0 — P0.1 (finalisation) : sécurité Next.js
+
+Audit frais de l'état actuel (sans supposer des anciens rapports) :
+`next` déjà à `15.5.24` (migration antérieure déjà validée), mais
+`eslint-config-next` resté sur `14.2.35` — jamais aligné, portant une
+vulnérabilité **HIGH** réelle (`glob`, injection de commande,
+GHSA-5j98-mcp5-4vw2). Voir
+`docs/audit/P0_1_NEXTJS_SECURITY_MIGRATION_REPORT.md` pour le rapport
+complet.
+
+### Corrigé
+- **`eslint-config-next` obsolète et vulnérable** (`14.2.35` →
+  `15.5.24`, alignement exact sur `next`, version stable existante hors
+  de la plage vulnérable). Devdependency de lint uniquement, aucun
+  impact runtime. `next` lui-même **inchangé** (déjà à la cible,
+  **pas** de passage à Next 16).
+
+### Vérification
+`tsc` 0 erreur · `lint` 0 warning (nouveau ruleset inclus) · `vitest`
+unit **225/225** · `test:integration` **68/68** · `build` OK ·
+`test:e2e:isolated` **54 passed / 3 failed** (3 échecs correspondant
+chacun à une signature déjà documentée comme préexistante) · `npm
+audit` : **8 → 5** vulnérabilités (0 restante liée à Next.js ; les 5
+restantes sont liées à l'outillage de test `vitest`/`vite`, hors
+périmètre). **Staging** (`kessia-staging`, via Vercel CLI, hors
+pipeline Git) : health/accueil/middleware/RBAC 401+403/login/Wallet/
+Tontines/Marketplace/images/logs — tous vérifiés OK.
+
+### Hors périmètre (confirmé non touché)
+Ledger, Wallet, Escrow, Payments, Tontines, Marketplace, KYC/AML, IA,
+Webhooks (P0.3), P0.2 (sessions/tokens/cookies/révocation), Prisma/
+PostgreSQL, rate limiting (P1.12)/Upstash, CSP/HSTS (Lot C de P1.9).
+Seuls `package.json` et `package-lock.json` modifiés.
+
 ## [Non publié] — Phase 1 — P1.12 : Rate limiting distribué (Upstash) & garde fail-closed — NON DÉPLOYÉ
 
 **⚠️ Ce changement est committé mais volontairement NON poussé vers `origin
