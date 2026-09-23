@@ -1,0 +1,157 @@
+# ============================================================
+# KESSIA — Promotion contrôlée vers Production (P1.9)
+#
+# Déclenchement UNIQUEMENT manuel (workflow_dispatch) — jamais sur push.
+# Chaque job référence `environment: production` : si ce GitHub
+# Environment est configuré avec des "Required reviewers" (Settings →
+# Environments → production), le job reste EN ATTENTE tant qu'un
+# reviewer désigné n'a pas explicitement approuvé — GitHub applique ce
+# blocage nativement, ce workflow ne contient aucune logique de
+# contournement possible.
+#
+# Secrets GitHub requis, TOUS scopés à l'environnement "production"
+# (Settings → Environments → production → Secrets) — jamais les secrets
+# STAGING_* :
+#   PRODUCTION_DATABASE_URL   Connexion Postgres du projet Supabase
+#                             PRODUCTION (pooler session, port 5432 —
+#                             jamais 6543, cf. DATABASE_MIGRATION_PLAN.md)
+#   PRODUCTION_DEPLOY_HOOK    Deploy Hook Vercel du projet PRODUCTION
+#                             (kessia) — à créer, voir le rapport P1.9
+#   PRODUCTION_BASE_URL       URL publique de production
+# Optionnels (parcours authentifié du smoke test — recommandé de les
+# laisser absents tant qu'aucun compte de test dédié à la production
+# n'existe ; le smoke test ignore alors simplement ce parcours) :
+#   PRODUCTION_SMOKE_PHONE / PRODUCTION_SMOKE_PASSWORD
+#
+# IMPORTANT — aucun skip silencieux : si un secret obligatoire manque,
+# le job échoue explicitement (::error:: + exit 1). Aucune valeur
+# secrète n'est jamais imprimée dans les logs.
+#
+# Ordre : migrate (schéma production à jour, prisma migrate deploy
+# UNIQUEMENT, jamais db push) -> deploy (Deploy Hook + smoke tests).
+# Si la migration échoue, le déploiement ne se déclenche pas.
+# ============================================================
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Tapez PRODUCTION pour confirmer cette promotion manuelle'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+# Moindre privilège : ce workflow lit le code et appelle des services
+# externes (Vercel, Supabase) — il n'a besoin d'écrire nulle part dans le
+# dépôt.
+permissions:
+  contents: read
+
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Vérifie la confirmation explicite
+        if: inputs.confirm != 'PRODUCTION'
+        run: |
+          echo "::error::Confirmation absente ou incorrecte — attendu 'PRODUCTION' dans le champ de confirmation. Aucune action effectuée."
+          exit 1
+
+  migrate:
+    needs: confirm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Référence le GitHub Environment "production" — c'est CE qui déclenche
+    # l'attente d'approbation si des "Required reviewers" y sont configurés
+    # (action manuelle, voir le rapport P1.9 §6).
+    environment: production
+    env:
+      PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prérequis production — PRODUCTION_DATABASE_URL obligatoire
+        if: env.PRODUCTION_DATABASE_URL == ''
+        run: |
+          echo "::error::PRODUCTION_DATABASE_URL est requis (secret d'environnement 'production') et n'est pas configuré."
+          echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement production n'est pas entièrement provisionné."
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kessia-app/package-lock.json
+
+      - name: Install
+        working-directory: kessia-app
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy (production)
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        # Aucune option de contournement, jamais `db push`. Un échec ici
+        # bloque le job `deploy` qui en dépend — le déploiement ne part
+        # pas si la migration échoue.
+        run: npx prisma migrate deploy
+
+      - name: Vérifier l'état des migrations (production)
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: npx prisma migrate status
+
+      # Aucun seed en production — contrairement à staging, la base
+      # production contient des données réelles ou déjà amorcées ; ne
+      # jamais y exécuter `db:seed` (efface/recrée des comptes).
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      PRODUCTION_DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+      PRODUCTION_BASE_URL: ${{ secrets.PRODUCTION_BASE_URL }}
+      PRODUCTION_SMOKE_PHONE: ${{ secrets.PRODUCTION_SMOKE_PHONE }}
+      PRODUCTION_SMOKE_PASSWORD: ${{ secrets.PRODUCTION_SMOKE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prérequis production — secrets obligatoires
+        if: env.PRODUCTION_DEPLOY_HOOK == '' || env.PRODUCTION_BASE_URL == ''
+        run: |
+          echo "::error::Un ou plusieurs secrets obligatoires sont absents (PRODUCTION_DEPLOY_HOOK, PRODUCTION_BASE_URL)."
+          echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement production n'est pas entièrement provisionné."
+          exit 1
+
+      - name: Trigger deploy (Vercel Deploy Hook — projet production uniquement)
+        run: curl -fsSL -X POST "$PRODUCTION_DEPLOY_HOOK"
+
+      - name: Wait for deploy
+        run: sleep 90
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Smoke tests (production)
+        working-directory: kessia-app
+        env:
+          SMOKE_BASE_URL: ${{ secrets.PRODUCTION_BASE_URL }}
+          SMOKE_PHONE: ${{ secrets.PRODUCTION_SMOKE_PHONE }}
+          SMOKE_PASSWORD: ${{ secrets.PRODUCTION_SMOKE_PASSWORD }}
+        # Échec explicite (exit 1) si un seul contrôle échoue — la
+        # promotion est alors considérée comme échouée. Voir le rapport
+        # P1.9 §rollback pour la procédure à suivre dans ce cas.
+        run: node scripts/smoke.mjs

@@ -3,6 +3,54 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 1 — P1.9 : Pipeline de déploiement Production (séparation staging/prod)
+
+Reprend l'ID historique du plan d'origine (`PHASE0_EXECUTION_PLAN.md`)
+— **distinct** du « P1.9 Lot A/B » (secrets/config, DB guard) déjà
+validé cette session. Voir
+`docs/audit/P1_9_PRODUCTION_DEPLOYMENT_PIPELINE_REPORT.md`.
+
+### Problème confirmé
+Un push sur `main` déclenchait simultanément `staging.yml` **et** le
+déploiement natif Vercel de production (`kessia`) — aucune passerelle,
+aucune approbation, aucun smoke test ne protégeait la production. Cause
+exacte, vérifiée empiriquement, de la prudence appliquée aux 11 commits
+locaux non poussés de cette session.
+
+### Ajouté
+- **`.github/workflows/deploy-prod.yml`** — promotion manuelle
+  exclusivement (`workflow_dispatch`, aucun déclencheur `push`), 3 jobs
+  (`confirm` → `migrate` → `deploy`) référençant `environment:
+  production` — GitHub bloque nativement l'exécution en attente
+  d'approbation si des « Required reviewers » y sont configurés.
+  Migration via `prisma migrate deploy` uniquement (jamais `db push`),
+  secrets `PRODUCTION_*` strictement séparés des `STAGING_*`, Deploy
+  Hook Vercel dédié, smoke tests via `scripts/smoke.mjs` (réutilisé sans
+  modification).
+
+### Vérification
+`tsc` 0 · `lint` 0 · unit **225/225** · intégration **103/103** · build
+OK · E2E **54 passed / 3 failed** — 2 échecs de la famille déjà
+documentée (`marketplace-delivery.spec.ts:14`, `tontine.spec.ts:22`) +
+1 nouveau flake intermittent observé (`navigation.spec.ts:32`, couleur
+d'accent Violet après reload) : **non lié à ce chantier** — zéro fichier
+applicatif modifié (confirmé par `git diff --stat`), reproduction en
+isolation = 2/3 passent, caractérisé comme flakiness préexistante
+simplement jamais déclenchée dans les runs précédents de cette session.
+
+### Hors périmètre (confirmé non touché)
+`staging.yml`, `ci.yml`, tout le code applicatif — Ledger, Wallet,
+Escrow, Payments, Sessions, Tokens, Webhooks, Marketplace, Tontines,
+KYC, AI, rate limiting Upstash. Aucune migration Prisma.
+
+### Actions manuelles requises avant activation (hors code)
+1. Vercel (projet `kessia`) : créer un Deploy Hook production + couper
+   l'auto-déploiement natif sur push (« Ignored Build Step » = `exit 0`).
+2. GitHub : créer l'environnement `production` avec Required reviewers
+   + secrets `PRODUCTION_DATABASE_URL`/`PRODUCTION_DEPLOY_HOOK`/
+   `PRODUCTION_BASE_URL`.
+3. Push de ce commit, puis validation réelle du mécanisme d'approbation.
+
 ## [Non publié] — Phase 1 — P1.6 : Ledger Core — course d'idempotence sous concurrence
 
 Reprend le constat documenté (non corrigé) à la clôture de P0.4 :
