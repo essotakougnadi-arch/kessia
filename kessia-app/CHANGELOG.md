@@ -3,6 +3,55 @@
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 Le projet suit la feuille de route par phases du cahier des charges (§52).
 
+## [Non publié] — Phase 1 — P1.6 : Ledger Core — course d'idempotence sous concurrence
+
+Reprend le constat documenté (non corrigé) à la clôture de P0.4 :
+`releaseEscrowToSeller` pouvait recevoir « Solde insuffisant » sous
+concurrence légitime. Root-causé avec preuve puis corrigé au niveau
+Ledger core. Voir
+`docs/audit/P1_6_LEDGER_CONCURRENCY_RECONCILIATION_REPORT.md`.
+
+### Corrigé
+- **Idempotence du Ledger mal positionnée sous concurrence réelle.**
+  `createLedgerEntry` et `postDoubleEntry` (`lib/ledger/ledger.service.ts`)
+  ne revérifiaient la présence d'une écriture déjà créée (par
+  `idempotencyKey`) qu'**avant** la transaction, jamais **à l'intérieur**
+  après l'acquisition du verrou wallet. Sous appels vraiment concurrents
+  avec la même clé : `createLedgerEntry` laissait fuiter une erreur
+  Prisma brute (`Unique constraint failed`, jamais interceptée) ;
+  `postDoubleEntry` pouvait répondre « Solde insuffisant » à un appelant
+  ayant acquis le verrou après qu'un concurrent avait déjà consommé le
+  solde — avant même d'atteindre sa propre résolution idempotente.
+  **Aucune corruption financière possible dans les deux cas** (vérifié :
+  toujours une seule écriture réelle, soldes toujours exacts) — le
+  défaut était uniquement dans la réponse renvoyée à l'appelant.
+  Corrigé par une réclamation atomique : revérification de
+  l'`idempotencyKey` à l'intérieur de la transaction, immédiatement
+  après le verrou PostgreSQL déjà en place, avant tout calcul de solde.
+  Aucun mutex mémoire, aucun retry, aucune contrainte supprimée, aucun
+  appelant modifié.
+
+### Tests
+`ledger.service.itest.ts` (4 → 13 tests : reproduction précise des deux
+causes, concurrence ×10/×20, clés différentes, comptes différents,
+insuffisance réelle, rollback, réconciliation, debit=credit, chaînage
+balanceBefore/After) ; `marketplace-settlement.itest.ts` (2 → 6 tests :
+`releaseEscrowToSeller`/`refundEscrowToBuyer`/`postDoubleEntry(REVERSAL)`
+×20 concurrents, tous désormais propres).
+
+### Vérification
+`tsc` 0 · `lint` 0 · unit **225/225** · intégration **103/103** · build
+OK · E2E **56 passed / 1 failed** (préexistant documenté). Staging :
+health/P0.2/P0.3/P1.12 revalidés non-régressés, aucun secret dans les
+logs. **Limitation documentée** : aucun article `ON_DELIVERY` disponible
+en démo Staging pour exercer `releaseEscrowToSeller` en direct — preuve
+reposant sur la suite locale (base jetable), stable sur plusieurs runs.
+
+### Hors périmètre (confirmé non touché)
+Wallet, Escrow (logique métier), Marketplace, Sessions (P0.2), Webhooks
+(P0.3), rate limiting P1.12/Upstash, KYC, AML, AI, Tontines, Business,
+migrations Prisma.
+
 ## [Non publié] — Phase 0 — P0.4 (finalisation) : Marketplace — preuve de non-régression sous concurrence
 
 Audit frais du flux Marketplace (panier → commande → paiement →

@@ -129,7 +129,53 @@ describe('Séquestre marketplace (intégration)', () => {
     expect(late.ok).toBe(false);
   });
 
-  it('vingt appels VRAIMENT concurrents à releaseEscrowToSeller (même commande) : un seul versement réel, jamais de double débit (P0.4 finalisation — cf. rapport §Constat Ledger)', async () => {
+  it('vingt appels VRAIMENT concurrents à refundEscrowToBuyer (même commande) : un seul remboursement réel, tous propres (P1.6, Étape 8)', async () => {
+    const seller = await makeUser({ balance: 0 });
+    const buyer = await makeUser({ balance: 300_000 });
+    userIds.push(seller.id, buyer.id);
+
+    const item = await makeItem(seller.id, 90_000);
+    const order = await buyOnDelivery(buyer, item);
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => refundEscrowToBuyer(order.id, 'delivery_cancelled'))
+    );
+    expect(results.every((r) => r.ok)).toBe(true); // correctif P1.6 : plus de faux "Solde insuffisant"
+
+    const idem = `MKT_ESCROW_REFUND_${order.id}`;
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `${idem}:out` } })).toBe(1);
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `${idem}:in` } })).toBe(1);
+
+    const buyerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: buyer.id } });
+    expect(Number(buyerWallet.balance)).toBe(300_000); // remboursé UNE fois, pas 20 fois
+
+    const after = await prisma.marketplaceOrder.findUniqueOrThrow({ where: { id: order.id } });
+    expect(after.status).toBe('REFUNDED');
+  });
+
+  it('vingt postDoubleEntry(REVERSAL) VRAIMENT concurrents, même clé, solde source EXACTEMENT égal au montant : tous propres (P1.6, Étape 8)', async () => {
+    const source = await makeUser({ balance: 45_000 });
+    const dest = await makeUser({ balance: 0 });
+    userIds.push(source.id, dest.id);
+    const key = `ITEST_REVERSAL_${Date.now()}`;
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        postDoubleEntry({
+          fromWalletId: source.walletId, toWalletId: dest.walletId, type: 'REVERSAL',
+          amount: 45_000, description: 'itest reversal P1.6', idempotencyKey: key,
+        })
+      )
+    );
+    expect(results.every((r) => r.success)).toBe(true);
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `${key}:out` } })).toBe(1);
+    expect(await prisma.wallet.findUniqueOrThrow({ where: { userId: dest.id } }).then((w) => Number(w.balance)))
+      .toBe(45_000);
+    expect(await prisma.wallet.findUniqueOrThrow({ where: { userId: source.id } }).then((w) => Number(w.balance)))
+      .toBe(0);
+  });
+
+  it('vingt appels VRAIMENT concurrents à releaseEscrowToSeller (même commande) : un seul versement réel, tous propres (P1.6, correctif Ledger validé au niveau Marketplace)', async () => {
     const seller = await makeUser({ balance: 0 });
     const buyer = await makeUser({ balance: 300_000 });
     userIds.push(seller.id, buyer.id);
@@ -141,25 +187,19 @@ describe('Séquestre marketplace (intégration)', () => {
       Array.from({ length: 20 }, () => releaseEscrowToSeller(order.id, 'buyer_confirmed'))
     );
 
-    // Constat empirique (P0.4 finalisation) : `postDoubleEntry` (Ledger
-    // core, hors périmètre de ce chantier — RÈGLE FINALE) vérifie le
-    // solde AVANT de retenter la création idempotente ; sous course
-    // vraiment concurrente, un appel qui a lu `existing === null` avant
-    // que le gagnant n'ait committé, mais qui acquiert le verrou wallet
-    // APRÈS lui, voit un solde déjà consommé et échoue en "Solde
-    // insuffisant" au lieu de résoudre proprement vers l'entrée déjà
-    // créée. CE TEST NE VÉRIFIE DONC PAS `every(r => r.ok)` (non garanti
-    // aujourd'hui par le Ledger) — il vérifie l'invariant qui compte
-    // réellement et qui, lui, est TOUJOURS respecté : aucun double
-    // débit, jamais de solde négatif, jamais de versement en double.
+    // Avant P1.6 (constaté en P0.4) : certains appels échouaient en
+    // "Solde insuffisant" — `postDoubleEntry` (Ledger core) vérifiait le
+    // solde avant de retenter la résolution idempotente. Corrigé en P1.6
+    // (revérification de l'idempotence sous verrou, avant tout calcul de
+    // solde). Revalidé ici au niveau Marketplace : tous les appels
+    // doivent désormais réussir proprement.
+    expect(results.every((r) => r.ok)).toBe(true);
+
     const idem = `MKT_SETTLE_${order.id}`;
     const outCount = await prisma.ledgerEntry.count({ where: { idempotencyKey: `${idem}:out` } });
     const inCount = await prisma.ledgerEntry.count({ where: { idempotencyKey: `${idem}:in` } });
     expect(outCount).toBe(1); // une seule écriture débit réelle, quel que soit le nombre d'appels
     expect(inCount).toBe(1); // une seule écriture crédit réelle
-
-    const trueSuccesses = results.filter((r) => r.ok);
-    expect(trueSuccesses.length).toBeGreaterThanOrEqual(1); // au moins un appel réussit proprement
 
     const sellerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: seller.id } });
     expect(Number(sellerWallet.balance)).toBe(120_000); // pas 2 400 000 : jamais de double versement

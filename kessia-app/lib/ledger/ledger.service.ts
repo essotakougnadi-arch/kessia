@@ -48,12 +48,25 @@ export type LedgerResult = {
 /**
  * Crée une entrée ledger et met à jour le solde du wallet.
  * Utilise une transaction Prisma pour garantir l'atomicité.
+ *
+ * P1.6 — course corrigée : l'idempotence était vérifiée une seule fois,
+ * AVANT la transaction (lecture hors verrou). Sous appels vraiment
+ * concurrents avec la même clé, un appelant qui acquiert le verrou
+ * wallet APRÈS qu'un concurrent a déjà committé pouvait soit heurter la
+ * contrainte `@unique` sur `create()` (erreur Prisma brute, nulle part
+ * gérée), soit — si le solde venait d'être consommé par le gagnant —
+ * échouer en « Solde insuffisant » avant même de tenter la création.
+ * Corrigé en revérifiant l'idempotence À L'INTÉRIEUR de la transaction,
+ * immédiatement après l'acquisition du verrou et AVANT tout calcul de
+ * solde : un concurrent qui a committé pendant notre attente du verrou
+ * est alors vu avant toute décision financière. Repose entièrement sur
+ * le verrou PostgreSQL déjà en place — aucun mutex mémoire, aucun retry.
  */
 export async function createLedgerEntry(input: LedgerEntryInput): Promise<LedgerResult> {
   const idempotencyKey =
     input.idempotencyKey ?? generateIdempotencyKey(input.type);
 
-  // Vérification d'idempotence
+  // Vérification d'idempotence (chemin rapide, hors verrou).
   const existing = await prisma.ledgerEntry.findFirst({
     where: { idempotencyKey },
   });
@@ -70,6 +83,15 @@ export async function createLedgerEntry(input: LedgerEntryInput): Promise<Ledger
     const result = await prisma.$transaction(async (tx) => {
       // 1. Verrouiller la ligne wallet puis relire le solde à jour
       await lockWallets(tx, [input.walletId]);
+
+      // 1bis. Réclamation atomique : un concurrent identique a pu
+      // committer pendant que nous attendions le verrou — le revérifier
+      // ICI, sous verrou, avant tout calcul de solde.
+      const already = await tx.ledgerEntry.findFirst({ where: { idempotencyKey } });
+      if (already) {
+        return { entry: already, balanceAfter: new Decimal(already.balanceAfter) };
+      }
+
       const wallet = await tx.wallet.findUnique({
         where: { id: input.walletId },
       });
@@ -125,6 +147,16 @@ export async function createLedgerEntry(input: LedgerEntryInput): Promise<Ledger
       balanceAfter: Number(result.balanceAfter),
     };
   } catch (error) {
+    // Filet de sécurité : une fenêtre infinitésimale subsiste entre le
+    // chemin rapide (hors transaction) et l'acquisition du verrou — si
+    // elle est heurtée malgré tout, résoudre proprement plutôt que de
+    // laisser fuiter l'erreur Prisma brute.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const twin = await prisma.ledgerEntry.findFirst({ where: { idempotencyKey } });
+      if (twin) {
+        return { success: true, entryId: twin.id, balanceAfter: Number(twin.balanceAfter) };
+      }
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Erreur ledger inconnue',
@@ -169,6 +201,16 @@ export type DoubleEntryResult = {
  * - idempotent : rejouer avec la même `idempotencyKey` ne rejoue rien.
  *
  * Employé pour tout mouvement tontine ↔ séquestre (§6.5).
+ *
+ * P1.6 — course corrigée : l'idempotence n'était vérifiée qu'AVANT la
+ * transaction (hors verrou). Sous appels vraiment concurrents avec la
+ * même clé, un appelant qui acquiert le verrou APRÈS qu'un concurrent a
+ * déjà committé relisait un solde déjà consommé par ce concurrent et
+ * échouait en « Solde insuffisant » — avant même d'atteindre la
+ * résolution idempotente par `P2002` ci-dessous, qui ne couvrait donc
+ * que l'un des deux ordres d'arrivée possibles. Corrigé en revérifiant
+ * l'idempotence À L'INTÉRIEUR de la transaction, immédiatement après le
+ * verrou et AVANT tout calcul de solde.
  */
 export async function postDoubleEntry(
   input: DoubleEntryInput
@@ -183,8 +225,9 @@ export async function postDoubleEntry(
     return { success: false, error: 'Les deux wallets sont identiques' };
   }
 
-  // Idempotence : la jambe débit est créée en même temps que la jambe
-  // crédit, donc sa présence suffit à conclure que l'opération a eu lieu.
+  // Idempotence (chemin rapide, hors verrou) : la jambe débit est créée
+  // en même temps que la jambe crédit, donc sa présence suffit à
+  // conclure que l'opération a eu lieu.
   const existing = await prisma.ledgerEntry.findFirst({ where: { idempotencyKey: outKey } });
   if (existing) {
     const twin = await prisma.ledgerEntry.findFirst({ where: { idempotencyKey: inKey } });
@@ -200,6 +243,16 @@ export async function postDoubleEntry(
   try {
     const res = await prisma.$transaction(async (tx) => {
       await lockWallets(tx, [input.fromWalletId, input.toWalletId]);
+
+      // Réclamation atomique (P1.6) : un concurrent identique a pu
+      // committer pendant que nous attendions le verrou — le revérifier
+      // ICI, sous verrou, avant tout calcul de solde.
+      const already = await tx.ledgerEntry.findFirst({ where: { idempotencyKey: outKey } });
+      if (already) {
+        const twin = await tx.ledgerEntry.findFirst({ where: { idempotencyKey: inKey } });
+        return { outEntry: already, inEntry: twin, fromAfter: already.balanceAfter, toAfter: twin?.balanceAfter };
+      }
+
       const wallets = await tx.wallet.findMany({
         where: { id: { in: [input.fromWalletId, input.toWalletId] } },
       });
@@ -263,9 +316,9 @@ export async function postDoubleEntry(
     return {
       success: true,
       outEntryId: res.outEntry.id,
-      inEntryId: res.inEntry.id,
+      inEntryId: res.inEntry?.id,
       fromBalanceAfter: Number(res.fromAfter),
-      toBalanceAfter: Number(res.toAfter),
+      toBalanceAfter: res.toAfter !== undefined ? Number(res.toAfter) : undefined,
     };
   } catch (error) {
     // Course entre deux appels identiques concurrents : le second bute sur
