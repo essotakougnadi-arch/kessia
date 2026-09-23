@@ -2,12 +2,41 @@
 # KESSIA — Promotion contrôlée vers Production (P1.9)
 #
 # Déclenchement UNIQUEMENT manuel (workflow_dispatch) — jamais sur push.
-# Chaque job référence `environment: production` : si ce GitHub
-# Environment est configuré avec des "Required reviewers" (Settings →
-# Environments → production), le job reste EN ATTENTE tant qu'un
-# reviewer désigné n'a pas explicitement approuvé — GitHub applique ce
-# blocage nativement, ce workflow ne contient aucune logique de
-# contournement possible.
+#
+# Garantie centrale de ce workflow : le commit réellement déployé en
+# production est EXACTEMENT celui qui a été validé par `staging.yml`.
+#
+#   confirm ──▶ verify-staging ──▶ migrate ──▶ deploy
+#
+#   - confirm         : saisie explicite "PRODUCTION" (pas de secret).
+#   - verify-staging  : interroge l'API GitHub Actions et EXIGE qu'un
+#                       run `staging.yml` avec conclusion="success"
+#                       existe pour `github.sha` — CE SHA EXACT, pas la
+#                       branche `main` en général. Échec explicite sinon,
+#                       AVANT toute sollicitation d'approbation (aucun
+#                       `environment:` sur ce job, donc aucun secret et
+#                       aucune attente de reviewer pour un SHA invalide).
+#   - migrate/deploy  : référencent `environment: production` — si cet
+#                       environment a des "Required reviewers" configurés
+#                       (Settings → Environments → production, action
+#                       manuelle), le job reste EN ATTENTE tant qu'un
+#                       reviewer désigné n'a pas explicitement approuvé.
+#                       GitHub applique ce blocage nativement ; ce
+#                       workflow ne contient aucune logique de
+#                       contournement possible.
+#
+# Le même `github.sha` (figé par GitHub dès la création du run, avant
+# même l'attente d'approbation, et jamais recalculé ensuite) est utilisé
+# par `verify-staging`, `migrate` (checkout + migration) et `deploy`
+# (checkout + `vercel pull` → `vercel build --prod` → `vercel deploy
+# --prebuilt --prod`, la séquence officielle Vercel pour CI — l'artefact
+# déployé est celui construit à partir de CE checkout, jamais reconstruit
+# ailleurs) — chaque `actions/checkout@v4` précise explicitement
+# `ref: ${{ github.sha }}` pour rendre cette garantie visible dans le
+# fichier, pas seulement implicite. Aucun `git pull` (Git), aucun
+# `git checkout main`, aucun Deploy Hook Vercel (qui déploierait le HEAD
+# courant de la branche au moment de l'appel, pas ce SHA précis — voir
+# docs/audit/P1_9_PRODUCTION_DEPLOYMENT_PIPELINE_REPORT.md).
 #
 # Secrets GitHub requis, TOUS scopés à l'environnement "production"
 # (Settings → Environments → production → Secrets) — jamais les secrets
@@ -15,8 +44,9 @@
 #   PRODUCTION_DATABASE_URL   Connexion Postgres du projet Supabase
 #                             PRODUCTION (pooler session, port 5432 —
 #                             jamais 6543, cf. DATABASE_MIGRATION_PLAN.md)
-#   PRODUCTION_DEPLOY_HOOK    Deploy Hook Vercel du projet PRODUCTION
-#                             (kessia) — à créer, voir le rapport P1.9
+#   VERCEL_TOKEN              Token Vercel (Account Settings → Tokens)
+#   VERCEL_ORG_ID             Org ID du compte/équipe Vercel
+#   VERCEL_PROJECT_ID         Project ID du projet PRODUCTION (kessia)
 #   PRODUCTION_BASE_URL       URL publique de production
 # Optionnels (parcours authentifié du smoke test — recommandé de les
 # laisser absents tant qu'aucun compte de test dédié à la production
@@ -26,10 +56,6 @@
 # IMPORTANT — aucun skip silencieux : si un secret obligatoire manque,
 # le job échoue explicitement (::error:: + exit 1). Aucune valeur
 # secrète n'est jamais imprimée dans les logs.
-#
-# Ordre : migrate (schéma production à jour, prisma migrate deploy
-# UNIQUEMENT, jamais db push) -> deploy (Deploy Hook + smoke tests).
-# Si la migration échoue, le déploiement ne se déclenche pas.
 # ============================================================
 name: Deploy Production
 
@@ -45,11 +71,13 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
-# Moindre privilège : ce workflow lit le code et appelle des services
-# externes (Vercel, Supabase) — il n'a besoin d'écrire nulle part dans le
-# dépôt.
+# Moindre privilège : `actions: read` est nécessaire UNIQUEMENT pour que
+# `verify-staging` puisse interroger l'API GitHub Actions (runs de
+# `staging.yml`) via le GITHUB_TOKEN automatique — aucune permission
+# d'écriture nulle part, aucun accès élargi.
 permissions:
   contents: read
+  actions: read
 
 jobs:
   confirm:
@@ -62,18 +90,65 @@ jobs:
           echo "::error::Confirmation absente ou incorrecte — attendu 'PRODUCTION' dans le champ de confirmation. Aucune action effectuée."
           exit 1
 
-  migrate:
+  # Aucun `environment:` ici — cette vérification ne doit dépendre
+  # d'aucun secret de production et ne doit jamais faire attendre un
+  # reviewer pour un commit qui échouera de toute façon.
+  verify-staging:
     needs: confirm
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Exige un run staging.yml SUCCESS pour ce SHA exact
+        run: |
+          SHA="${{ github.sha }}"
+          echo "Commit à promouvoir (github.sha, figé pour tout ce run) : $SHA"
+
+          RUNS_JSON=$(gh api "repos/${{ github.repository }}/actions/workflows/staging.yml/runs?head_sha=${SHA}&per_page=10")
+          LATEST=$(echo "$RUNS_JSON" | jq -c '.workflow_runs | sort_by(.created_at) | reverse | .[0]')
+
+          if [ "$LATEST" = "null" ] || [ -z "$LATEST" ]; then
+            echo "::error::Aucun run staging.yml trouvé pour le commit $SHA — ce commit n'a jamais été validé par staging. Refus de promouvoir vers production."
+            exit 1
+          fi
+
+          STATUS=$(echo "$LATEST" | jq -r '.status')
+          CONCLUSION=$(echo "$LATEST" | jq -r '.conclusion')
+          RUN_URL=$(echo "$LATEST" | jq -r '.html_url')
+
+          echo "Run staging.yml le plus récent pour ce commit exact : status=$STATUS conclusion=$CONCLUSION"
+          echo "Référence : $RUN_URL"
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::Le run staging.yml le plus récent pour le commit $SHA n'a pas réussi (status=$STATUS, conclusion=$CONCLUSION). Refus de promouvoir vers production — qu'il soit en cours, échoué, annulé ou autre."
+            exit 1
+          fi
+
+          echo "OK — staging.yml = SUCCESS pour le commit exact $SHA. Poursuite vers l'approbation production (environment: production)."
+
+  migrate:
+    needs: verify-staging
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Référence le GitHub Environment "production" — c'est CE qui déclenche
     # l'attente d'approbation si des "Required reviewers" y sont configurés
-    # (action manuelle, voir le rapport P1.9 §6).
+    # (action manuelle, voir le rapport P1.9). `verify-staging` a déjà
+    # garanti, avant cette étape, que ce SHA a un staging.yml SUCCESS.
     environment: production
     env:
       PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Explicite : le même commit que celui vérifié par
+          # `verify-staging`, jamais recalculé, jamais le HEAD courant
+          # de `main` au moment de l'approbation.
+          ref: ${{ github.sha }}
+
+      - name: Confirme le commit migré
+        run: |
+          echo "Migration du commit exact : ${{ github.sha }}"
 
       - name: Prérequis production — PRODUCTION_DATABASE_URL obligatoire
         if: env.PRODUCTION_DATABASE_URL == ''
@@ -121,29 +196,73 @@ jobs:
     timeout-minutes: 15
     environment: production
     env:
-      PRODUCTION_DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       PRODUCTION_BASE_URL: ${{ secrets.PRODUCTION_BASE_URL }}
       PRODUCTION_SMOKE_PHONE: ${{ secrets.PRODUCTION_SMOKE_PHONE }}
       PRODUCTION_SMOKE_PASSWORD: ${{ secrets.PRODUCTION_SMOKE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Même garantie que dans `migrate` : le SHA vérifié par
+          # `verify-staging`, explicitement, jamais le HEAD courant.
+          ref: ${{ github.sha }}
 
       - name: Prérequis production — secrets obligatoires
-        if: env.PRODUCTION_DEPLOY_HOOK == '' || env.PRODUCTION_BASE_URL == ''
+        if: env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' || env.PRODUCTION_BASE_URL == ''
         run: |
-          echo "::error::Un ou plusieurs secrets obligatoires sont absents (PRODUCTION_DEPLOY_HOOK, PRODUCTION_BASE_URL)."
+          echo "::error::Un ou plusieurs secrets obligatoires sont absents (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, PRODUCTION_BASE_URL)."
           echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement production n'est pas entièrement provisionné."
           exit 1
-
-      - name: Trigger deploy (Vercel Deploy Hook — projet production uniquement)
-        run: curl -fsSL -X POST "$PRODUCTION_DEPLOY_HOOK"
-
-      - name: Wait for deploy
-        run: sleep 90
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Installer la CLI Vercel
+        run: npm install --global vercel@latest
+
+      - name: Confirme le commit déployé
+        run: |
+          echo "Déploiement du commit exact : ${{ github.sha }}"
+          echo "HEAD réel du checkout : $(git rev-parse HEAD)"
+
+      # Séquence officielle Vercel pour CI (pull -> build -> deploy
+      # --prebuilt), jamais un Deploy Hook — un Deploy Hook Vercel
+      # déploie toujours le HEAD courant de la branche liée AU MOMENT DE
+      # L'APPEL, pas un commit précis (aucun paramètre de SHA n'existe
+      # dans l'API des Deploy Hooks).
+      #
+      # RÉPERTOIRE — vérifié empiriquement, pas supposé : le projet
+      # Vercel `kessia` a Root Directory=kessia-app (confirmé via
+      # `vercel project inspect kessia`). Un test réel de `vercel pull` +
+      # `vercel build --prod` exécuté DEPUIS LA RACINE du dépôt (sans
+      # `--cwd`, sans `working-directory`) a généré tous les fichiers de
+      # build sous le chemin `kessia-app/.next/...` — la preuve que
+      # `vercel pull` télécharge `rootDirectory: "kessia-app"` dans
+      # `.vercel/project.json` et que `vercel build` l'applique
+      # automatiquement. (Le test local a ensuite échoué sur un `EPERM`
+      # au moment de créer un symlink — limitation Windows connue,
+      # `SeCreateSymbolicLinkPrivilege` nécessitant le Mode développeur ;
+      # sans rapport avec la résolution du Root Directory et absente sur
+      # le runner Linux `ubuntu-latest` utilisé ici.) À L'INVERSE,
+      # utiliser `--cwd kessia-app` ferait chercher un Root Directory
+      # relatif à `kessia-app/` lui-même — c'est exactement l'erreur
+      # « Root Directory does not exist » déjà rencontrée cette session
+      # lors d'un `vercel deploy` lancé par erreur depuis l'intérieur de
+      # `kessia-app/` plutôt que depuis la racine.
+      - name: Vercel — pull des réglages projet & variables (production)
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Vercel — build (production, Root Directory résolu par le pull ci-dessus)
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Vercel — déploiement de l'artefact prébuilt (production)
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Wait for deploy
+        run: sleep 30
 
       - name: Smoke tests (production)
         working-directory: kessia-app
