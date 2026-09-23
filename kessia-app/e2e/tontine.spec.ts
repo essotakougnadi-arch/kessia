@@ -31,7 +31,10 @@ test('créer une tontine (type Achat) puis la retrouver dans la liste', async ({
   await dialog.getByRole('button', { name: /Créer la tontine/i }).click();
 
   await expect(page.getByText(/créée avec succès/i)).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(name)).toBeVisible({ timeout: 10_000 });
+  // La carte de la liste est un <Link> (role="link") — le toast de succès
+  // contient aussi le nom en sous-chaîne, getByText(name) matcherait les
+  // deux (strict mode violation). role="link" cible sans ambiguïté la carte.
+  await expect(page.getByRole('link', { name })).toBeVisible({ timeout: 10_000 });
 });
 
 test('créer un plan d’Achat individuel (solo) puis le retrouver dans la liste', async ({ page }) => {
@@ -51,7 +54,9 @@ test('créer un plan d’Achat individuel (solo) puis le retrouver dans la liste
   await dialog.getByRole('button', { name: /Créer mon plan d’achat/i }).click();
 
   await expect(page.getByText(/Plan d'achat individuel/i)).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(name)).toBeVisible({ timeout: 10_000 });
+  // Même raison que le test « type Achat » ci-dessus : le toast de succès
+  // contient aussi le nom du plan, seul role="link" cible la carte de liste.
+  await expect(page.getByRole('link', { name })).toBeVisible({ timeout: 10_000 });
 });
 
 test('la modale « rejoindre par code » rejette un code invalide', async ({ page }) => {
