@@ -252,6 +252,9 @@ jobs:
       # « Root Directory does not exist » déjà rencontrée cette session
       # lors d'un `vercel deploy` lancé par erreur depuis l'intérieur de
       # `kessia-app/` plutôt que depuis la racine.
+      - name: Vercel — link projet production
+        run: vercel link --yes --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_ORG_ID" --token="$VERCEL_TOKEN"
+
       - name: Vercel — pull des réglages projet & variables (production)
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
