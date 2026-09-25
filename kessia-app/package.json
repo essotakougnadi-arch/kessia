@@ -29,6 +29,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
     "@prisma/client": "^5.16.2",
+    "@sentry/nextjs": "^11.0.0",
     "@upstash/ratelimit": "^2.0.1",
     "@upstash/redis": "^1.34.0",
     "bcryptjs": "^2.4.3",

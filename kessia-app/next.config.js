@@ -33,4 +33,21 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// ── Sentry (P1.13-B) ──────────────────────────────────────
+// Wrapper appliqué en dernier, ne touche à aucune des options
+// ci-dessus (headers/CSP/remotePatterns inchangés). Aucun secret
+// requis pour que le build réussisse : `org`/`project`/`authToken`
+// ne sont volontairement pas renseignés, et l'upload de source maps
+// ainsi que la gestion de release sont explicitement désactivés —
+// tant qu'aucun jeton Sentry n'est configuré, ce wrapper n'effectue
+// aucun appel réseau à l'API Sentry pendant le build.
+// Sous-chemin dédié : `require('@sentry/nextjs')` résout vers le SDK
+// runtime (serveur), pas l'utilitaire de build — vérifié dans
+// node_modules/@sentry/nextjs/package.json (champ "exports"./"config").
+const { withSentryConfig } = require('@sentry/nextjs/config');
+
+module.exports = withSentryConfig(nextConfig, {
+  silent: true,
+  sourcemaps: { disable: true },
+  release: { create: false, finalize: false, setCommits: false },
+});
