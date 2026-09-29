@@ -11,6 +11,7 @@
 
 import winston from 'winston';
 import { redact, redactDeep } from './security/redact';
+import { getCurrentRequestId } from './observability/request-context';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -40,12 +41,23 @@ export const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
-/** Log d'erreur normalisé pour les routes API. */
+/**
+ * Log d'erreur normalisé pour les routes API.
+ *
+ * P1.13-C : inclut automatiquement `requestId` (lu depuis le contexte de
+ * corrélation établi par withAuth, voir lib/observability/
+ * request-context.ts) quand il est disponible — aucun changement requis
+ * dans les ~90 appels existants de `logApiError`. Absent hors de ce
+ * contexte (routes pré-authentification, webhooks) plutôt que d'y
+ * placer une valeur trompeuse.
+ */
 export function logApiError(route: string, error: unknown, meta?: Record<string, unknown>) {
+  const requestId = getCurrentRequestId();
   logger.error('api_error', {
     route,
     message: error instanceof Error ? error.message : String(error),
     stack: error instanceof Error ? error.stack : undefined,
+    ...(requestId ? { requestId } : {}),
     ...meta,
   });
 }

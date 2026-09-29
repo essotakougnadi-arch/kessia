@@ -14,8 +14,13 @@ import { ok, badRequest, validationError, serverError, notFound } from '@/lib/ut
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
+import { correlateRequest } from '@/lib/observability/request-context';
 
 export async function POST(request: NextRequest) {
+  // P1.13-C : route pré-authentification, hors withAuth — corrélation
+  // établie ici explicitement (voir lib/observability/request-context.ts).
+  correlateRequest(request);
+
   try {
     const limited = await enforceRateLimit(request, 'auth.verify-otp', { limit: 15, windowMs: 15 * 60_000 });
     if (limited) return limited;

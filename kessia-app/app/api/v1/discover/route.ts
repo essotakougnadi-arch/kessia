@@ -14,6 +14,7 @@ import { ok, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { cached } from '@/lib/utils/ttl-cache';
+import { correlateRequest } from '@/lib/observability/request-context';
 
 // Réponse publique, peu changeante, servie à fort volume (landing +
 // accueil). Cache mémoire 45 s + requêtes séquentielles : allège le
@@ -87,6 +88,10 @@ async function buildPayload() {
 }
 
 export async function GET(request: NextRequest) {
+  // P1.13-C : route publique, hors withAuth — corrélation établie ici
+  // explicitement (voir lib/observability/request-context.ts).
+  correlateRequest(request);
+
   try {
     const limited = await enforceRateLimit(request, 'discover', { limit: 120, windowMs: 60_000 });
     if (limited) return limited;

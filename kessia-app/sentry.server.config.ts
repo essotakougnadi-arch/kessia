@@ -13,6 +13,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { scrubBreadcrumb, scrubEvent } from '@/lib/observability/sentry-scrub';
+import { REQUEST_ID_HEADER } from '@/lib/observability/request-id';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -26,10 +27,21 @@ if (dsn) {
 
     // Coupe la collecte à la source (event.request ET attributs de span)
     // — remplace `sendDefaultPii`, absent de cette version du SDK.
+    //
+    // P1.13-C — SEULE exception : `httpHeaders.request` autorise
+    // explicitement x-request-id, et RIEN d'autre (allow-list stricte,
+    // pas un `true` générique) — Authorization/Cookie/etc. restent
+    // bloqués à la source. C'est ce qui permet à l'instrumentation
+    // automatique du SDK (`autoInstrumentServerFunctions`, active par
+    // défaut sur TOUTES les routes API, pas seulement celles passant par
+    // withAuth) de fournir le request-id à scrubEvent()
+    // (lib/observability/sentry-scrub.ts), qui le pose comme tag
+    // `request_id` puis retire le header de l'événement final — voir ce
+    // fichier pour le détail.
     dataCollection: {
       cookies: false,
       httpHeaders: {
-        request: false,
+        request: { allow: [REQUEST_ID_HEADER] },
         response: false,
       },
       httpBodies: [],

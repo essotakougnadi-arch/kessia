@@ -11,11 +11,16 @@ import { ok, badRequest, validationError, serverError, tooManyRequests } from '@
 import { logApiError } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { withDemoOtp } from '@/lib/config/demo';
+import { correlateRequest } from '@/lib/observability/request-context';
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 3;
 
 export async function POST(request: NextRequest) {
+  // P1.13-C : route pré-authentification, hors withAuth — corrélation
+  // établie ici explicitement (voir lib/observability/request-context.ts).
+  correlateRequest(request);
+
   try {
     const limited = await enforceRateLimit(request, 'auth.request-otp', { limit: 8, windowMs: 15 * 60_000 });
     if (limited) return limited;

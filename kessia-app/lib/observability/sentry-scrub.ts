@@ -29,6 +29,7 @@
 
 import type { Breadcrumb, ErrorEvent, SpanJSON, TransactionEvent } from '@sentry/core';
 import { redactDeep } from '@/lib/security/redact';
+import { REQUEST_ID_HEADER, isValidRequestId } from '@/lib/observability/request-id';
 
 const FILTERED = '[Filtered]';
 
@@ -123,8 +124,53 @@ function scrubSpan(span: SpanJSON): SpanJSON {
 
 type ScrubbableEvent = ErrorEvent | TransactionEvent;
 
+/**
+ * P1.13-C — extrait le x-request-id de l'événement, s'il est présent et
+ * valide (UUID v4 strict — jamais une valeur brute non vérifiée). C'est
+ * le SEUL header dont la collecte est autorisée à la source, via
+ * `dataCollection.httpHeaders.request: { allow: [REQUEST_ID_HEADER] }`
+ * dans les 3 fichiers d'init (instrumentation-client.ts,
+ * sentry.server.config.ts, sentry.edge.config.ts) — c'est ce qui permet
+ * une corrélation Sentry pour TOUTE requête traitée par le SDK
+ * (instrumentation automatique du SDK, `autoInstrumentServerFunctions`
+ * par défaut — pas seulement celles passant par withAuth), sans jamais
+ * élargir la collecte à un autre header (Authorization/Cookie restent
+ * bloqués à la source, cf. `response: false` et l'absence de tout autre
+ * nom dans l'allow-list).
+ *
+ * Cherche d'abord sur event.request.headers (events d'erreur), puis sur
+ * les attributs de span http.request.header.x-request-id (transactions
+ * — voir addNormalizedRequestDataToSpan dans le SDK).
+ */
+function findIncomingRequestId(event: ScrubbableEvent): string | undefined {
+  const headerValue = event.request?.headers?.[REQUEST_ID_HEADER];
+  if (typeof headerValue === 'string' && isValidRequestId(headerValue)) {
+    return headerValue;
+  }
+
+  const spanAttributeKey = `http.request.header.${REQUEST_ID_HEADER}`;
+  for (const span of event.spans ?? []) {
+    const raw = span.data?.[spanAttributeKey];
+    const candidate = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof candidate === 'string' && isValidRequestId(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
 /** `beforeSend` / `beforeSendTransaction` — même traitement pour les deux. */
 export function scrubEvent<T extends ScrubbableEvent>(event: T): T {
+  // P1.13-C — pose le tag de corrélation AVANT le nettoyage ci-dessous,
+  // qui retire justement ce même header de event.request/event.spans.
+  // Sentry.setTag('request_id', ...) UNIQUEMENT — jamais setContext ni
+  // setExtra, et rien d'autre que cet UUID déjà validé.
+  const requestId = findIncomingRequestId(event);
+  if (requestId) {
+    event.tags = { ...event.tags, request_id: requestId };
+  }
+
   if (event.request) {
     // Jamais le corps de requête (peut contenir mot de passe, OTP, IBAN...).
     event.request.data = undefined;

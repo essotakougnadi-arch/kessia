@@ -6,6 +6,7 @@
 import { NextRequest } from 'next/server';
 import { verifyAccessToken, extractBearerToken, isSessionRevoked, type JwtPayload } from './session';
 import { unauthorized, forbidden } from '../utils/response';
+import { correlateRequest } from '../observability/request-context';
 import type { UserRole } from '@prisma/client';
 
 export type AuthContext = {
@@ -22,6 +23,15 @@ export type AuthContext = {
 export async function withAuth(
   request: NextRequest
 ): Promise<{ error: ReturnType<typeof unauthorized> | null; context: AuthContext | null }> {
+  // P1.13-C — établit la corrélation request-id (Winston + tag Sentry)
+  // pour le reste du traitement de cette requête. withAuth est le
+  // point d'entrée partagé par la quasi-totalité des routes
+  // authentifiées (wallet/ledger/paiements/KYC/RBAC via requireAdmin →
+  // withAuthAndRole → withAuth) — voir lib/observability/
+  // request-context.ts pour la portée exacte et ses limites (routes
+  // pré-authentification et webhooks non couverts par ce point).
+  correlateRequest(request);
+
   const authHeader = request.headers.get('authorization');
   // En-tête Bearer d'abord (appels `apiClient`). Repli sur le cookie
   // `kessia-access-token` UNIQUEMENT pour les GET — permet la navigation

@@ -4,11 +4,16 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { correlateRequest } from '@/lib/observability/request-context';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // P1.13-C : route publique, hors withAuth — corrélation établie ici
+  // explicitement (voir lib/observability/request-context.ts).
+  correlateRequest(request);
+
   const started = Date.now();
   let db: 'ok' | 'down' = 'ok';
   try {

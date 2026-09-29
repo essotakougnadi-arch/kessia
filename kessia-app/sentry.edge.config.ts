@@ -13,6 +13,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { scrubBreadcrumb, scrubEvent } from '@/lib/observability/sentry-scrub';
+import { REQUEST_ID_HEADER } from '@/lib/observability/request-id';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -26,10 +27,14 @@ if (dsn) {
 
     // Coupe la collecte à la source (event.request ET attributs de span)
     // — remplace `sendDefaultPii`, absent de cette version du SDK.
+    //
+    // P1.13-C — SEULE exception : voir sentry.server.config.ts pour le
+    // détail (allow-list stricte sur x-request-id uniquement, rien
+    // d'autre) — même logique côté edge (middleware.ts).
     dataCollection: {
       cookies: false,
       httpHeaders: {
-        request: false,
+        request: { allow: [REQUEST_ID_HEADER] },
         response: false,
       },
       httpBodies: [],

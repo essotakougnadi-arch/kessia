@@ -16,8 +16,14 @@ import { rotateRefreshToken } from '@/lib/auth/session';
 import { setAuthCookies, REFRESH_COOKIE } from '@/lib/auth/cookies';
 import { ok, unauthorized, validationError, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
+import { correlateRequest } from '@/lib/observability/request-context';
 
 export async function POST(request: NextRequest) {
+  // P1.13-C : route pré-authentification (le refresh token n'est pas un
+  // access token vérifié par withAuth) — corrélation établie ici
+  // explicitement (voir lib/observability/request-context.ts).
+  correlateRequest(request);
+
   try {
     const fromCookie = request.cookies.get(REFRESH_COOKIE)?.value;
 
