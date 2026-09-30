@@ -213,16 +213,22 @@ export function scrubEvent<T extends ScrubbableEvent>(event: T): T {
 export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
   if (breadcrumb.data && typeof breadcrumb.data === 'object') {
     const data = breadcrumb.data as Record<string, unknown>;
-    if (data.headers && typeof data.headers === 'object') {
-      data.headers = stripSensitiveHeaders(data.headers as Record<string, string>);
-    }
-    // `sanitizeUrl` doit avoir le dernier mot sur `url` : appliqué AVANT
-    // `redactDeep`, son résultat (qui contient encore littéralement
-    // `otp=...`/`code=...` juste masqués) serait re-capturé par la même
-    // regex que `redactDeep` applique au reste de l'objet, écrasant le
-    // marqueur `[Filtered]` par `***` — inoffensif mais incohérent.
+    // `stripSensitiveHeaders`/`sanitizeUrl` doivent avoir le dernier mot
+    // sur `headers`/`url` : calculés AVANT `redactDeep`, puis réappliqués
+    // APRÈS (P1.13-D : `redactDeep` masque désormais aussi par nom de
+    // clé — "Authorization"/"Cookie" y correspondent — donc, sans cette
+    // réapplication finale, son passage sur `data` réécrirait le
+    // marqueur `[Filtered]` déjà posé par `stripSensitiveHeaders` avec
+    // `***` : inoffensif pour la sécurité, mais incohérent).
+    const sanitizedHeaders =
+      data.headers && typeof data.headers === 'object'
+        ? stripSensitiveHeaders(data.headers as Record<string, string>)
+        : undefined;
     const sanitizedUrl = typeof data.url === 'string' ? sanitizeUrl(data.url) : undefined;
     breadcrumb.data = redactDeep(data);
+    if (sanitizedHeaders !== undefined) {
+      (breadcrumb.data as Record<string, unknown>).headers = sanitizedHeaders;
+    }
     if (sanitizedUrl !== undefined) {
       (breadcrumb.data as Record<string, unknown>).url = sanitizedUrl;
     }

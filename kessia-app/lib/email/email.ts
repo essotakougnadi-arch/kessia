@@ -7,7 +7,7 @@
 // aucun mail réel envoyé). Ne lève jamais.
 // ============================================================
 
-import { logApiError } from '@/lib/logger';
+import { logApiError, logger } from '@/lib/logger';
 
 export type EmailAttachment = {
   filename: string;
@@ -44,10 +44,14 @@ export async function sendEmail(input: EmailInput): Promise<EmailResult> {
 
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    console.info(
-      `[EMAIL] (simulation) → ${input.to} · « ${input.subject} »` +
-        (input.attachments?.length ? ` · ${input.attachments.length} pièce(s) jointe(s)` : '')
-    );
+    // Simulation : ne jamais logger l'adresse e-mail complète du
+    // destinataire (P1.13-D) — seul le domaine est journalisé, utile au
+    // débogage sans exposer une adresse individuelle.
+    logger.info('email_simulated', {
+      domain: input.to.split('@')[1] ?? 'inconnu',
+      subject: input.subject,
+      attachments: input.attachments?.length ?? 0,
+    });
     return { sent: true, simulated: true, provider: 'simulation', detail: 'aucun fournisseur configuré' };
   }
 

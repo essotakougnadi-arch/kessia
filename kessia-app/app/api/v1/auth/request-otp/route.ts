@@ -8,7 +8,7 @@ import prisma from '@/lib/db/prisma';
 import { requestOtpSchema } from '@/lib/validations/auth';
 import { generateOtp, otpExpiresAt, normalizePhone } from '@/lib/utils/crypto';
 import { ok, badRequest, validationError, serverError, tooManyRequests } from '@/lib/utils/response';
-import { logApiError } from '@/lib/logger';
+import { logApiError, logger } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { withDemoOtp } from '@/lib/config/demo';
 import { correlateRequest } from '@/lib/observability/request-context';
@@ -78,9 +78,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Envoyer l'OTP
+    // Envoyer l'OTP — mode DEV (pas de fournisseur SMS réel) : notifie
+    // qu'un OTP a été généré, SANS jamais logger l'OTP ni le numéro de
+    // téléphone complet (P1.13-D). Le canal contrôlé d'exposition de
+    // l'OTP en démo reste `withDemoOtp()` (réponse API, opt-in explicite
+    // via DEMO_MODE) — inchangé.
     if (process.env.SMS_PROVIDER === 'DEV') {
-      console.log(`[KESSIA OTP - ${purpose}] ${normalizedPhone} → Code: ${otp}`);
+      logger.info('otp_dev_mode', { purpose, userId: user?.id });
     }
 
     return ok(

@@ -10,7 +10,7 @@ import { registerSchema } from '@/lib/validations/auth';
 import { LEGAL_VERSION } from '@/lib/legal/versions';
 import { generateOtp, otpExpiresAt, normalizePhone } from '@/lib/utils/crypto';
 import { ok, created, conflict, validationError, serverError } from '@/lib/utils/response';
-import { logApiError } from '@/lib/logger';
+import { logApiError, logger } from '@/lib/logger';
 import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { withDemoOtp } from '@/lib/config/demo';
@@ -92,9 +92,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Envoyer l'OTP (DEV: console | PROD: SMS provider)
+    // Envoyer l'OTP — mode DEV (pas de fournisseur SMS réel) : notifie
+    // qu'un OTP a été généré, SANS jamais logger l'OTP ni le numéro de
+    // téléphone complet (P1.13-D). Le canal contrôlé d'exposition de
+    // l'OTP en démo reste `withDemoOtp()` (réponse API, opt-in explicite
+    // via DEMO_MODE) — inchangé.
     if (process.env.SMS_PROVIDER === 'DEV') {
-      console.log(`[KESSIA OTP - REGISTER] ${normalizedPhone} → Code: ${otp}`);
+      logger.info('otp_dev_mode', { purpose: 'REGISTER', userId: user.id });
     }
     // TODO: Intégrer un vrai provider SMS en production
 

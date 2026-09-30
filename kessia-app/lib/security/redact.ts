@@ -37,7 +37,55 @@ export function redact(input: string): string {
     });
 }
 
-/** Applique `redact()` récursivement (chaînes, tableaux, objets) — profondeur bornée. */
+// P1.13-D — mêmes mots-clés que SENSITIVE_ASSIGNMENT ci-dessus (texte
+// libre), sous forme de liste pour la correspondance par NOM DE CLÉ d'un
+// objet structuré. Volontairement séparée de SENSITIVE_ASSIGNMENT (pas
+// dérivée dynamiquement de la regex) pour ne rien changer au
+// comportement existant du filtrage en texte libre — à maintenir
+// synchronisée manuellement si la liste de mots-clés évolue.
+//
+// Comparaison par sous-chaîne sur la clé normalisée (minuscule,
+// underscores/tirets retirés) — délibérément large, cohérent avec le
+// filtrage en texte libre existant (ex. "code" matche aussi
+// "otpCode"/"postalCode" : un faux positif sur un champ non sensible
+// masque juste sa valeur dans les logs, jamais l'inverse).
+const SENSITIVE_KEY_SUBSTRINGS = [
+  'password',
+  'secret',
+  'token',
+  'apikey',
+  'otp',
+  'code',
+  'pin',
+  'iban',
+  'cvv',
+  'authorization',
+  'cookie',
+];
+
+const SENSITIVE_KEY_VALUE_REPLACEMENT = '***';
+
+/** Vrai si le nom de clé correspond à un champ sensible usuel. */
+function isSensitiveKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[_-]/g, '');
+  return SENSITIVE_KEY_SUBSTRINGS.some((keyword) => normalized.includes(keyword));
+}
+
+/**
+ * Applique `redact()` récursivement (chaînes, tableaux, objets) —
+ * profondeur bornée.
+ *
+ * P1.13-D : lors du parcours d'un objet, le NOM de chaque clé est
+ * inspecté avant sa valeur — si la clé correspond à un champ sensible
+ * (password/secret/token/apiKey/otp/code/pin/iban/cvv/authorization/
+ * cookie et variantes), la valeur entière est remplacée par `***`, quel
+ * que soit son contenu ou son type, SANS y descendre (`redact()` seul
+ * ne pouvait pas protéger un objet structuré comme
+ * `{ password: 'hunter2' }` — la chaîne "hunter2" ne contient aucun
+ * motif reconnaissable une fois séparée de sa clé). S'applique à
+ * chaque niveau de la récursion, jusqu'à la même profondeur bornée
+ * qu'avant.
+ */
 export function redactDeep<T>(value: T, depth = 0): T {
   if (depth > 5 || value == null) return value;
   if (typeof value === 'string') return redact(value) as unknown as T;
@@ -45,7 +93,7 @@ export function redactDeep<T>(value: T, depth = 0): T {
   if (typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = redactDeep(v, depth + 1);
+      out[k] = isSensitiveKey(k) ? SENSITIVE_KEY_VALUE_REPLACEMENT : redactDeep(v, depth + 1);
     }
     return out as T;
   }
