@@ -7,6 +7,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 import { hashToken } from '@/lib/utils/crypto';
 import { requestMeta } from '@/lib/audit/audit.service';
 
@@ -64,7 +65,7 @@ export async function recordDevice(userId: string, req: { headers: Headersish })
       seenCount: 1, knownDeviceCount: knownDeviceCount + 1,
     };
   } catch (e) {
-    console.error('[FRAUD] recordDevice', e);
+    logger.error('fraud_record_device_failed', { userId, error: e });
     return null;
   }
 }

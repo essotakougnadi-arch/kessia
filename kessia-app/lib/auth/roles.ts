@@ -10,6 +10,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 import type { UserRole } from '@prisma/client';
 
 const RANK: Partial<Record<UserRole, number>> = {
@@ -29,6 +30,6 @@ export async function elevateRole(userId: string, target: 'BUSINESS_OWNER' | 'TO
     if (next <= current) return; // pas une promotion
     await prisma.user.update({ where: { id: userId }, data: { role: target } });
   } catch (e) {
-    console.error('[ROLES] échec élévation', target, e);
+    logger.error('role_elevation_failed', { target, error: e });
   }
 }

@@ -9,6 +9,8 @@
 // Voir docs/decisions/0003 et 0014.
 // ============================================================
 
+import { logger } from '@/lib/logger';
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -38,12 +40,13 @@ export async function putObject(
       body: new Uint8Array(bytes),
     });
     if (!res.ok) {
-      console.error('[STORAGE] putObject', res.status, await res.text().catch(() => ''));
+      const body = await res.text().catch(() => '');
+      logger.error('storage_put_object_failed', { bucket, path, status: res.status, body });
       return false;
     }
     return true;
   } catch (e) {
-    console.error('[STORAGE] putObject', e);
+    logger.error('storage_put_object_error', { bucket, path, error: e });
     return false;
   }
 }
@@ -62,13 +65,13 @@ export async function signObjectUrl(
       body: JSON.stringify({ expiresIn }),
     });
     if (!res.ok) {
-      console.error('[STORAGE] signObjectUrl', res.status);
+      logger.error('storage_sign_object_url_failed', { bucket, path, status: res.status });
       return null;
     }
     const body = (await res.json()) as { signedURL?: string };
     return body.signedURL ? `${base()}${body.signedURL}` : null;
   } catch (e) {
-    console.error('[STORAGE] signObjectUrl', e);
+    logger.error('storage_sign_object_url_error', { bucket, path, error: e });
     return null;
   }
 }
@@ -83,6 +86,6 @@ export async function removeObjects(bucket: string, paths: string[]): Promise<vo
       body: JSON.stringify({ prefixes: paths }),
     });
   } catch (e) {
-    console.error('[STORAGE] removeObjects', e);
+    logger.error('storage_remove_objects_error', { bucket, pathCount: paths.length, error: e });
   }
 }

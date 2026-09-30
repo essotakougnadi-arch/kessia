@@ -14,6 +14,7 @@ import { enforceRateLimit } from '@/lib/security/rate-limit';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { ok, badRequest, unauthorized, validationError, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
+import { correlateRequest } from '@/lib/observability/request-context';
 
 const schema = z.object({
   challengeToken: z.string().min(10),
@@ -21,6 +22,11 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // P1.13-E : route pré-authentification (challenge 2FA), hors withAuth —
+  // corrélation établie ici explicitement, à l'identique des autres routes
+  // auth/* pré-authentification (voir lib/observability/request-context.ts).
+  correlateRequest(request);
+
   try {
     const limited = await enforceRateLimit(request, 'auth.2fa', { limit: 10, windowMs: 15 * 60_000 });
     if (limited) return limited;

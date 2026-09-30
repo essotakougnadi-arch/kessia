@@ -4,6 +4,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 import type { TontineEventType } from '@prisma/client';
 
 export type TontineEventInput = {
@@ -28,7 +29,7 @@ export async function recordTontineEvent(input: TontineEventInput): Promise<void
       },
     });
   } catch (e) {
-    console.error('[TONTINE_EVENT] échec écriture', input.type, e);
+    logger.error('tontine_event_write_failed', { tontineId: input.tontineId, type: input.type, error: e });
   }
 }
 

@@ -7,6 +7,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 
 type Headersish = { get(name: string): string | null };
 
@@ -58,6 +59,6 @@ export async function recordAudit(input: AuditInput): Promise<void> {
       },
     });
   } catch (e) {
-    console.error('[AUDIT] échec écriture', input.action, e);
+    logger.error('audit_write_failed', { action: input.action, error: e });
   }
 }

@@ -8,6 +8,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 import { assessFraud, type FraudInputs } from './rules';
 import { recordDevice } from './devices';
 import { KYC_LIMITS, tierFor } from '@/lib/kyc/limits';
@@ -203,7 +204,7 @@ export async function assessEvent(input: AssessEventInput) {
 
     return assessment;
   } catch (e) {
-    console.error('[FRAUD] assessEvent', e);
+    logger.error('fraud_assess_event_failed', { userId: input.userId, context: input.context, error: e });
     return null;
   }
 }

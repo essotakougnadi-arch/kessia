@@ -5,6 +5,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 import type { NotificationCategory, NotificationPriority } from '@prisma/client';
 import { dispatch, channelsFor } from './channels';
 
@@ -68,7 +69,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       channelsFor(priority)
     );
   } catch (e) {
-    console.error('[NOTIFY] échec écriture', input.category, input.title, e);
+    logger.error('notify_write_failed', { userId: input.userId, category: input.category, error: e });
   }
 }
 
@@ -92,6 +93,6 @@ export async function notifyMany(userIds: string[], input: Omit<NotifyInput, 'us
       })),
     });
   } catch (e) {
-    console.error('[NOTIFY] échec écriture multiple', input.category, input.title, e);
+    logger.error('notify_write_failed_bulk', { category: input.category, recipientCount: unique.length, error: e });
   }
 }

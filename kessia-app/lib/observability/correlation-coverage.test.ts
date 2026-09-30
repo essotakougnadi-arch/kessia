@@ -50,6 +50,7 @@ vi.mock('@/lib/security/rate-limit', () => ({
 
 import { GET as healthGET } from '../../app/api/health/route';
 import { POST as requestOtpPOST } from '../../app/api/v1/auth/request-otp/route';
+import { POST as twoFaVerifyPOST } from '../../app/api/v1/auth/2fa/verify/route';
 import { logger } from '../logger';
 import { scrubEvent } from './sentry-scrub';
 
@@ -96,6 +97,30 @@ describe('C — route pré-authentification (/api/v1/auth/request-otp)', () => {
       const [, meta] = errorSpy.mock.calls[0] as unknown as [string, Record<string, unknown>];
       expect(meta.requestId).toBe(UUID_A);
       expect(meta.route).toBe('/v1/auth/request-otp');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+describe('C2 — route pré-authentification (/api/v1/auth/2fa/verify, P1.13-E)', () => {
+  // Avant P1.13-E, cette route (challenge 2FA final) était la seule
+  // sous-route auth/* à n'appeler ni withAuth ni correlateRequest —
+  // écart identifié par l'audit P1.13-E et corrigé à l'identique du
+  // pattern déjà validé ci-dessus pour request-otp.
+  it('établit la corrélation Sentry avant même la logique métier', async () => {
+    await twoFaVerifyPOST(fakeRequest({ requestId: UUID_A }));
+    expect(setTagMock).toHaveBeenCalledWith('request_id', UUID_A);
+  });
+
+  it('le requestId apparaît dans le log Winston (logApiError) de cette route', async () => {
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => logger);
+    try {
+      await twoFaVerifyPOST(fakeRequest({ requestId: UUID_A }));
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const [, meta] = errorSpy.mock.calls[0] as unknown as [string, Record<string, unknown>];
+      expect(meta.requestId).toBe(UUID_A);
+      expect(meta.route).toBe('/v1/auth/2fa/verify');
     } finally {
       errorSpy.mockRestore();
     }

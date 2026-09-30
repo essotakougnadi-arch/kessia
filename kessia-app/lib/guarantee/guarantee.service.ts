@@ -4,6 +4,7 @@
 // ============================================================
 
 import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
 import type { GuaranteeClaimStatus, GuaranteeEventType } from '@prisma/client';
 import { notify } from '@/lib/notifications/notify';
 import { recordAudit } from '@/lib/audit/audit.service';
@@ -127,7 +128,7 @@ async function event(type: GuaranteeEventType, claimId: string, actorId: string,
       data: { type, claimId, actorId, amount: amount ?? undefined, metadata: (metadata ?? undefined) as never },
     });
   } catch (e) {
-    console.error('[GUARANTEE_EVENT]', type, e);
+    logger.error('guarantee_event_failed', { type, claimId, actorId, error: e });
   }
 }
 
