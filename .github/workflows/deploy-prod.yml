@@ -44,6 +44,16 @@
 #   PRODUCTION_DATABASE_URL   Connexion Postgres du projet Supabase
 #                             PRODUCTION (pooler session, port 5432 —
 #                             jamais 6543, cf. DATABASE_MIGRATION_PLAN.md)
+#   PRODUCTION_DIRECT_URL     P1.11 — connexion DÉDIÉE aux migrations
+#                             Prisma (pooler SESSION, port 5432, jamais
+#                             6543/pgbouncer=true). C'est elle que
+#                             `prisma migrate deploy`/`migrate status`
+#                             utilisent réellement (datasource.directUrl,
+#                             prisma/schema.prisma) — PRODUCTION_DATABASE_URL
+#                             reste nécessaire pour que Prisma résolve
+#                             env("DATABASE_URL") au chargement du schéma,
+#                             mais n'est plus la connexion effective ici.
+#                             Voir ADR 0049.
 #   VERCEL_TOKEN              Token Vercel (Account Settings → Tokens)
 #   VERCEL_ORG_ID             Org ID du compte/équipe Vercel
 #   VERCEL_PROJECT_ID         Project ID du projet PRODUCTION (kessia)
@@ -138,6 +148,7 @@ jobs:
     environment: production
     env:
       PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      PRODUCTION_DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -157,6 +168,21 @@ jobs:
           echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement production n'est pas entièrement provisionné."
           exit 1
 
+      # P1.11 — séparation runtime/migration (prisma/schema.prisma :
+      # datasource.directUrl, ADR 0049). PRODUCTION_DATABASE_URL reste
+      # nécessaire pour que Prisma résolve env("DATABASE_URL") au
+      # chargement du schéma, mais `prisma migrate deploy`/`migrate
+      # status` se connectent réellement via PRODUCTION_DIRECT_URL
+      # (pooler SESSION, port 5432) — jamais via le pooler transaction
+      # du runtime Vercel (port 6543), qui casse le DDL de Prisma
+      # Migrate (ADR 0002, ADR 0048).
+      - name: Prérequis production — PRODUCTION_DIRECT_URL obligatoire
+        if: env.PRODUCTION_DIRECT_URL == ''
+        run: |
+          echo "::error::PRODUCTION_DIRECT_URL est requis (secret d'environnement 'production', P1.11) et n'est pas configuré."
+          echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement production n'est pas entièrement provisionné."
+          exit 1
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -171,19 +197,21 @@ jobs:
         working-directory: kessia-app
         run: npx prisma generate
 
-      - name: Prisma migrate deploy (production)
+      - name: Prisma migrate deploy (production — via DIRECT_URL, pooler session)
         working-directory: kessia-app
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
         # Aucune option de contournement, jamais `db push`. Un échec ici
         # bloque le job `deploy` qui en dépend — le déploiement ne part
         # pas si la migration échoue.
         run: npx prisma migrate deploy
 
-      - name: Vérifier l'état des migrations (production)
+      - name: Vérifier l'état des migrations (production — via DIRECT_URL)
         working-directory: kessia-app
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
         run: npx prisma migrate status
 
       # Aucun seed en production — contrairement à staging, la base

@@ -6,9 +6,17 @@ generator client {
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
+// P1.11 — séparation runtime/migration. `url` (DATABASE_URL) reste lu
+// par PrismaClient au runtime (pooler transaction Supabase, port 6543,
+// pgbouncer=true — adapté au serverless Vercel). `directUrl` (DIRECT_URL)
+// est utilisé automatiquement par `prisma migrate dev/deploy/reset` et
+// `db push`/`db pull` À LA PLACE de `url` — doit toujours cibler le
+// pooler SESSION (port 5432) : le mode transaction casse le DDL de
+// Prisma Migrate (ADR 0002, ADR 0048, ADR 0049).
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================

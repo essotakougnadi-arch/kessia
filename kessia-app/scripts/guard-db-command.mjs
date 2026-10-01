@@ -10,13 +10,20 @@
 // des tables (prisma/seed.ts) avant de réensemencer — lancé par erreur
 // contre la production, il l'effacerait irréversiblement.
 //
-// Refuse l'exécution si DATABASE_URL correspond à une référence de
-// projet Supabase de PRODUCTION connue — même motif que la garde déjà
-// en place et prouvée en CI (.github/workflows/staging.yml, e2e.yml,
-// integration.yml). N'affiche JAMAIS l'URL complète (identifiants
-// inclus) — voir redactUrl(). Résout DATABASE_URL exactement comme le
-// fait Prisma CLI : process.env, puis .env (jamais .env.local — voir
-// le commentaire dédié en tête de .env).
+// Refuse l'exécution si DATABASE_URL ou DIRECT_URL (P1.11 — séparation
+// runtime/migration, prisma/schema.prisma, ADR 0049) correspond à une
+// référence de projet Supabase de PRODUCTION connue — même motif que la
+// garde déjà en place et prouvée en CI (.github/workflows/staging.yml,
+// e2e.yml, integration.yml). N'affiche JAMAIS l'URL complète
+// (identifiants inclus) — voir redactUrl(). Résout chaque variable
+// exactement comme le fait Prisma CLI : process.env, puis .env (jamais
+// .env.local — voir le commentaire dédié en tête de .env).
+//
+// P1.11 — DIRECT_URL (migrations) doit en plus être refusée si elle
+// cible le pooler Supabase en mode TRANSACTION (port 6543 et/ou
+// pgbouncer=true) : ce mode casse le DDL de Prisma Migrate (ADR 0002,
+// ADR 0048) — sans cette garde explicite, l'erreur ne serait détectée
+// qu'à l'échec tardif de la commande Prisma elle-même.
 // ============================================================
 
 import { execFileSync } from 'node:child_process';
@@ -47,13 +54,41 @@ export function isProductionDatabaseUrl(url) {
   return PRODUCTION_MARKERS.some((marker) => url.includes(marker));
 }
 
-/** Résout DATABASE_URL comme le fait Prisma CLI : process.env, puis .env (jamais .env.local). */
-export function resolveDatabaseUrl(cwd = process.cwd(), env = process.env) {
-  if (env.DATABASE_URL) return env.DATABASE_URL;
+/**
+ * Détecte le pooler Supabase en mode TRANSACTION (port 6543 et/ou
+ * `pgbouncer=true`) — ce mode casse le DDL de Prisma Migrate (ADR 0002,
+ * ADR 0048). Jamais acceptable pour DIRECT_URL (P1.11, ADR 0049).
+ * Même robustesse que isProductionDatabaseUrl : ne lève jamais.
+ */
+export function isTransactionPoolerUrl(url) {
+  if (typeof url !== 'string' || url.length === 0) return false;
+  return /:6543\b/.test(url) || /pgbouncer=true/i.test(url);
+}
+
+/** Résout une variable de connexion comme le fait Prisma CLI : process.env, puis .env (jamais .env.local). */
+export function resolveEnvUrl(name, cwd = process.cwd(), env = process.env) {
+  if (env[name]) return env[name];
   const p = join(cwd, '.env');
   if (!existsSync(p)) return undefined;
-  const m = readFileSync(p, 'utf8').match(/^DATABASE_URL\s*=\s*"?([^"\n]+)"?/m);
+  const m = readFileSync(p, 'utf8').match(new RegExp(`^${name}\\s*=\\s*"?([^"\\n]+)"?`, 'm'));
   return m ? m[1].trim() : undefined;
+}
+
+/** DATABASE_URL (runtime). Conservé pour compatibilité avec les appelants existants. */
+export function resolveDatabaseUrl(cwd = process.cwd(), env = process.env) {
+  return resolveEnvUrl('DATABASE_URL', cwd, env);
+}
+
+/** DIRECT_URL (P1.11 — connexion dédiée aux migrations Prisma). */
+export function resolveDirectUrl(cwd = process.cwd(), env = process.env) {
+  return resolveEnvUrl('DIRECT_URL', cwd, env);
+}
+
+function refuse(reason, url, cmd, args) {
+  console.error(`::error::REFUS — ${reason}`);
+  console.error(`::error::Cible détectée : ${redactUrl(url)}`);
+  console.error(`::error::Commande bloquée : ${[cmd, ...args].join(' ')}`);
+  process.exit(1);
 }
 
 function main() {
@@ -63,13 +98,35 @@ function main() {
     process.exit(1);
   }
 
-  const url = resolveDatabaseUrl();
-  if (isProductionDatabaseUrl(url)) {
-    console.error('::error::REFUS — cette commande peut modifier ou effacer des données ; DATABASE_URL cible la base de PRODUCTION.');
-    console.error(`::error::Cible détectée : ${redactUrl(url)}`);
-    console.error(`::error::Commande bloquée : ${[cmd, ...args].join(' ')}`);
-    console.error('::error::Pour agir sur la production, passez par le pipeline de déploiement documenté (jamais depuis un poste local).');
-    process.exit(1);
+  const databaseUrl = resolveDatabaseUrl();
+  if (isProductionDatabaseUrl(databaseUrl)) {
+    refuse(
+      "cette commande peut modifier ou effacer des données ; DATABASE_URL cible la base de PRODUCTION. Pour agir sur la production, passez par le pipeline de déploiement documenté (jamais depuis un poste local).",
+      databaseUrl,
+      cmd,
+      args
+    );
+  }
+
+  // P1.11 — DIRECT_URL (migrations) : même garde anti-production que
+  // DATABASE_URL, PLUS un refus explicite si elle cible le pooler
+  // transaction (casse le DDL de Prisma Migrate).
+  const directUrl = resolveDirectUrl();
+  if (isProductionDatabaseUrl(directUrl)) {
+    refuse(
+      "cette commande peut modifier ou effacer des données ; DIRECT_URL cible la base de PRODUCTION. Pour agir sur la production, passez par le pipeline de déploiement documenté (jamais depuis un poste local).",
+      directUrl,
+      cmd,
+      args
+    );
+  }
+  if (isTransactionPoolerUrl(directUrl)) {
+    refuse(
+      "DIRECT_URL cible le pooler Supabase en mode TRANSACTION (port 6543 et/ou pgbouncer=true) — ce mode casse le DDL de Prisma Migrate (ADR 0002, ADR 0048). DIRECT_URL doit utiliser le pooler SESSION (port 5432).",
+      directUrl,
+      cmd,
+      args
+    );
   }
 
   execFileSync(cmd, args, { stdio: 'inherit', shell: process.platform === 'win32' });

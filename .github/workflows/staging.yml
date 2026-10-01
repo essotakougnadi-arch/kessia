@@ -6,6 +6,14 @@
 #                         (pooler session, port 5432 — jamais le pooler
 #                         transaction 6543, qui casse le DDL de Prisma
 #                         Migrate, cf. DATABASE_MIGRATION_PLAN.md)
+#   STAGING_DIRECT_URL    P1.11 — connexion DÉDIÉE aux migrations Prisma
+#                         (pooler SESSION, port 5432, jamais 6543/
+#                         pgbouncer=true). C'est elle que `prisma migrate
+#                         deploy`/`migrate status` utilisent réellement
+#                         (datasource.directUrl, prisma/schema.prisma) —
+#                         STAGING_DATABASE_URL reste nécessaire pour que
+#                         Prisma résolve env("DATABASE_URL") au chargement
+#                         du schéma. Voir ADR 0049.
 #   STAGING_DEPLOY_HOOK   URL de déclenchement du déploiement (Vercel)
 #   STAGING_BASE_URL      URL publique de l'environnement staging
 #   STAGING_SMOKE_PHONE / STAGING_SMOKE_PASSWORD   compte de test (seed)
@@ -55,6 +63,7 @@ jobs:
     environment: staging
     env:
       STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      STAGING_DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
       STAGING_SUPABASE_PROJECT_REF: ${{ vars.STAGING_SUPABASE_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
@@ -65,6 +74,15 @@ jobs:
           echo "::error::STAGING_DATABASE_URL est requis pour valider la migration staging (P0.0 — validation C) et n'est pas configuré."
           echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement staging n'est pas provisionné."
           echo "::error::Voir docs/audit/P0_0_C_STAGING_MIGRATION_VALIDATION.md pour la procédure de provisionnement."
+          exit 1
+
+      # P1.11 — séparation runtime/migration (prisma/schema.prisma :
+      # datasource.directUrl, ADR 0049).
+      - name: Prérequis staging — STAGING_DIRECT_URL obligatoire
+        if: env.STAGING_DIRECT_URL == ''
+        run: |
+          echo "::error::STAGING_DIRECT_URL est requis pour valider la migration staging (P1.11) et n'est pas configuré."
+          echo "::error::Ce n'est pas un skip — ce run échoue explicitement tant que l'environnement staging n'est pas provisionné."
           exit 1
 
       - uses: actions/setup-node@v4
@@ -94,6 +112,12 @@ jobs:
             echo "::error::STAGING_DATABASE_URL pointe vers le projet Supabase de PRODUCTION — refus d'appliquer une migration dessus."
             exit 1
           fi
+          # P1.11 — même garde pour STAGING_DIRECT_URL (connexion migration
+          # réellement utilisée par `prisma migrate …`, cf. ADR 0049).
+          if echo "$STAGING_DIRECT_URL" | grep -q "uwvnarmojdbutbunzqww"; then
+            echo "::error::STAGING_DIRECT_URL pointe vers le projet Supabase de PRODUCTION — refus d'appliquer une migration dessus."
+            exit 1
+          fi
 
           # 2) Liste blanche (positive, plus robuste) : si la variable
           #    d'environnement (non secrète) STAGING_SUPABASE_PROJECT_REF
@@ -115,19 +139,21 @@ jobs:
         working-directory: kessia-app
         run: npx prisma generate
 
-      - name: Prisma migrate deploy (staging)
+      - name: Prisma migrate deploy (staging — via DIRECT_URL, pooler session)
         working-directory: kessia-app
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
         # Aucune option de contournement : un échec ici bloque le job
         # `deploy` qui en dépend (needs: migrate) — le déploiement ne part
         # pas si la migration échoue.
         run: npx prisma migrate deploy
 
-      - name: Vérifier l'état des migrations (staging)
+      - name: Vérifier l'état des migrations (staging — via DIRECT_URL)
         working-directory: kessia-app
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
         run: npx prisma migrate status
 
       - name: Seed (jeu de données de démonstration — aucune donnée réelle)

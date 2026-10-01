@@ -36,6 +36,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://kessia:kessia@localhost:5432/kessia_itest
+      # P1.11 — prisma/schema.prisma déclare désormais datasource.directUrl ;
+      # `prisma migrate deploy`/`db push` l'utilisent automatiquement à la
+      # place de DATABASE_URL. Base éphémère sans pooler : même valeur.
+      DIRECT_URL: postgresql://kessia:kessia@localhost:5432/kessia_itest
       JWT_SECRET: itest-jwt-secret
       JWT_REFRESH_SECRET: itest-refresh-secret
       SMS_PROVIDER: DEV
@@ -54,13 +58,17 @@ jobs:
         working-directory: kessia-app
         run: npm ci
 
-      - name: Garde anti-production — DATABASE_URL ne doit jamais être une base réelle
+      - name: Garde anti-production — DATABASE_URL/DIRECT_URL ne doivent jamais être une base réelle
         run: |
           if echo "$DATABASE_URL" | grep -qiE "supabase\.co|pooler\.supabase\.com"; then
             echo "::error::DATABASE_URL pointe vers un hôte Supabase — refus d'exécuter une migration CI dessus."
             exit 1
           fi
-          echo "OK — DATABASE_URL cible le Postgres éphémère du runner (localhost), pas une base réelle."
+          if echo "$DIRECT_URL" | grep -qiE "supabase\.co|pooler\.supabase\.com"; then
+            echo "::error::DIRECT_URL pointe vers un hôte Supabase — refus d'exécuter une migration CI dessus."
+            exit 1
+          fi
+          echo "OK — DATABASE_URL et DIRECT_URL ciblent le Postgres éphémère du runner (localhost), pas une base réelle."
 
       - name: Prisma generate
         working-directory: kessia-app
