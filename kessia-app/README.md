@@ -141,3 +141,5 @@ La feuille de route par phases est dans le cahier des charges (§52).
 - `../KESSIA_DESIGN_SYSTEM.md`
 - `../CLAUDE_CODE_RULES.md`
 - Cahier des charges final (61 sections) — document produit maître.
+
+<!-- production redeploy trigger -->
