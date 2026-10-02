@@ -1,0 +1,123 @@
+# ============================================================
+# KESSIA — Baseline ponctuel de la base Production (P1.11)
+#
+# Opération UNIQUE et DÉLIBÉRÉE : marque la migration `0_init` comme
+# déjà appliquée sur la base de production (`prisma migrate resolve
+# --applied 0_init`), sans exécuter aucun DDL ni toucher au schéma
+# métier — cette commande insère uniquement une ligne dans la table
+# de suivi `_prisma_migrations`.
+#
+# Contexte : la base Production existait déjà avant l'introduction des
+# migrations versionnées (ADR 0048) ; `0_init` a été généré par
+# introspection de cette base exacte et correspond donc à son schéma
+# réel. Confirmé par vérification directe (Supabase SQL Editor,
+# 2026-10-02) : `_prisma_migrations` absente, `sessions.token` présent
+# (pas `jti`/`revokedAt`), `webhook_events` absente,
+# `marketplace_orders.idempotencyKey` absente — seul `0_init`
+# correspond à l'état réel ; les 3 migrations suivantes (P0.2/P0.3/P0.4)
+# ne doivent PAS être marquées comme appliquées, elles restent de
+# vraies migrations en attente (à appliquer ensuite via le `migrate
+# deploy` existant de deploy-prod.yml, dans une étape séparée et
+# délibérée).
+#
+# Déclenchement UNIQUEMENT manuel (workflow_dispatch), jamais sur push.
+# Garde explicite : nécessite de taper exactement "BASELINE-0-INIT"
+# (volontairement distinct de "PRODUCTION" utilisé par deploy-prod.yml,
+# pour qu'aucune confusion entre les deux workflows ne soit possible).
+#
+# Secrets requis, scopés à l'environnement "production" :
+#   PRODUCTION_DATABASE_URL  Conservé pour que Prisma résolve
+#                            env("DATABASE_URL") au chargement du
+#                            schéma — non utilisé pour la connexion
+#                            réelle de cette opération.
+#   PRODUCTION_DIRECT_URL    Pooler SESSION (port 5432) — c'est elle
+#                            qui est réellement utilisée par
+#                            `migrate resolve`/`migrate status`
+#                            (datasource.directUrl, ADR 0049).
+# ============================================================
+name: Baseline Production (0_init)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Tapez BASELINE-0-INIT pour confirmer cette opération ponctuelle'
+        required: true
+        type: string
+
+concurrency:
+  group: baseline-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Vérifie la confirmation explicite
+        if: inputs.confirm != 'BASELINE-0-INIT'
+        run: |
+          echo "::error::Confirmation absente ou incorrecte — attendu 'BASELINE-0-INIT'. Aucune action effectuée."
+          exit 1
+
+  baseline:
+    needs: confirm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      PRODUCTION_DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prérequis — PRODUCTION_DATABASE_URL obligatoire
+        if: env.PRODUCTION_DATABASE_URL == ''
+        run: |
+          echo "::error::PRODUCTION_DATABASE_URL est requis (secret d'environnement 'production') et n'est pas configuré."
+          exit 1
+
+      - name: Prérequis — PRODUCTION_DIRECT_URL obligatoire
+        if: env.PRODUCTION_DIRECT_URL == ''
+        run: |
+          echo "::error::PRODUCTION_DIRECT_URL est requis (secret d'environnement 'production') et n'est pas configuré."
+          exit 1
+
+      - name: Garde — DIRECT_URL ne doit jamais être le pooler transaction
+        run: |
+          if echo "$PRODUCTION_DIRECT_URL" | grep -qE ':6543\b|pgbouncer=true'; then
+            echo "::error::PRODUCTION_DIRECT_URL cible le pooler TRANSACTION (port 6543/pgbouncer=true) — refus, ce mode casse le DDL/le suivi de migration de Prisma."
+            exit 1
+          fi
+          echo "OK — PRODUCTION_DIRECT_URL ne cible pas le pooler transaction."
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kessia-app/package-lock.json
+
+      - name: Install
+        working-directory: kessia-app
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Baseline — marque UNIQUEMENT 0_init comme déjà appliquée
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+        run: npx prisma migrate resolve --applied 0_init
+
+      - name: Vérifier l'état des migrations après baseline
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+        run: npx prisma migrate status
