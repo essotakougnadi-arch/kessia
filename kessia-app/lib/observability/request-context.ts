@@ -37,6 +37,17 @@ export function getCurrentRequestId(): string | undefined {
 }
 
 /**
+ * Réinitialise le contexte AsyncLocalStorage.
+ *
+ * Utilisé uniquement par les tests afin d'éviter qu'un contexte
+ * créé par un test précédent ne soit réutilisé par le test suivant.
+ * Ne pas appeler dans le traitement normal d'une requête.
+ */
+export function resetRequestContextForTests(): void {
+  requestIdStorage.disable();
+}
+
+/**
  * Établit le contexte de corrélation pour le reste du traitement de la
  * requête en cours (Winston via getCurrentRequestId(), tag Sentry).
  *

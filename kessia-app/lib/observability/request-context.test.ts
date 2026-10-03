@@ -6,7 +6,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { NextRequest } from 'next/server';
-import { correlateRequest, getCurrentRequestId } from './request-context';
+import {
+  correlateRequest,
+  getCurrentRequestId,
+  resetRequestContextForTests,
+} from './request-context';
 import { logApiError, logger } from '../logger';
 
 const { setTagMock, setContextMock, setExtraMock } = vi.hoisted(() => ({
@@ -30,6 +34,7 @@ function fakeRequest(incomingRequestId: string | null): NextRequest {
 }
 
 beforeEach(() => {
+  resetRequestContextForTests();
   setTagMock.mockClear();
   setContextMock.mockClear();
   setExtraMock.mockClear();
