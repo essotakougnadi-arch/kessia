@@ -25,6 +25,7 @@ const PAGE = 24;
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('API MARKETPLACE DB COUNT:', await prisma.marketplaceItem.count());
     const limited = await enforceRateLimit(request, 'marketplace.list', { limit: 60, windowMs: 60_000 });
     if (limited) return limited;
 
