@@ -17,6 +17,7 @@ test('livraison Miaride : demande, suivi et confirmation de réception', async (
 
   // L'onduleur de Kossi (SEED.main) — a un quartier d'enlèvement ("be").
   const list = await (await request.get(`${baseURL}/api/v1/marketplace?q=Onduleur`)).json();
+  console.log('E2E MARKETPLACE:', JSON.stringify(list, null, 2));
   const item = list.data.items.find((i: { pickupZone: string | null }) => i.pickupZone);
   expect(item, 'un article avec pickupZone doit exister').toBeTruthy();
 
