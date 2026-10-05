@@ -72,6 +72,12 @@ export default defineConfig({
         // Avec une base de test dédiée, on veut TOUJOURS un serveur neuf
         // branché dessus — jamais réutiliser un serveur pointé sur la démo.
         reuseExistingServer: TEST_DB ? false : !process.env.CI,
+        // Diagnostic : par défaut Playwright n'affiche la sortie du
+        // serveur qu'en cas d'échec de démarrage — tout console.log
+        // applicatif (ex. routes API) reste invisible dans les logs CI
+        // une fois le serveur démarré. `pipe` la rend visible en continu.
+        stdout: 'pipe',
+        stderr: 'pipe',
         env: {
           // La suite enchaîne les connexions depuis une seule IP.
           E2E_RATE_LIMIT_BYPASS: process.env.E2E_RATE_LIMIT_BYPASS ?? '1',
