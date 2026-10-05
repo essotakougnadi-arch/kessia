@@ -35,6 +35,24 @@ export async function GET(request: NextRequest) {
     const tontineOnly = url.searchParams.get('tontine') === '1';
     const cursor = url.searchParams.get('cursor');
 
+    // DIAGNOSTIC TEMPORAIRE — à retirer après investigation. Lecture
+    // seule, n'affecte pas la requête fonctionnelle ci-dessous.
+    console.log('DIAG q=', q);
+    console.log('DIAG marketplaceItem.count()=', await prisma.marketplaceItem.count());
+    const diagOnduleur = await prisma.marketplaceItem.findMany({
+      where: { title: { contains: 'Onduleur', mode: 'insensitive' } },
+    });
+    console.log('DIAG Onduleur findMany count=', diagOnduleur.length);
+    for (const d of diagOnduleur) {
+      console.log('DIAG Onduleur item=', {
+        title: d.title,
+        stock: d.stock,
+        status: d.status,
+        pickupZone: d.pickupZone,
+        description: d.description,
+      });
+    }
+
     const runQuery = () =>
       prisma.marketplaceItem
         .findMany({
