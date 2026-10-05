@@ -85,7 +85,10 @@ jobs:
       - name: Seed
         working-directory: kessia-app
         run: npm run db:seed
-
+      - name: Verify marketplace seed
+        working-directory: kessia-app
+        run: |
+          node -e "const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.marketplaceItem.count().then(n => console.log('MARKETPLACE COUNT:', n)).finally(() => p.\$disconnect())"
       - name: Install Playwright browser
         working-directory: kessia-app
         run: npx playwright install --with-deps chromium
