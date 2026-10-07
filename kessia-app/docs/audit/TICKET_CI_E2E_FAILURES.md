@@ -1,13 +1,18 @@
 ---
 title: "KESSIA — Ticket : échecs CI e2e.yml (pré-existants, confirmés antérieurs à P0.1)"
-date: "15 septembre 2026 (ouvert) — mis à jour à la clôture de P0.5 (21 sept.)"
+date: "15 septembre 2026 (ouvert) — CLOS le 7 octobre 2026 (run CI 57 passed / 0 failed / 0 flaky)"
 ---
 
 # Ticket — Échecs `e2e.yml` en CI (pré-existants)
 
-**Statut : PARTIELLEMENT RÉSOLU — clôture P0.2 (2026-09-16). Nouveau cas
-`auth.spec.ts:12` caractérisé (préexistant, non-régression) à la clôture de
-P0.5 (2026-09-21).**
+**Statut : CLOS (2026-10-07).** Les 3 causes restantes
+(`marketplace-delivery.spec.ts:14`, `auth.spec.ts:12`, `tontine.spec.ts:37`)
+sont toutes résolues — voir les sections de clôture en bas de ce document.
+Run CI de vérification (commit `52b08fb`) : **57 passed, 0 failed, 0 flaky**.
+
+Historique : partiellement résolu dès la clôture P0.2 (2026-09-16). Nouveau
+cas `auth.spec.ts:12` caractérisé (préexistant, non-régression) à la
+clôture de P0.5 (2026-09-21).
 Ouvert à la clôture de P0.1, suite à la découverte documentée dans
 `P0_1_REMEDIATION_REPORT.md` §6/§7. Non bloquant pour P0.1 (non-régression
 démontrée par comparaison avec le commit `3786926`, antérieur à tout
