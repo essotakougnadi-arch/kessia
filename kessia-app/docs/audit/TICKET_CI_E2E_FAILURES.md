@@ -147,3 +147,32 @@ pourrait retarder la redirection), **hors périmètre P0.5** (KYC/conformité
 uniquement) et hors périmètre de tout P0.x déjà clos. Non bloquant pour la
 clôture de P0.5 : comportement identique avant/après, donc non-régression
 démontrée.
+
+## Clôture — `marketplace-delivery.spec.ts:14` (2026-10-07)
+
+**Statut : RÉSOLU.** Root cause confirmée empiriquement (diagnostic
+temporaire via `check-runs/annotations`, seul accès disponible aux détails
+d'échec CI — aucun accès aux logs bruts GitHub Actions) : le test fait
+`page.goto('/marketplace/mine')` après avoir capturé `buyer.accessToken`
+au login. Cette navigation monte `AuthBootstrap`, qui échange le cookie de
+refresh contre un accessToken frais — cette rotation **révoque** la session
+liée au token capturé avant la navigation (comportement voulu, cf.
+`lib/auth/session.ts::rotateRefreshToken`). Le test continuait pourtant
+d'utiliser ce token désormais révoqué pour l'appel final `action:'confirm'`,
+provoquant `401 UNAUTHORIZED` (« Session révoquée. Veuillez vous
+reconnecter. ») au lieu du succès attendu — visible en CI comme un
+`TypeError` opaque (`confirm.json().data` undefined) avant correctif, pur
+problème de **test** (pas de bug applicatif, pas de régression métier).
+
+Confirmé comme la même famille de cause déjà pressentie pour
+`auth.spec.ts:12` ci-dessus (« interaction entre `AuthBootstrap` et
+une session détenue ailleurs par le code de test »).
+
+**Corrigé** par une reconnexion fraîche de l'acheteur juste avant l'appel
+`confirm` (même pattern que la reconnexion vendeur déjà présente quelques
+lignes plus haut) — commit `ea41285`. Les diagnostics temporaires ajoutés
+pendant l'investigation (en-tête `x-e2e-diag-onduleur`, `console.log`,
+messages d'assertion enrichis) ont été retirés dans le même commit.
+
+`tontine.spec.ts:37` (violation de mode strict Playwright) reste ouvert,
+sans lien avec cette cause.
