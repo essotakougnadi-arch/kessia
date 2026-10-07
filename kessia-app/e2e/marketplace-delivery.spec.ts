@@ -19,7 +19,10 @@ test('livraison Miaride : demande, suivi et confirmation de réception', async (
   const list = await (await request.get(`${baseURL}/api/v1/marketplace?q=Onduleur`)).json();
   console.log('E2E MARKETPLACE:', JSON.stringify(list, null, 2));
   const item = list.data.items.find((i: { pickupZone: string | null }) => i.pickupZone);
-  expect(item, 'un article avec pickupZone doit exister').toBeTruthy();
+  // DIAGNOSTIC TEMPORAIRE : le message d'échec embarque la liste reçue —
+  // contourne l'absence d'accès aux logs bruts GitHub Actions (API publique
+  // limitée aux messages d'assertion). À retirer une fois la cause confirmée.
+  expect(item, `un article avec pickupZone doit exister — items reçus: ${JSON.stringify(list.data.items)}`).toBeTruthy();
 
   const orderRes = await request.post(`${baseURL}/api/v1/marketplace/${item.id}/order`, {
     headers: { Authorization: `Bearer ${buyer.accessToken}` },
