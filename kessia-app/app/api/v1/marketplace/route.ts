@@ -25,7 +25,6 @@ const PAGE = 24;
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('API MARKETPLACE DB COUNT:', await prisma.marketplaceItem.count());
     const limited = await enforceRateLimit(request, 'marketplace.list', { limit: 60, windowMs: 60_000 });
     if (limited) return limited;
 
@@ -34,21 +33,6 @@ export async function GET(request: NextRequest) {
     const category = url.searchParams.get('category');
     const tontineOnly = url.searchParams.get('tontine') === '1';
     const cursor = url.searchParams.get('cursor');
-
-    // DIAGNOSTIC TEMPORAIRE — à retirer après investigation. Lecture
-    // seule, n'affecte pas la requête fonctionnelle ci-dessous. N'est
-    // attaché à la réponse que si l'appelant envoie explicitement l'en-tête
-    // x-e2e-diag-onduleur (jamais envoyé par le client applicatif réel) —
-    // contourne l'absence d'accès aux logs bruts GitHub Actions.
-    let diagOnduleurPayload: unknown;
-    if (request.headers.get('x-e2e-diag-onduleur') === '1') {
-      const diagOnduleur = await prisma.marketplaceItem.findMany({
-        where: { title: { contains: 'Onduleur', mode: 'insensitive' } },
-      });
-      diagOnduleurPayload = diagOnduleur.map((d) => ({
-        id: d.id, title: d.title, stock: d.stock, status: d.status, pickupZone: d.pickupZone,
-      }));
-    }
 
     const runQuery = () =>
       prisma.marketplaceItem
@@ -81,7 +65,7 @@ export async function GET(request: NextRequest) {
     const noFilter = !q && !category && !tontineOnly && !cursor;
     const payload = noFilter ? await cached('marketplace:first-page', 30_000, runQuery) : await runQuery();
 
-    return ok(diagOnduleurPayload !== undefined ? { ...payload, __diagOnduleur: diagOnduleurPayload } : payload);
+    return ok(payload);
   } catch (error) {
     logApiError('/v1/marketplace', error);
     return serverError();

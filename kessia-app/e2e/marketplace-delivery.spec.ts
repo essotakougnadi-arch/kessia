@@ -16,18 +16,9 @@ test('livraison Miaride : demande, suivi et confirmation de réception', async (
   await topUp(request, baseURL!, buyer.accessToken, 300_000);
 
   // L'onduleur de Kossi (SEED.main) — a un quartier d'enlèvement ("be").
-  const list = await (await request.get(`${baseURL}/api/v1/marketplace?q=Onduleur`, {
-    headers: { 'x-e2e-diag-onduleur': '1' },
-  })).json();
-  console.log('E2E MARKETPLACE:', JSON.stringify(list, null, 2));
+  const list = await (await request.get(`${baseURL}/api/v1/marketplace?q=Onduleur`)).json();
   const item = list.data.items.find((i: { pickupZone: string | null }) => i.pickupZone);
-  // DIAGNOSTIC TEMPORAIRE : le message d'échec embarque la liste reçue et
-  // l'état brut (stock/status) de l'article Onduleur — contourne l'absence
-  // d'accès aux logs bruts GitHub Actions. À retirer une fois la cause confirmée.
-  expect(
-    item,
-    `un article avec pickupZone doit exister — items reçus: ${JSON.stringify(list.data.items)} — état brut Onduleur: ${JSON.stringify(list.data.__diagOnduleur)}`
-  ).toBeTruthy();
+  expect(item, 'un article avec pickupZone doit exister').toBeTruthy();
 
   const orderRes = await request.post(`${baseURL}/api/v1/marketplace/${item.id}/order`, {
     headers: { Authorization: `Bearer ${buyer.accessToken}` },
@@ -70,9 +61,16 @@ test('livraison Miaride : demande, suivi et confirmation de réception', async (
   });
   expect(ready.ok(), await ready.text()).toBeTruthy();
 
-  // L'acheteur confirme la réception → DELIVERED
+  // L'acheteur confirme la réception → DELIVERED. Reconnexion : le
+  // `page.goto` ci-dessus a monté `AuthBootstrap`, qui a échangé le cookie
+  // de refresh contre un accessToken frais côté navigateur — cette
+  // rotation révoque la session liée à `buyer.accessToken` (capturé avant
+  // la navigation), cause racine confirmée via les annotations CI
+  // (« Session révoquée. Veuillez vous reconnecter. », code UNAUTHORIZED).
+  const buyerAgain = await request.post(`${baseURL}/api/v1/auth/login`, { data: { phone: SEED.ama, password: 'Kessia2026!' } });
+  const buyerToken = (await buyerAgain.json()).data.accessToken as string;
   const confirm = await request.post(`${baseURL}/api/v1/marketplace/deliveries/${deliveryId}`, {
-    headers: { Authorization: `Bearer ${buyer.accessToken}` },
+    headers: { Authorization: `Bearer ${buyerToken}` },
     data: { action: 'confirm' },
   });
   expect(confirm.ok(), await confirm.text()).toBeTruthy();
