@@ -174,8 +174,17 @@ lignes plus haut) — commit `ea41285`. Les diagnostics temporaires ajoutés
 pendant l'investigation (en-tête `x-e2e-diag-onduleur`, `console.log`,
 messages d'assertion enrichis) ont été retirés dans le même commit.
 
-`tontine.spec.ts:37` (violation de mode strict Playwright) reste ouvert,
-sans lien avec cette cause.
+**Correction** : en rédigeant la clôture ci-dessus, j'avais initialement
+affirmé que `tontine.spec.ts:37` restait ouvert — par réflexe de recopie du
+constat P0.5 plutôt que par vérification. En réalité, `getByText(name)` a
+déjà été remplacé par `getByRole('link', { name })` dans les deux tests
+`tontine.spec.ts` concernés (commit `74c2518`, 2026-09-23, antérieur à ce
+jour mais postérieur à la note P0.5 jamais mise à jour depuis). Le run CI
+de clôture ci-dessus (commit `8ece27b`) le confirme empiriquement : 56
+passed / 1 flaky (`auth.spec.ts:12` uniquement), aucune mention de
+`tontine.spec.ts` dans les échecs ou le flaky. **`tontine.spec.ts:37` est
+donc déjà résolu**, sans lien avec les deux causes ci-dessus — ticket
+entièrement clos.
 
 ## Clôture — `auth.spec.ts:12` (2026-10-07)
 
