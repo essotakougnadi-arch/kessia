@@ -176,3 +176,29 @@ messages d'assertion enrichis) ont été retirés dans le même commit.
 
 `tontine.spec.ts:37` (violation de mode strict Playwright) reste ouvert,
 sans lien avec cette cause.
+
+## Clôture — `auth.spec.ts:12` (2026-10-07)
+
+**Statut : RÉSOLU.** Même famille de cause que `marketplace-delivery.spec.ts:14`
+ci-dessus (interaction `AuthBootstrap` / rechargement de page), comme
+pressenti en P0.5. Root cause précise : `page.goto('/profile')` est un
+rechargement complet, qui vide l'`accessToken` en mémoire (jamais
+persisté, P0.2) ; `AuthBootstrap` le régénère de façon asynchrone via
+`POST /auth/refresh`. Si le clic sur « déconnexion » arrive avant la
+résolution de cet appel, `hooks/useAuth.ts::logout()` trouvait
+`accessToken` encore `null` et **sautait entièrement** l'appel serveur
+`POST /auth/logout` — qui est le seul point qui nettoie les cookies
+HttpOnly de session (`clearAuthCookies`). Le nettoyage local
+(`storeLogout()`) s'exécutait bien, mais les cookies serveur restaient
+valides ; la navigation suivante vers `/login` était donc immédiatement
+renvoyée vers `/home` par `middleware.ts` (ligne « Déjà connecté sur
+login/register → /home »), qui ne regarde que le cookie, pas l'état
+client. **Bug réel, pas un artefact de test** : un utilisateur réel
+cliquant « déconnexion » juste après un rechargement de page aurait vu
+exactement le même échec de déconnexion silencieux.
+
+**Corrigé** (commit `c738de9`) : `logout()` tente désormais un
+`/auth/refresh` de repli avant d'abandonner, pour garantir que la
+révocation serveur + le nettoyage des cookies s'exécutent chaque fois
+qu'une session existe réellement — sans toucher à la protection CSRF de
+`withAuth` (l'auth par cookie seul reste strictement réservée aux GET).
