@@ -273,10 +273,22 @@ export function useAuth() {
   async function logout() {
     setLoading(true);
     try {
-      if (accessToken) {
+      let token = accessToken;
+      if (!token) {
+        // Le token en mémoire peut être vide juste après un rechargement de
+        // page (AuthBootstrap n'a pas encore échangé le cookie de refresh
+        // contre un accessToken) : sans ce repli, l'appel serveur ci-dessous
+        // était sauté, les cookies HttpOnly de session n'étaient jamais
+        // nettoyés, et la navigation suivante vers /login était aussitôt
+        // renvoyée vers /home par le middleware (session toujours valide
+        // côté serveur) — root cause confirmée de e2e/auth.spec.ts:12.
+        const refreshed = await apiFetch<{ accessToken: string }>('auth/refresh', { method: 'POST' });
+        token = refreshed.success ? refreshed.data?.accessToken ?? null : null;
+      }
+      if (token) {
         await apiFetch('auth/logout', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
       }
     } catch {
