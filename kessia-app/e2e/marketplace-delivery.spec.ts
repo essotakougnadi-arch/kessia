@@ -16,13 +16,18 @@ test('livraison Miaride : demande, suivi et confirmation de réception', async (
   await topUp(request, baseURL!, buyer.accessToken, 300_000);
 
   // L'onduleur de Kossi (SEED.main) — a un quartier d'enlèvement ("be").
-  const list = await (await request.get(`${baseURL}/api/v1/marketplace?q=Onduleur`)).json();
+  const list = await (await request.get(`${baseURL}/api/v1/marketplace?q=Onduleur`, {
+    headers: { 'x-e2e-diag-onduleur': '1' },
+  })).json();
   console.log('E2E MARKETPLACE:', JSON.stringify(list, null, 2));
   const item = list.data.items.find((i: { pickupZone: string | null }) => i.pickupZone);
-  // DIAGNOSTIC TEMPORAIRE : le message d'échec embarque la liste reçue —
-  // contourne l'absence d'accès aux logs bruts GitHub Actions (API publique
-  // limitée aux messages d'assertion). À retirer une fois la cause confirmée.
-  expect(item, `un article avec pickupZone doit exister — items reçus: ${JSON.stringify(list.data.items)}`).toBeTruthy();
+  // DIAGNOSTIC TEMPORAIRE : le message d'échec embarque la liste reçue et
+  // l'état brut (stock/status) de l'article Onduleur — contourne l'absence
+  // d'accès aux logs bruts GitHub Actions. À retirer une fois la cause confirmée.
+  expect(
+    item,
+    `un article avec pickupZone doit exister — items reçus: ${JSON.stringify(list.data.items)} — état brut Onduleur: ${JSON.stringify(list.data.__diagOnduleur)}`
+  ).toBeTruthy();
 
   const orderRes = await request.post(`${baseURL}/api/v1/marketplace/${item.id}/order`, {
     headers: { Authorization: `Bearer ${buyer.accessToken}` },

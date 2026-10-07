@@ -36,21 +36,18 @@ export async function GET(request: NextRequest) {
     const cursor = url.searchParams.get('cursor');
 
     // DIAGNOSTIC TEMPORAIRE — à retirer après investigation. Lecture
-    // seule, n'affecte pas la requête fonctionnelle ci-dessous.
-    console.log('DIAG q=', q);
-    console.log('DIAG marketplaceItem.count()=', await prisma.marketplaceItem.count());
-    const diagOnduleur = await prisma.marketplaceItem.findMany({
-      where: { title: { contains: 'Onduleur', mode: 'insensitive' } },
-    });
-    console.log('DIAG Onduleur findMany count=', diagOnduleur.length);
-    for (const d of diagOnduleur) {
-      console.log('DIAG Onduleur item=', {
-        title: d.title,
-        stock: d.stock,
-        status: d.status,
-        pickupZone: d.pickupZone,
-        description: d.description,
+    // seule, n'affecte pas la requête fonctionnelle ci-dessous. N'est
+    // attaché à la réponse que si l'appelant envoie explicitement l'en-tête
+    // x-e2e-diag-onduleur (jamais envoyé par le client applicatif réel) —
+    // contourne l'absence d'accès aux logs bruts GitHub Actions.
+    let diagOnduleurPayload: unknown;
+    if (request.headers.get('x-e2e-diag-onduleur') === '1') {
+      const diagOnduleur = await prisma.marketplaceItem.findMany({
+        where: { title: { contains: 'Onduleur', mode: 'insensitive' } },
       });
+      diagOnduleurPayload = diagOnduleur.map((d) => ({
+        id: d.id, title: d.title, stock: d.stock, status: d.status, pickupZone: d.pickupZone,
+      }));
     }
 
     const runQuery = () =>
@@ -84,7 +81,7 @@ export async function GET(request: NextRequest) {
     const noFilter = !q && !category && !tontineOnly && !cursor;
     const payload = noFilter ? await cached('marketplace:first-page', 30_000, runQuery) : await runQuery();
 
-    return ok(payload);
+    return ok(diagOnduleurPayload !== undefined ? { ...payload, __diagOnduleur: diagOnduleurPayload } : payload);
   } catch (error) {
     logApiError('/v1/marketplace', error);
     return serverError();
