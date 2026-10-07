@@ -75,6 +75,7 @@ test('livraison Miaride : demande, suivi et confirmation de réception', async (
     headers: { Authorization: `Bearer ${buyer.accessToken}` },
     data: { action: 'confirm' },
   });
+  expect(confirm.ok(), await confirm.text()).toBeTruthy();
   expect((await confirm.json()).data.status).toBe('DELIVERED');
 });
 
@@ -133,6 +134,7 @@ test('règlement à la réception : fonds au séquestre puis versés à la confi
   const confirm = await request.post(`${baseURL}/api/v1/marketplace/deliveries/${deliveryId}`, {
     headers: h, data: { action: 'confirm' },
   });
+  expect(confirm.ok(), await confirm.text()).toBeTruthy();
   expect((await confirm.json()).data.status).toBe('DELIVERED');
 
   const mine = await (await request.get(`${baseURL}/api/v1/marketplace/mine`, { headers: h })).json();
