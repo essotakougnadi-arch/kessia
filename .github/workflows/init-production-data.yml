@@ -1,0 +1,112 @@
+# ============================================================
+# KESSIA — Initialisation du compte vendeur officiel « KESSIA Shop »
+# en Production (chantier « vraies données métier »)
+#
+# Opération UNIQUE et DÉLIBÉRÉE : crée le compte User + UserProfile +
+# Wallet + Business du vendeur officiel KESSIA s'il n'existe pas
+# encore (scripts/init-production-kessia-seller.mjs). Additive
+# uniquement — aucun deleteMany, aucun truncate, aucune modification
+# destructive. Idempotent : une relance sans effet si le compte
+# existe déjà.
+#
+# Déclenchement UNIQUEMENT manuel (workflow_dispatch), jamais sur push.
+# Garde explicite : nécessite de taper exactement "INIT-KESSIA-SELLER"
+# (volontairement distinct de "PRODUCTION" utilisé par
+# deploy-prod.yml et de "BASELINE-0-INIT" utilisé par
+# baseline-production.yml — aucune confusion possible entre workflows).
+#
+# Sécurité par défaut — DRY RUN : l'entrée `dry_run` vaut `true` par
+# défaut. Dans ce mode, le script affiche l'aperçu complet de ce qui
+# SERAIT créé et s'arrête avant toute écriture. Il faut explicitement
+# repasser `dry_run` à `false` (en plus du texte de confirmation) pour
+# qu'une écriture réelle ait lieu — deux signaux délibérés distincts.
+#
+# Secrets requis, scopés à l'environnement "production" :
+#   PRODUCTION_DATABASE_URL          Déjà utilisé par deploy-prod.yml —
+#                                    connexion runtime (pooler
+#                                    transaction), cette opération est
+#                                    du DML (INSERT), jamais du DDL :
+#                                    PRODUCTION_DIRECT_URL n'est pas
+#                                    nécessaire ici.
+#   PRODUCTION_KESSIA_SELLER_PASSWORD  Nouveau secret dédié, jamais
+#                                    réutilisé pour un autre compte,
+#                                    jamais commité, jamais journalisé.
+# ============================================================
+name: Init Production Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Tapez INIT-KESSIA-SELLER pour confirmer cette opération ponctuelle'
+        required: true
+        type: string
+      dry_run:
+        description: "Aperçu uniquement (true) ou écriture réelle (false)"
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: init-production-data
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  confirm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Vérifie la confirmation explicite
+        if: inputs.confirm != 'INIT-KESSIA-SELLER'
+        run: |
+          echo "::error::Confirmation absente ou incorrecte — attendu 'INIT-KESSIA-SELLER'. Aucune action effectuée."
+          exit 1
+
+  init:
+    needs: confirm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prérequis — PRODUCTION_DATABASE_URL obligatoire
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        if: env.PRODUCTION_DATABASE_URL == ''
+        run: |
+          echo "::error::PRODUCTION_DATABASE_URL est requis (secret d'environnement 'production') et n'est pas configuré."
+          exit 1
+
+      - name: Prérequis — PRODUCTION_KESSIA_SELLER_PASSWORD obligatoire
+        env:
+          PRODUCTION_KESSIA_SELLER_PASSWORD: ${{ secrets.PRODUCTION_KESSIA_SELLER_PASSWORD }}
+        if: env.PRODUCTION_KESSIA_SELLER_PASSWORD == ''
+        run: |
+          echo "::error::PRODUCTION_KESSIA_SELLER_PASSWORD est requis (secret d'environnement 'production') et n'est pas configuré."
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kessia-app/package-lock.json
+
+      - name: Install
+        working-directory: kessia-app
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: kessia-app
+        run: npx prisma generate
+
+      - name: Initialisation du compte vendeur officiel KESSIA Shop
+        working-directory: kessia-app
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          SELLER_PASSWORD: ${{ secrets.PRODUCTION_KESSIA_SELLER_PASSWORD }}
+          DRY_RUN: ${{ inputs.dry_run == true && '1' || '0' }}
+        run: node scripts/init-production-kessia-seller.mjs
