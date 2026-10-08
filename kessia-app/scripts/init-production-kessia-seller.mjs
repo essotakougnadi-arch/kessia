@@ -130,7 +130,7 @@ async function main() {
     console.log('User.isPhoneVerified    = false (défaut schéma)');
     console.log('User.termsAcceptedAt    = null (défaut schéma)');
     console.log('User.kycStatus/kycLevel = NOT_STARTED / 0 (défauts schéma)');
-    console.log('UserProfile.userType    = BUSINESS');
+    console.log('UserProfile.userType    = SME');
     console.log('Wallet.kind/balance     = USER / 0 (défauts schéma)');
     console.log(`Business.name           = ${BUSINESS_NAME}`);
     console.log(`Business.sector         = ${BUSINESS_SECTOR}`);
@@ -166,7 +166,7 @@ async function main() {
       await tx.userProfile.create({
         data: {
           userId: createdUser.id,
-          userType: 'BUSINESS',
+          userType: 'SME',
           userTypeSetAt: new Date(),
         },
       });
