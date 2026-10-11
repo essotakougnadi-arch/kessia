@@ -101,4 +101,26 @@ describe('POST /api/v1/marketplace — création d’annonce', () => {
     const count = await prisma.marketplaceItem.count({ where: { sellerId: seller.id } });
     expect(count).toBe(0);
   });
+
+  it('refuse (403) le businessId d’une entreprise appartenant à un autre utilisateur, aucune annonce créée', async () => {
+    const buyer = await makeUser();
+    const owner = await makeUser();
+    userIds.push(buyer.id, owner.id);
+
+    // Business d'un autre utilisateur — onDelete: Cascade sur Business.user
+    // (prisma/schema.prisma) : nettoyée automatiquement par cleanup() via
+    // la suppression de `owner`, pas besoin de la suivre séparément.
+    const othersBusiness = await prisma.business.create({
+      data: { userId: owner.id, name: 'itest autre entreprise', sector: 'Test' },
+    });
+
+    const token = signAccessToken({ sub: buyer.id, phone: buyer.phone, role: 'USER' });
+    const title = `itest business non autorisé ${Date.now()}`;
+
+    const res = await createRequest(token, { title, price: 12_000, businessId: othersBusiness.id });
+    expect(res.status).toBe(403);
+
+    const count = await prisma.marketplaceItem.count({ where: { sellerId: buyer.id } });
+    expect(count).toBe(0);
+  });
 });
