@@ -37,32 +37,38 @@ export async function recordDevice(userId: string, req: { headers: Headersish })
     const { userAgent, ipAddress } = requestMeta(req);
     const ipHash = ipAddress ? hashToken(ipAddress).slice(0, 32) : null;
 
-    const existing = await prisma.device.findUnique({
-      where: { userId_fingerprint: { userId, fingerprint } },
-    });
     const knownDeviceCount = await prisma.device.count({ where: { userId } });
 
-    if (existing) {
-      const updated = await prisma.device.update({
-        where: { id: existing.id },
-        data: { lastSeenAt: new Date(), seenCount: { increment: 1 }, ipHash: ipHash ?? existing.ipHash },
-      });
-      return {
-        id: updated.id, fingerprint, isNew: false, trusted: updated.trusted,
-        seenCount: updated.seenCount, knownDeviceCount,
-      };
-    }
-
-    const created = await prisma.device.create({
-      data: {
+    // `upsert` (une seule requête atomique côté base) plutôt que
+    // find-then-create : deux enregistrements concurrents du même
+    // appareil (même empreinte) ne se disputent plus la contrainte
+    // unique (userId, fingerprint) — constat P2.20 volet 2, prouvé par
+    // test (`devices.itest.ts`). `ipHash: ipHash ?? undefined` dans la
+    // branche update : `undefined` laisse le champ inchangé côté Prisma
+    // (contrairement à `null`), même effet que l'ancien repli sur
+    // `existing.ipHash` sans avoir besoin de le relire.
+    const device = await prisma.device.upsert({
+      where: { userId_fingerprint: { userId, fingerprint } },
+      create: {
         userId, fingerprint, userAgent: userAgent ?? null, ipHash,
         // Le tout premier appareil d'un compte est considéré de confiance.
         trusted: knownDeviceCount === 0,
       },
+      update: { lastSeenAt: new Date(), seenCount: { increment: 1 }, ipHash: ipHash ?? undefined },
     });
+
+    // `seenCount` vaut 1 seulement juste après une création (valeur par
+    // défaut du schéma, jamais réatteinte par un increment ultérieur
+    // puisqu'il part toujours d'une valeur ≥ 1) — distingue create/update
+    // après l'upsert sans course de lecture supplémentaire.
+    const wasCreated = device.seenCount === 1;
     return {
-      id: created.id, fingerprint, isNew: knownDeviceCount > 0, trusted: created.trusted,
-      seenCount: 1, knownDeviceCount: knownDeviceCount + 1,
+      id: device.id,
+      fingerprint,
+      isNew: wasCreated && knownDeviceCount > 0,
+      trusted: device.trusted,
+      seenCount: device.seenCount,
+      knownDeviceCount: wasCreated ? knownDeviceCount + 1 : knownDeviceCount,
     };
   } catch (e) {
     logger.error('fraud_record_device_failed', { userId, error: e });
