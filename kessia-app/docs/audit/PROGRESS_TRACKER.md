@@ -6,6 +6,25 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 
 ---
 
+## ⚠️ Incident du 2026-10-12 (session agent) — commande Prisma ad hoc, hôte distant non vérifié
+
+**Toujours non résolu au sens strict — aucune commande Prisma réelle n'a été exécutée depuis, et aucune n'a été autorisée.** Une commande `prisma migrate status` tapée directement (hors de tout script protégé) avec `DATABASE_URL` remplacée mais `DIRECT_URL` non remplacée s'est connectée à `aws-1-eu-west-1.pooler.supabase.com:5432` au lieu du cluster de test local — repli silencieux exactement de la même nature que la cause racine de l'incident de production original. Lecture seule par conception de la commande (pas de preuve de modification, mais pas de preuve absolue de son absence non plus — voir le rapport).
+
+**Détail complet, preuves** : `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.
+
+**Correctif désormais câblé, mais toujours jamais exécuté contre aucune base** :
+- `scripts/require-local-db.mjs` : garde ALLOWLIST (DATABASE_URL/DIRECT_URL identiques entre eux, identiques à `.env.test`, hôte loopback). **Auto-révisée** : sa description initiale sur-affirmait sa portée (« protège toute invocation ») — corrigée pour préciser qu'elle ne protège que ce qui l'appelle explicitement.
+- `scripts/run-local-only.mjs` (nouveau ce tour) : relais concret, nouveau script npm `db:test:status` => `prisma migrate status` via ce relais. Comble le vide réel qui a motivé la commande ad hoc incriminée.
+- **17 tests entièrement simulés** au total (`require-local-db.test.ts` 10 + `run-local-only.test.ts` 7) — `node:fs`/`execFileSync` moqués, **aucune commande réelle, aucune connexion, dans aucun de ces tests**.
+- **Limite structurelle non résolue, et qui ne peut PAS être résolue par ce seul correctif** : même câblé, rien n'empêche une commande Prisma tapée directement dans un terminal de contourner `db:test:status` — exactement le mécanisme de l'incident lui-même. Documenté explicitement dans le rapport et l'en-tête des deux scripts.
+- **La première exécution réelle de `db:test:status` (même contre le cluster local) n'a pas eu lieu et reste soumise à autorisation explicite du propriétaire.**
+
+**Constat aggravant (lecture seule, `git show`)** : le correctif de l'incident de production ORIGINAL (`DIRECT_URL` toujours résolue explicitement dans `db-test-reset.mjs`) n'existe que sur la branche `fix/db-test-reset-production-guard` — **absent de `main`**. `npm run db:test:reset` reproduirait aujourd'hui l'incident original sur `main` tel quel.
+
+**Délibérément NON fait** : `db-test-reset.mjs` lui-même n'a pas été modifié pour déléguer à `assertLocalTestPair()` — risquerait de casser son repli `E2E_DATABASE_URL` existant (8 tests déjà verts) sans bénéfice de sûreté démontré. Reporté comme nettoyage non urgent, pas un correctif de sûreté manquant.
+
+---
+
 ## Phase 1 — Incident base de données (PRIORITÉ ABSOLUE)
 
 | ID | Tâche | Statut | Dépendances | Preuves | Prochaine action |
@@ -13,7 +32,7 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 | P1.1 | Établir la chronologie et la cause de l'incident (`DROP SCHEMA "public" CASCADE`) | **VALIDÉ EN TEST** (cause racine établie avec un haut degré de confiance) | — | Log Prisma (`Environment variables loaded from .env`), hôte/port identiques à `.env`, aucun `DROP SCHEMA` dans l'historique Git, 0 migration ne contient cette instruction | Aucune — close sauf nouvel élément |
 | P1.2 | Recherche de sources de récupération (sauvegardes locales, dumps, artefacts CI, runbook) | **VALIDÉ EN TEST** (recherche exhaustive effectuée) | — | 2 rapports produits cette session ; aucune sauvegarde locale/CI trouvée ; runbook `docs/operations/backup-recovery.md` cite des snapshots quotidiens « plan de base », non vérifié indépendamment | Attendre réponse support Supabase + vérification dashboard par le propriétaire |
 | P1.3 | Inventaire réel des tables/lignes en production | **BLOQUÉ** | Autorisation effective de lecture production | Tentative bloquée 2× par le classificateur automatique de l'environnement (« Production Reads », puis « Credential Materialization ») malgré l'autorisation du Master Prompt (§3.1) | Nécessite un réglage de permission côté propriétaire (hors de portée conversationnelle) — ou vérification directe par le propriétaire via le dashboard/SQL editor Supabase |
-| P1.4 | Correctif empêchant la récidive (`db-test-reset.mjs`) | **VALIDÉ EN TEST** (garde elle-même prouvée en mock ; le script complet `db:test:reset` n'a PAS été ré-exécuté réellement — tentative bloquée par le classificateur automatique, « Cloud Storage Mass Delete » — la logique de garde est testée, pas le binaire `prisma migrate reset` lui-même sur ce chemin précis) | — | `scripts/db-test-reset.mjs` corrigé, `scripts/db-test-reset.test.ts` (8 tests, dont la régression exacte de l'incident), `tsc`/`eslint` propres. Commits `7d37f10` + `5c6b9a9`, branche `fix/db-test-reset-production-guard` poussée (PR non créée) | **EN ATTENTE DE VALIDATION** : ouverture de PR par le propriétaire (pas d'accès API en écriture GitHub) |
+| P1.4 | Correctif empêchant la récidive (`db-test-reset.mjs`) | **VALIDÉ EN TEST** (garde elle-même prouvée en mock ; le script complet `db:test:reset` n'a PAS été ré-exécuté réellement — tentative bloquée par le classificateur automatique, « Cloud Storage Mass Delete » — la logique de garde est testée, pas le binaire `prisma migrate reset` lui-même sur ce chemin précis) | — | `scripts/db-test-reset.mjs` corrigé, `scripts/db-test-reset.test.ts` (8 tests, dont la régression exacte de l'incident), `tsc`/`eslint` propres. Commits `7d37f10` + `5c6b9a9`, branche `fix/db-test-reset-production-guard` poussée, **PR #7 ouverte** | **EN COURS DE REVUE** : PR #7 ouverte contre `main` |
 | P1.5 | Cluster PostgreSQL 16 de test local (port 5433, `kessia_p0_test`) retrouvé et redémarré | **VALIDÉ EN TEST** | Aucune (infra locale) | Trouvé arrêté (`postmaster.pid` périmé, PID confirmé non actif) dans le scratchpad de cette session — c'est la même instance que le P0.0 historique. Redémarré via `pg_ctl`, 45 tables confirmées, 4/4 migrations déjà appliquées (`_prisma_migrations`). **Important** : ce n'est pas le service Windows `postgresql-x64-16` (port 5432, délibérément inutilisé) | Penser à l'arrêter proprement (`pg_ctl stop -m fast`) en fin de session de travail |
 
 ## Phase 2 — Sécurisation des outils et de la CI/CD
@@ -30,9 +49,9 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 
 | ID | Statut | Détail |
 |---|---|---|
-| Fichier `test/integration/authz.itest.ts` (6 nouveaux scénarios) | **VALIDÉ EN TEST** (exécution réelle) | **7/7 tests verts** contre le cluster local réel (P1.5). `tsc`/`eslint` propres. Suite complète : 21 fichiers / 121 tests verts, aucune régression. Commit `d6a955c`, branche `test/authz-and-invariants` poussée (PR non créée) |
+| Fichier `test/integration/authz.itest.ts` (6 nouveaux scénarios) | **VALIDÉ EN TEST** (exécution réelle) | **7/7 tests verts** contre le cluster local réel (P1.5). `tsc`/`eslint` propres. Suite complète : 21 fichiers / 121 tests verts, aucune régression. Commit `d6a955c`, branche `test/authz-and-invariants` poussée, **PR #8 ouverte** |
 | 5 scénarios déjà couverts ailleurs (5,6,7,9,10) | **VALIDÉ EN PRODUCTION** (préexistant) | `admin-rbac.itest.ts`, `webhook-security.itest.ts`, `marketplace-order-idempotency.itest.ts`, `session-security.itest.ts` — déjà verts en CI avant l'incident |
-| Finding mineur (non bloquant) découvert pendant l'exécution réelle | **ÉCHEC PARTIEL, non critique** | Scénario 8 (transferts concurrents) : `lib/fraud/devices.ts` lève une violation de contrainte unique `(userId, fingerprint)` lors de deux enregistrements d'appareil concurrents — erreur journalisée (`fraud_record_device_failed`), **absorbée, ne fait pas échouer la requête ni le transfert**. À corriger séparément (hors périmètre de ce tour), sans urgence |
+| Finding mineur (non bloquant) découvert pendant l'exécution réelle | **RÉSOLU** | Scénario 8 (transferts concurrents) : `lib/fraud/devices.ts` levait une violation de contrainte unique `(userId, fingerprint)` lors de deux enregistrements d'appareil concurrents — **corrigé** (`find-then-create` → `upsert` atomique), 3 nouveaux tests prouvent 0 échec sous 20 enregistrements concurrents (`device-concurrency.itest.ts`, branche `test/authz-and-invariants`, PR #8) |
 
 ## Phase « P2.20 volet 3 » — Invariants comptables (nouveau ce tour)
 
@@ -94,7 +113,7 @@ non corrigé (décision produit), 1 lacune de couverture comblée :**
 | Durée par défaut du badge « Fournisseur vérifié » | **1 an par défaut** si l'admin ne précise pas de date à l'approbation | `lib/marketplace/seller-verification.ts::reviewSellerVerification` : `expiresAt: opts?.expiresAt ?? new Date(Date.now() + 365j)`. Une date explicite fournie par l'admin reste toujours respectée (le défaut ne s'applique QUE si rien n'est fourni). **Prouvé par 2 nouveaux tests** (`seller-verification.itest.ts`) : défaut ≈1 an confirmé à la seconde (tolérance 5s) ; date explicite jamais écrasée par le défaut |
 | Planification de `expireOverdueSellerVerifications()` | **Oui, cron quotidien** | Branchée dans le tick cron partagé existant (`app/api/v1/cron/tontine-tick/route.ts`, déjà horaire via GitHub Actions + quotidien via Vercel Cron) plutôt qu'une nouvelle entrée `vercel.json` dédiée — **aucun nouveau slot de cron Vercel** (le plan Hobby limite leur nombre, déjà documenté comme piège connu). Résultat exposé sous la clé `sellerVerifications` du tick |
 
-Suite complète après ce tour : **348/348 tests unitaires** (+5 fuzzing), **133/133 tests d'intégration (22 fichiers, +3)**, `tsc --noEmit` et `eslint` propres sur tous les fichiers touchés.
+Suite complète après ce tour : **348/348 tests unitaires** (+5 fuzzing), **134/134 tests d'intégration (22 fichiers)**, `tsc --noEmit` et `eslint` propres sur tous les fichiers touchés.
 
 ## Phase 5 — Marketplace et parcours de commande
 
@@ -129,7 +148,7 @@ Suite complète après ce tour : **348/348 tests unitaires** (+5 fuzzing), **133
 
 ## Phase 7 — Sécurité, finance, qualité
 
-Largement recoupée par P2.20 (volets 1 et 2) déjà traités. **Mise à jour** : les invariants comptables SONT écrits et verts (`test/integration/invariants.itest.ts`, **branche `test/authz-and-invariants`, non fusionnée** — l'affirmation précédente « jamais écrit » datait d'avant cette branche et n'a pas été corrigée au bon moment ; corrigé ici par vérification directe de l'état réel des 3 branches).
+Largement recoupée par P2.20 (volets 1 et 2) déjà traités. **Mise à jour** : les invariants comptables SONT écrits et verts (`test/integration/invariants.itest.ts`, branche `test/authz-and-invariants`, PR #8).
 
 **Fuzzing Zod — FAIT ce tour** : `fast-check` ajouté en devDependency (aucune vulnérabilité introduite, vérifié via `npm audit` — les 11 vulnérabilités du dépôt sont préexistantes et sans rapport). `lib/validations/marketplace.fuzz.test.ts` (5 tests, 3000 exécutions aléatoires au total) : `createItemSchema.safeParse` ne lève jamais sur un espace d'entrée adverse (NaN, ±Infinity, nombres énormes, chaînes arbitraires) et, en cas de succès, respecte TOUJOURS les bornes prix (fini, >0, ≤50M)/stock (entier, 1-9999) déclarées — prouvé, pas supposé. `imageDataUri` : jamais de dépassement de la limite 2,7 Mo ni de contournement du filtre MIME (jpeg/png/webp) par casse, espace ou type voisin. **0 défaut trouvé** — les schémas tiennent leurs bornes sous fuzzing.
 
@@ -139,26 +158,58 @@ Restent **NON AUDITÉS, hors de portée d'un agent de code** : DAST et pentest e
 
 ## Risques immédiats (mis à jour après exécution réelle)
 
-1. **État réel de la production toujours indéterminé** (P1.3, bloqué — classificateur automatique, pas une limite de ma part). **Ceci reste distinct et non résolu par les validations ci-dessous, qui ne portent que sur la base de test locale.**
-2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel (avec un vrai `prisma migrate reset`) n'a pas pu être testé de bout en bout, l'action a été bloquée par un classificateur distinct (« Cloud Storage Mass Delete »), malgré une cible confirmée locale et sûre.
-3. Fichiers KESSIA Shop toujours non commités (par conception, en attente d'autorisation dédiée) — confirmés intacts à chaque vérification de cette session.
-4. **Finding mineur non bloquant** : course sur `Device` (fingerprint) en cas de transferts concurrents — voir tableau P2.20 volet 2.
-5. Le cluster PostgreSQL 16 de test local tourne actuellement en arrière-plan (PID via `pg_ctl`, port 5433) — à arrêter proprement en fin de session.
-6. **Migration `20261012163104_add_seller_verification_and_delivery_tracking` appliquée au cluster de test local uniquement** — jamais exécutée en production, conformément à la consigne (« aucune migration en production sans autorisation explicite »). `prisma migrate deploy` en production reste une action du propriétaire.
-7. **3 branches poussées, aucune fusionnée** : `fix/db-test-reset-production-guard`, `test/authz-and-invariants`, `feat/seller-verification-and-miaride-tracking` (cette dernière contient Phase 4 + Phase 6 + l'auto-audit de ce tour). Aucune PR n'a été considérée comme fusionnée sans vérification — toutes restent à ouvrir/fusionner par le propriétaire. **Titres/descriptions de PR rédigés** (brouillons prêts à coller, pas publiés : aucun accès `gh`/API d'écriture GitHub dans cette session — confirmé à nouveau ce tour, `gh: command not found`).
-8. `docs/audit/PROGRESS_TRACKER.md` existe en parallèle sur 2 branches non fusionnées (`fix/db-test-reset-production-guard` et, depuis ce tour, `feat/seller-verification-and-miaride-tracking`) — contenu de base identique, sections Phase 4/6/Auto-audit ajoutées uniquement sur cette dernière. Fusion triviale attendue (ajouts en fin de section, pas de conflit de fond) mais à vérifier à la fusion des PR.
-9. **Correction d'un constat précédemment inexact** (ce tour) : ce fichier affirmait à tort qu'aucun webhook entrant MiaRide n'existait — un récepteur sécurisé et testé existe réellement (jamais appelé par un vrai MiaRide, faute de partenariat). Corrigé en Phase 6. Rappel pour la suite : vérifier l'état réel du code avant d'écrire un constat négatif, ne pas se fier à un balayage partiel.
+0. **Incident du 2026-10-12 : voir section dédiée en tête de ce fichier.** Le correctif est désormais câblé (`db:test:status`) et prouvé par 17 tests simulés, mais **jamais exécuté réellement, même contre le cluster local** — reste soumis à autorisation explicite.
+1. **État réel de la production toujours indéterminé** (P1.3, bloqué — classificateur automatique, pas une limite de ma part).
+2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel n'a pas pu être testé de bout en bout. **Confirmé : ce correctif n'existe que sur `fix/db-test-reset-production-guard` — absent de `main` tant que PR #7 n'est pas fusionnée.**
+3. Fichiers KESSIA Shop toujours non commités (par conception) — confirmés intacts à chaque vérification de cette session, y compris ce tour.
+4. **Finding course sur `Device` (fingerprint) — CORRIGÉ**, voir Phase « P2.20 volet 2 ».
+5. Le cluster PostgreSQL 16 de test local a été **utilisé avec succès ce tour** (authz/invariants ré-exécutés, 126/126 verts) — toujours actif, à arrêter proprement en fin de session de travail.
+6. **Migration `20261012163104_add_seller_verification_and_delivery_tracking` appliquée au cluster de test local uniquement** — jamais exécutée en production. `prisma migrate deploy` en production reste une action du propriétaire, non effectuée.
+7. **Partenariat MiaRide réel** : aucune action technique possible sans réponses du propriétaire/de MiaRide aux 10 questions listées dans `docs/integrations/miaride-integration-contract.md` — toujours sans réponse.
 
-## Validations humaines requises, en attente
+## Validations locales — dernière exécution réelle vérifiée cette session
 
-- Vérification Supabase (backups/logs) — §P1.2/P1.3. **Reste le blocage prioritaire distinct, non résolu par ce tour ni par aucune validation sur la base de test locale.**
-- Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture. Brouillon de titre/description prêt (voir note de session).
-- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3) — idem. Brouillon prêt.
-- **Ouverture de PR pour `feat/seller-verification-and-miaride-tracking`** (Phase 4 + Phase 6 + auto-audit, ce tour) — idem. Brouillon prêt, inclut le détail des 2 correctifs de concurrence/index appliqués après le commit initial.
-- **Application de la migration en production** (`prisma migrate deploy` avec les variables d'environnement production) pour Phase 4/6 — non effectuée, décision du propriétaire.
-- Décision sur le commit des fichiers KESSIA Shop (hors périmètre de cet incident, rappelé pour mémoire).
-- Décision sur le finding `lib/fraud/devices.ts` (corriger maintenant ou plus tard — non urgent, non exploité par un attaquant, juste un log d'erreur bruyant).
-- Décision sur la planification cron de `expireOverdueSellerVerifications()` (Phase 4) — fonction prête, non branchée.
-- **Décision produit sur l'absence de garde de statut dans `PATCH /admin/kyc/[id]`** (constat #5 de l'auto-audit) — comportement actuel (re-décision toujours permise) semble intentionnel, à confirmer avant toute correction.
-- **Partenariat MiaRide réel** — aucune action technique possible sans réponses du propriétaire/de MiaRide aux 10 questions listées dans `docs/integrations/miaride-integration-contract.md`.
-- DAST / pentest externe (Phase 7) — nécessite un outillage de sécurité dédié et une autorisation d'intrusion explicite, hors de portée de cette session agent.
+| Branche | Unitaires (tous mockés) | Intégration (cluster local réel) | `tsc`/`eslint` |
+|---|---|---|---|
+| `fix/db-test-reset-production-guard` (PR #7) | **351/351** (42 fichiers) | non ré-exécutée depuis (dernier statut connu : vert) | ✅ |
+| `test/authz-and-invariants` (PR #8) | 343/343 | **126/126** (22 fichiers, exécuté réellement contre le cluster local) | ✅ |
+| `feat/seller-verification-and-miaride-tracking` (PR #6) | 348/348 | 134/134 | ✅ |
+| `fix/prisma-adhoc-connection-guard` (PR #9) | **368/368** (44 fichiers, incl. les 17 tests simulés du correctif d'incident) | sans objet (rien ne touche une route/un service) | ✅ |
+
+## Bases, dépendances, CI et conflits — vérifiés rigoureusement (`git merge-base`/`git merge-tree`, plumbing read-only, puis confirmé en conditions réelles via l'API GitHub)
+
+**Bases** : PR #6/#7/#8 partent toutes de `c9992ef` (tip réel d'`origin/main`, vérifié par `git merge-base`). **PR #9 contient PR #7 (`fix/db-test-reset-production-guard`) comme ancêtre direct** — sa base est `fix/db-test-reset-production-guard`, PAS `main` (vérifié avant chaque création de PR, confirmé ensuite par l'API : `baseRefName` exact sur les 4 PR réelles).
+
+**Contrôles CI** (lecture directe des 4 fichiers `.github/workflows/*.yml`) : `ci.yml`/`integration.yml`/`e2e.yml`/`security.yml` se déclenchent tous sur `pull_request: branches: [main, develop]`, rien d'autre. **PR #6/#7/#8 (base `main`) les déclenchent. PR #9 (base `fix/db-test-reset-production-guard`) n'en déclenche AUCUN** — confirmé en conditions réelles après ouverture (seuls les checks Vercel apparaissent sur #9).
+
+**Conflits** : simulé par `git merge-tree --write-tree` avant ouverture des PR (3 étapes chaînées via `git commit-tree`, aucun commit réel) puis confirmé par l'API GitHub après ouverture (`mergeable: MERGEABLE` sur les 4). Le conflit réel est sur `docs/audit/PROGRESS_TRACKER.md` entre {PR #7 + PR #9} et PR #6 — confirmé dans les deux sens (peu importe laquelle fusionne en premier, l'autre hérite du conflit). `package.json` (modifié par PR #6 et PR #9) s'auto-fusionne proprement. PR #8 ne crée aucun conflit, dans aucun ordre.
+
+**Résolution préparée** : ce document constitue la réconciliation des 3 versions divergentes de `PROGRESS_TRACKER.md` (base commune 109 lignes + apports de PR #6 + apports de PR #9, fusionnés par `git merge-file`, un seul conflit réel résolu manuellement, aucune information perdue). Déposé directement sur la branche de PR #6 (`feat/seller-verification-and-miaride-tracking`) — **la fusion de PR #6 ne devrait donc plus produire de conflit sur ce fichier une fois PR #7/#9 fusionnées**, à revérifier au moment venu.
+
+## Accès GitHub — rétabli ce tour, 4 PR réelles ouvertes
+
+Le propriétaire a authentifié `gh` (compte `essotakougnadi-arch`, scopes `repo`+`workflow`). **Non trouvé dans le PATH des shells de cet outil** — localisé sur disque (`C:\Program Files\GitHub CLI\gh.exe`) et invoqué via son chemin complet. Permission vérifiée non destructivement (`gh repo view --json viewerPermission`) : **`ADMIN`**. Jamais de secret affiché (jeton toujours masqué par `gh`).
+
+**Exécuté (non destructif — édition de description + création de PR, aucune fusion, aucune commande Prisma, aucune connexion Supabase, aucun push forcé) :**
+
+| PR | Lien | Base | État au moment de ce rapport |
+|---|---|---|---|
+| **#6** | `github.com/essotakougnadi-arch/kessia/pull/6` | `main` | Description corrigée (reflète désormais KESSIA Verification + MiaRide, plus l'ancien texte erroné). `MERGEABLE`, `CLEAN`. CI : 10/10 `success` (confirmé via API). |
+| **#7** | `github.com/essotakougnadi-arch/kessia/pull/7` | `main` ✅ | `MERGEABLE`. CI : **10/10 `pass` réels, entièrement vertes** (codeql/verify/integration/playwright/secrets-scan/dependency-audit + 3 Vercel + CodeQL, durées réelles confirmées). |
+| **#8** | `github.com/essotakougnadi-arch/kessia/pull/8` | `main` ✅ | `MERGEABLE`. CI : **10/10 `pass` réels, entièrement vertes**, même détail que #7. |
+| **#9** | `github.com/essotakougnadi-arch/kessia/pull/9` | **`fix/db-test-reset-production-guard`** ✅ | `MERGEABLE`. Seuls les checks Vercel existent (confirmé, aucun workflow GitHub Actions ne s'applique) ; `Vercel – kessia` a montré un redéploiement ponctuel en `pending` sans aucun nouveau commit sur la branche ni sa base (vérifié par `git log` local vs `origin`) — comportement Vercel transitoire, pas un problème de code. |
+
+**Aucun conflit détecté par GitHub sur aucune des 4 PR** (`mergeable: MERGEABLE` partout).
+
+## Blocages réels restants
+
+1. **Récupération Supabase : incident distinct, toujours non résolu, ni confirmé récupéré ni confirmé perdu définitivement.** Action directe du propriétaire requise.
+2. Décision du propriétaire sur le moment de fusionner (ordre recommandé ci-dessous) — **aucune fusion effectuée**.
+3. Application de la migration en production (Phase 4/6) — décision du propriétaire, non technique.
+4. Partenariat MiaRide réel — réponses du propriétaire/MiaRide requises.
+5. Décision sur le commit des fichiers KESSIA Shop (hors périmètre).
+6. Vérifier que le check `Vercel – kessia` de PR #9 a bien fini de se déployer (`pending` au moment de ce rapport, sans rapport avec le code).
+
+## Prochaine action unique
+
+**Avec votre autorisation explicite, fusionner dans l'ordre #7 → #9 → #8 → #6.** #7/#8 sont entièrement vertes. #9 n'a aucun workflow GitHub Actions bloquant. La réconciliation du tracker pour la fusion de #6 est déjà déposée sur sa branche dans ce document.
