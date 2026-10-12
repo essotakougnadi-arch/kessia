@@ -8,11 +8,20 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 
 ## ⚠️ Incident du 2026-10-12 (session agent) — commande Prisma ad hoc, hôte distant non vérifié
 
-**BLOQUANT jusqu'à autorisation explicite du propriétaire.** Une commande `prisma migrate status` tapée directement (hors de tout script protégé) avec `DATABASE_URL` remplacée mais `DIRECT_URL` non remplacée s'est connectée à `aws-1-eu-west-1.pooler.supabase.com:5432` au lieu du cluster de test local — repli silencieux exactement de la même nature que la cause racine de l'incident de production original. Lecture seule par conception de la commande (pas de preuve de modification, mais pas de preuve absolue de son absence non plus — voir le rapport). Correctif proposé (ALLOWLIST, `scripts/require-local-db.mjs`), **pas câblé, pas exécuté contre aucune base**. Toute nouvelle commande Prisma ou vérification de base de données est suspendue jusqu'à autorisation explicite.
+**Toujours non résolu au sens strict — aucune commande Prisma réelle n'a été exécutée depuis, et aucune n'a été autorisée.** Une commande `prisma migrate status` tapée directement (hors de tout script protégé) avec `DATABASE_URL` remplacée mais `DIRECT_URL` non remplacée s'est connectée à `aws-1-eu-west-1.pooler.supabase.com:5432` au lieu du cluster de test local — repli silencieux exactement de la même nature que la cause racine de l'incident de production original. Lecture seule par conception de la commande (pas de preuve de modification, mais pas de preuve absolue de son absence non plus — voir le rapport).
 
-**Détail complet, preuves, et correctif proposé** : `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.
+**Détail complet, preuves** : `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.
 
-**Constat aggravant découvert pendant l'investigation (lecture seule, `git show`)** : le correctif de l'incident de production ORIGINAL (`DIRECT_URL` toujours résolue explicitement dans `db-test-reset.mjs`) n'existe que sur la branche `fix/db-test-reset-production-guard` — **absent de `main`**. `npm run db:test:reset` reproduirait aujourd'hui l'incident original sur `main` tel quel. Rappel direct de l'urgence de fusionner cette PR, indépendamment du présent incident.
+**Correctif désormais câblé, mais toujours jamais exécuté contre aucune base** :
+- `scripts/require-local-db.mjs` : garde ALLOWLIST (DATABASE_URL/DIRECT_URL identiques entre eux, identiques à `.env.test`, hôte loopback). **Auto-révisée** : sa description initiale sur-affirmait sa portée (« protège toute invocation ») — corrigée pour préciser qu'elle ne protège que ce qui l'appelle explicitement.
+- `scripts/run-local-only.mjs` (nouveau ce tour) : relais concret, nouveau script npm `db:test:status` => `prisma migrate status` via ce relais. Comble le vide réel qui a motivé la commande ad hoc incriminée.
+- **17 tests entièrement simulés** au total (`require-local-db.test.ts` 10 + `run-local-only.test.ts` 7) — `node:fs`/`execFileSync` moqués, **aucune commande réelle, aucune connexion, dans aucun de ces tests**.
+- **Limite structurelle non résolue, et qui ne peut PAS être résolue par ce seul correctif** : même câblé, rien n'empêche une commande Prisma tapée directement dans un terminal de contourner `db:test:status` — exactement le mécanisme de l'incident lui-même. Documenté explicitement dans le rapport et l'en-tête des deux scripts.
+- **La première exécution réelle de `db:test:status` (même contre le cluster local) n'a pas eu lieu et reste soumise à autorisation explicite du propriétaire.**
+
+**Constat aggravant (lecture seule, `git show`)** : le correctif de l'incident de production ORIGINAL (`DIRECT_URL` toujours résolue explicitement dans `db-test-reset.mjs`) n'existe que sur la branche `fix/db-test-reset-production-guard` — **absent de `main`**. `npm run db:test:reset` reproduirait aujourd'hui l'incident original sur `main` tel quel.
+
+**Délibérément NON fait** : `db-test-reset.mjs` lui-même n'a pas été modifié pour déléguer à `assertLocalTestPair()` — risquerait de casser son repli `E2E_DATABASE_URL` existant (8 tests déjà verts) sans bénéfice de sûreté démontré. Reporté comme nettoyage non urgent, pas un correctif de sûreté manquant.
 
 ---
 
@@ -104,30 +113,42 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 
 ## Risques immédiats (mis à jour après exécution réelle)
 
-0. **Incident du 2026-10-12 (ce tour) : voir section dédiée en tête de ce fichier.** Bloquant jusqu'à autorisation explicite.
+0. **Incident du 2026-10-12 : voir section dédiée en tête de ce fichier.** Le correctif est désormais câblé (`db:test:status`) et prouvé par 17 tests simulés, mais **jamais exécuté réellement, même contre le cluster local** — reste soumis à autorisation explicite.
 1. **État réel de la production toujours indéterminé** (P1.3, bloqué — classificateur automatique, pas une limite de ma part).
-2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel (avec un vrai `prisma migrate reset`) n'a pas pu être testé de bout en bout, l'action a été bloquée par un classificateur distinct (« Cloud Storage Mass Delete »), malgré une cible confirmée locale et sûre. **Confirmé ce tour (lecture seule, `git show`) : ce correctif n'existe que sur cette branche — absent de `main`.**
-3. Fichiers KESSIA Shop toujours non commités (par conception, en attente d'autorisation dédiée) — confirmés intacts à chaque vérification de cette session.
-4. **Finding course sur `Device` (fingerprint) — CORRIGÉ ce tour, sur une autre branche non fusionnée** (`test/authz-and-invariants`, commit `0d4bc6f`) : `recordDevice` remplace find-then-create par un upsert atomique, 3 nouveaux tests d'intégration prouvent 0 échec sous 20 enregistrements concurrents du même appareil (avant : certains retournaient `null`).
-5. Le cluster PostgreSQL 16 de test local tournait en arrière-plan avant l'incident du 2026-10-12 — son état n'a plus été vérifié depuis (aucune commande de vérification autorisée pour l'instant, voir section incident).
+2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel n'a pas pu être testé de bout en bout. **Confirmé : ce correctif n'existe que sur cette branche — absent de `main`.**
+3. Fichiers KESSIA Shop toujours non commités (par conception) — confirmés intacts à chaque vérification de cette session, y compris ce tour.
+4. **Finding course sur `Device` (fingerprint) — CORRIGÉ, re-confirmé ce tour contre le cluster local réel** (`test/authz-and-invariants`, commit `0d4bc6f`, toujours non poussé) : 126/126 tests d'intégration verts, dont les 3 nouveaux de `device-concurrency.itest.ts`.
+5. Le cluster PostgreSQL 16 de test local a été **utilisé avec succès ce tour** (authz/invariants ré-exécutés, 126/126 verts) — toujours actif, à arrêter proprement en fin de session de travail.
 
-## Tâches restantes (mises à jour 2026-10-12, après l'auto-révision du correctif d'incident)
+## Validations locales terminées ce tour (2026-10-12, suite à l'incident — aucune commande Prisma, aucune connexion distante)
 
-- Pousser `test/authz-and-invariants` (commit `0d4bc6f`, le correctif `recordDevice`) — committé localement, pas encore poussé.
-- Pousser `fix/prisma-adhoc-connection-guard` (commits `fcaf784`, `a5791cd`) — nouvelle branche, jamais poussée.
-- Ouvrir les 4 PR (brouillons précis prêts, titres/corps/tests par branche — voir note de session). PR 4 doit cibler `fix/db-test-reset-production-guard` comme base, pas `main`.
-- Décider du câblage du correctif proposé (`scripts/require-local-db.mjs`) — non câblé, et rester conscient de sa limite structurelle (ne protège pas une commande tapée directement) même une fois câblé.
-- Ré-exécuter la suite complète (unitaire + intégration) sur `fix/db-test-reset-production-guard`/`fix/prisma-adhoc-connection-guard` avant fusion — pas revérifiée cette session (seuls `tsc`/`eslint`/le test simulé ciblé ont tourné).
+| Branche | Unitaires (tous mockés) | Intégration (cluster local réel) | `tsc`/`eslint` |
+|---|---|---|---|
+| `fix/db-test-reset-production-guard` | **351/351** (42 fichiers, re-confirmé ce tour) | non ré-exécutée ce tour (dernier statut connu : vert) | ✅ |
+| `test/authz-and-invariants` | 343/343 (déjà confirmé) | **126/126** (22 fichiers, **re-exécuté réellement ce tour contre le cluster local**, autorisé explicitement) | ✅ |
+| `feat/seller-verification-and-miaride-tracking` | 348/348 (déjà confirmé, inchangé ce tour) | 134/134 (déjà confirmé, inchangé ce tour) | ✅ |
+| `fix/prisma-adhoc-connection-guard` | **368/368** (44 fichiers, re-confirmé ce tour avec les 17 nouveaux tests simulés) | sans objet (rien de nouveau ne touche une route/un service) | ✅ |
+
+## Contrôles CI et conflits identifiés pour les 4 PR (lecture seule des workflows et des diffs réels contre `origin/main`)
+
+- Les 4 workflows pertinents (`ci.yml`, `integration.yml`, `e2e.yml`, `security.yml`) se déclenchent tous sur `pull_request: branches: [main, develop]`. **PR 1/2/3 les déclenchent normalement. PR 4, si ouverte contre `fix/db-test-reset-production-guard` (base recommandée pour un diff propre), ne déclenche AUCUN des 4** — compromis réel à trancher (diff propre sans CI, ou diff bruité avec CI contre `main`).
+- **Conflit de fusion probable sur `docs/audit/PROGRESS_TRACKER.md`** entre PR 1, PR 3 et PR 4 (PR 2 ne le touche pas) — modifié indépendamment par les trois depuis le même point de départ. Ordre de fusion recommandé : **PR 1 → PR 4 → PR 2 (à tout moment) → PR 3**, avec réconciliation manuelle du tracker après PR 4 et après PR 3.
+- `package.json` : PR 3 (devDependency `fast-check`) et PR 4 (script `db:test:status`) le modifient toutes deux, sections différentes — probablement fusionnable automatiquement.
+- PR 4 dépend de PR 1 (contient ses commits) — à fusionner après elle, pas un vrai conflit.
+- Détail complet par PR : voir les 4 brouillons de PR préparés cette session (titres, corps, tests, contrôles CI attendus, conflits).
+
+## Tâches restantes
+
+- Pousser `test/authz-and-invariants` (commit `0d4bc6f`) et `fix/prisma-adhoc-connection-guard` (3 commits) — **toujours pas fait, sur instruction explicite de ne pas les pousser sans autorisation.**
+- Ouvrir les 4 PR dans l'ordre recommandé ci-dessus.
+- **Autoriser la première exécution réelle de `db:test:status`** (même contre le cluster local) — c'est la seule façon de prouver le câblage au-delà des tests simulés.
 - Appliquer la migration Phase 4/6 en production — non effectuée, décision du propriétaire.
 - Décision sur le commit des fichiers KESSIA Shop (hors périmètre, rappelé pour mémoire).
-- Décision sur la garde KYC devenue superflue à documenter une fois la PR 3 fusionnée (déjà tranchée et implémentée côté `feat/...`).
 
 ## Validations humaines requises, en attente
 
-- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma, tout test de connexion, ou toute connexion à une base distante — voir section dédiée en tête de fichier et `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.** Reste valable même après l'auto-révision du correctif proposé : celui-ci n'a toujours pas été câblé ni exécuté.
-- **Récupération Supabase : incident distinct, toujours non résolu.** Aucune action cette session (ni avant, ni pendant la gestion de l'incident Prisma ci-dessus) ne constitue une restauration, une migration, une écriture ou une connexion distante autorisée. Reste une action du propriétaire (dashboard/SQL editor Supabase).
-- Vérification Supabase (backups/logs) — §P1.2/P1.3.
-- Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture.
-- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3 + correctif `recordDevice`) — idem.
-- Ouverture de PR pour `fix/prisma-adhoc-connection-guard` (incident + correctif proposé) — idem, base = `fix/db-test-reset-production-guard`.
-- Décision sur le commit des fichiers KESSIA Shop (hors périmètre de cet incident, rappelé pour mémoire).
+- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma réelle (y compris `db:test:status` désormais câblé), tout test de connexion, ou toute connexion à une base distante.** Les validations locales de ce tour (tests mockés + intégration via vitest contre le cluster local) ne constituent PAS cette autorisation — elles n'ont jamais invoqué le CLI Prisma.
+- **Récupération Supabase : incident distinct, toujours non résolu.** Aucune action de cette session ne constitue une restauration, une migration, une écriture ou une connexion distante autorisée — ni confirmation que les données sont récupérées, ni qu'elles sont définitivement perdues. Reste une action directe du propriétaire (dashboard/SQL editor Supabase).
+- Ouverture des 4 PR (brouillons prêts) — pas d'accès API en écriture.
+- Décision sur l'ordre de fusion et la réconciliation du tracker (conflit identifié ci-dessus).
+- Décision sur le commit des fichiers KESSIA Shop.
