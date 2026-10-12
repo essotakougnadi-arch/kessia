@@ -16,8 +16,8 @@ describe('redact', () => {
 
   it('masque la valeur des champs password/secret/token/apiKey', () => {
     expect(redact('password=hunter2')).toBe('password=***');
-    expect(redact('token: "eyJhbGciOiJIUzI1NiJ9.abc.def"')).not.toContain('eyJhbGciOiJIUzI1NiJ9');
-    expect(redact('{"apiKey":"sk-abcdef123"}')).not.toContain('sk-abcdef123');
+    expect(redact('token: "placeholder-token-value"')).not.toContain('placeholder-token-value');
+    expect(redact('{"apiKey":"placeholder-api-key-value"}')).not.toContain('placeholder-api-key-value');
     expect(redact('JWT_SECRET=u6LDW3X7ufUF')).not.toContain('u6LDW3X7ufUF');
   });
 

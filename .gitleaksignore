@@ -1,0 +1,32 @@
+# KESSIA — exclusions Gitleaks précises (P2.20)
+#
+# Chaque ligne ci-dessous est une empreinte « commit fingerprint » au
+# format exact `commit:fichier:règle:ligne` (4 segments) — PAS le format
+# « global fingerprint » à 3 segments (`fichier:règle:ligne`, sans commit)
+# qui ignorerait la détection sur CE fichier/CETTE ligne quel que soit le
+# commit. Confirmé dans le code source de gitleaks v8.30.1
+# (detect/detect.go, AddGitleaksIgnore/AddFinding) : un fingerprint à 4
+# segments ne correspond, par égalité stricte de chaîne, qu'à CETTE
+# détection précise (ce commit + ce fichier + cette règle + cette ligne)
+# — aucune autre détection, passée ou future, ne peut jamais la matcher.
+#
+# Audit complet le 2026-10-12 : les 6 détections ci-dessous sont des
+# fixtures de test de lib/logger.test.ts / lib/security/redact.test.ts
+# (tests de redact()/redactDeep()) — un fragment générique d'en-tête JWT
+# tronqué ({"alg":"HS256"} suivi de segments non-base64 "abc"/"def",
+# donc syntaxiquement inutilisable comme jeton réel) et une chaîne
+# préfixée "sk-" suivie d'une suite alphabétique/numérique séquentielle
+# (jamais aléatoire). Confirmé par lecture du code, par l'historique
+# (ces 3 commits n'ont jamais contenu une autre valeur à ces lignes) et
+# par le message du commit eb8bc44 lui-même, qui documente un audit
+# antérieur n'ayant trouvé aucun secret réel dans tout l'historique.
+# Le contenu ACTUEL de ces 2 fichiers a déjà été corrigé séparément
+# (valeurs remplacées par des placeholders neutres) — ces empreintes ne
+# couvrent que les 3 anciens commits, immuables, où les valeurs
+# d'origine subsistent dans l'historique Git.
+eb8bc44b88a60460fac904d1b0dbe23da2f5d68a:kessia-app/lib/logger.test.ts:generic-api-key:19
+eb8bc44b88a60460fac904d1b0dbe23da2f5d68a:kessia-app/lib/logger.test.ts:generic-api-key:20
+c37eb1e61b946b4e3b7b1e63bd58e77ee7c2113d:kessia-app/lib/security/redact.test.ts:generic-api-key:23
+c37eb1e61b946b4e3b7b1e63bd58e77ee7c2113d:kessia-app/lib/security/redact.test.ts:generic-api-key:24
+3f49af7a916c3dfe1f19fbb867e002c0df1c5558:kessia-app/lib/security/redact.test.ts:generic-api-key:96
+3f49af7a916c3dfe1f19fbb867e002c0df1c5558:kessia-app/lib/security/redact.test.ts:generic-api-key:115
