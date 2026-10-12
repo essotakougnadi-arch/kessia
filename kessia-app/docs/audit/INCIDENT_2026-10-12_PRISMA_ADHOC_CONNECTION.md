@@ -58,9 +58,15 @@ Nouveau module `scripts/require-local-db.mjs` (ALLOWLIST, complémentaire à la 
 - Exige qu'ils soient strictement identiques entre eux.
 - Exige qu'ils correspondent strictement à la valeur documentée dans `.env.test`.
 - Exige, en défense en profondeur, un hôte loopback (`127.0.0.1`/`localhost`) — même si `.env.test` lui-même était un jour mal configuré.
-- Conçue pour être réutilisable par **toute** invocation Prisma destinée à la base de test — y compris de futures invocations non encore écrites, pas seulement les scripts déjà existants.
+- Peut être appelée par n'importe quel wrapper Node futur avant de lancer Prisma — mais ne protège, par elle-même, **aucune** invocation qui ne l'appelle pas explicitement (voir « Limite structurelle » ci-dessous : ce n'est PAS une protection automatique et universelle).
 
 Preuve par tests **entièrement simulés** (`scripts/require-local-db.test.ts`, 10 tests, `node:fs` moqué, aucune connexion réseau, aucun process Prisma lancé) : couvre exactement le scénario de cet incident (`DATABASE_URL` fournie, `DIRECT_URL` absente → refusé), plus les variantes (URLs différentes, ne correspondant pas à `.env.test`, hôte non-loopback, `.env.test` absent, cas valides). **10/10 verts.** `tsc --noEmit` et `eslint` propres.
+
+**Ce que ces 10 tests prouvent, exactement — ni plus ni moins** : que la fonction `assertLocalTestPair()`, SI elle est appelée avec des arguments donnés, renvoie la bonne décision (accepté/refusé) selon les règles ci-dessus. Ils ne prouvent PAS, et ne peuvent pas prouver, qu'elle sera effectivement appelée avant une commande Prisma donnée — c'est une question de câblage (§ »Câblage proposé »), pas de logique interne.
+
+### Limite structurelle — à ne jamais présenter comme résolue par ce correctif
+
+**Ce correctif, même entièrement câblé selon la proposition ci-dessous, ne peut PAS empêcher une commande Prisma tapée directement dans un terminal.** C'est exactement le mécanisme de cet incident : une commande ad hoc, jamais passée par un script protégé. Un nouveau script `db:test:status` offrirait un chemin sûr *disponible*, mais rien n'empêche quiconque (humain ou agent, y compris moi-même dans une session future) de taper `npx prisma migrate status` directement et de contourner ce chemin comme `guard-db-command.mjs` a été contourné cette fois-ci. Réduire ce risque à la source demanderait un mécanisme hors du niveau applicatif de ce dépôt (restriction réseau sur le poste/l'environnement d'exécution, identifiants de production absents de toute machine de développement, hook shell, etc.) — **aucun de ces mécanismes n'est proposé ici** ; ce correctif réduit la probabilité de récidive si la convention « toujours passer par un script `db:*` » est respectée, il ne l'élimine pas structurellement.
 
 ### Câblage proposé (texte ci-dessous — PAS appliqué, en attente d'autorisation)
 

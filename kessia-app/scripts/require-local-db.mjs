@@ -14,17 +14,28 @@
 //      même si .env.test lui-même était un jour mal configuré.
 //
 // Une DENYLIST ne protège que contre une cible déjà connue comme
-// dangereuse. Cette ALLOWLIST protège contre TOUTE cible qui n'est pas
-// explicitement et positivement la base de test attendue — y compris
-// une invocation Prisma ad hoc non encore écrite (c'est exactement ce
-// qui a échappé à guard-db-command.mjs lors de l'incident : une
-// commande tapée directement, jamais passée par un script protégé).
+// dangereuse. Cette ALLOWLIST vérifie positivement que la cible EST la
+// base de test attendue — mais UNIQUEMENT pour le code qui l'appelle
+// explicitement. Elle ne protège RIEN tant que rien ne l'invoque.
+//
+// LIMITE STRUCTURELLE IMPORTANTE, À NE JAMAIS PRÉSENTER COMME RÉSOLUE :
+// ce module ne peut PAS empêcher une commande Prisma tapée directement
+// dans un terminal (`npx prisma …`) — exactement le mécanisme de
+// l'incident du 2026-10-12. Un futur wrapper Node (ex. un nouveau
+// script `db:test:status`) PEUT appeler cette fonction avant de lancer
+// Prisma, ce qui réduirait la récidive SI cette convention est
+// respectée — mais rien n'oblige quiconque (humain ou agent) à passer
+// par ce wrapper plutôt que par `npx prisma` directement. Fermer cette
+// classe de risque demanderait un mécanisme hors du niveau applicatif
+// (ex. restriction réseau, séparation des identifiants, hook shell) —
+// hors périmètre de ce module, non proposé ici.
 //
 // PROPOSÉ, PAS ENCORE CÂBLÉ : aucun script package.json n'appelle ce
 // module pour le moment. Voir le rapport d'incident pour le câblage
 // proposé (nouveau script `db:test:status`, et remplacement de la
 // vérification de db-test-reset.mjs par celle-ci pour éviter la
-// duplication de logique entre les deux fichiers).
+// duplication de logique entre les deux fichiers) — et pour la limite
+// ci-dessus, qui s'applique même une fois ce câblage fait.
 // ============================================================
 
 import { existsSync, readFileSync } from 'node:fs';
