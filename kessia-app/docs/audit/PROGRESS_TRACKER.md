@@ -190,13 +190,17 @@ Demandé explicitement ce tour. Vérifié avant de conclure (pas supposé par ha
 **Texte de remplacement exact pour la description de PR #6** (à coller manuellement) :
 > Implémente KESSIA Verification (badge « Fournisseur vérifié » : soumission de documents, revue admin COMPLIANCE_ROLES, expiration) et le suivi de livraison KESSIA–MiaRide (`kessiaTrackingCode` généré par KESSIA, distinct de `providerRef` ; preuve photo d'étiquette). Auto-audit inclus : index Prisma redondant supprimé, course de concurrence sur l'approbation corrigée (doublon notification/audit), 3 décisions produit tranchées explicitement par le propriétaire (garde KYC préservée, expiration badge 1 an par défaut, cron d'expiration branché). Migration additive pure, appliquée au cluster de test local uniquement. 348/348 unitaires, 134/134 intégration.
 
-**Diffs réels re-confirmés ce tour (`git diff --shortstat`, read-only) pour les 3 PR à ouvrir :**
+**Diffs réels re-confirmés ce tour (`git diff --name-status`, read-only) pour les 3 PR à ouvrir :**
 
-| PR à ouvrir | Base | Diff réel |
+| PR | Base | Fichiers (statut) |
 |---|---|---|
-| 1 — `fix/db-test-reset-production-guard` | `main` | 3 fichiers, +365/-45 |
-| 2 — `test/authz-and-invariants` | `main` | 7 fichiers, +746/-28 |
-| 4 — `fix/prisma-adhoc-connection-guard` | `fix/db-test-reset-production-guard` (demandé explicitement, confirme la recommandation déjà vérifiée) | 7 fichiers, +696/-9 |
+| 1 — `fix/db-test-reset-production-guard` | `main` | `docs/audit/PROGRESS_TRACKER.md` (A), `scripts/db-test-reset.mjs` (M), `scripts/db-test-reset.test.ts` (A) — 3 fichiers, +365/-45 |
+| 2 — `test/authz-and-invariants` | `main` | `lib/fraud/devices.ts` (M), `lib/observability/no-sensitive-console-log.test.ts` (M), `test/integration/{authz,device-concurrency,invariants}.itest.ts` (A×3), `test/integration/{marketplace-settlement,tontine-concurrency}.itest.ts` (M×2) — 7 fichiers, +746/-28 |
+| 4 — `fix/prisma-adhoc-connection-guard` | **`fix/db-test-reset-production-guard` — base ré-vérifiée impérativement par `git merge-base` ce tour : son tip (`9b9cdaa`) EST l'ancêtre direct confirmé** | `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md` (A), `docs/audit/PROGRESS_TRACKER.md` (M), `package.json` (M), `scripts/require-local-db.mjs` (A), `scripts/require-local-db.test.ts` (A), `scripts/run-local-only.mjs` (A), `scripts/run-local-only.test.ts` (A) — 7 fichiers, +696/-9. **Ne contient plus `db-test-reset.mjs`/`.test.ts`** (déjà dans cette base) — confirme le bénéfice du bon choix de base. |
+
+**PR #6 re-vérifiée au moment de ce rapport (API GitHub)** : `state=open`, `mergeable_state=clean`, `head.sha=dba47cf5…`, `commits=3`, `changed_files=23` — inchangée depuis la vérification précédente.
+
+**Workflows CI re-confirmés une 3ᵉ fois (lecture directe des 4 fichiers `.yml`)** : `ci.yml`/`integration.yml`/`e2e.yml`/`security.yml` déclenchent uniquement sur `pull_request: branches: [main, develop]`. PR 1/2 (base `main`) les déclenchent. **PR 4 (base `fix/db-test-reset-production-guard`) n'en déclenche aucun** — confirmé, pas un oubli.
 
 ## Tâches restantes
 
