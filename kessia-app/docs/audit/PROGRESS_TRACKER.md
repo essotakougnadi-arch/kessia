@@ -129,13 +129,29 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 | `feat/seller-verification-and-miaride-tracking` | 348/348 (déjà confirmé, inchangé ce tour) | 134/134 (déjà confirmé, inchangé ce tour) | ✅ |
 | `fix/prisma-adhoc-connection-guard` | **368/368** (44 fichiers, re-confirmé ce tour avec les 17 nouveaux tests simulés) | sans objet (rien de nouveau ne touche une route/un service) | ✅ |
 
-## Contrôles CI et conflits identifiés pour les 4 PR (lecture seule des workflows et des diffs réels contre `origin/main`)
+## Contrôles CI et conflits — vérifiés rigoureusement ce tour (`git merge-tree`, plumbing read-only, zéro branche/historique modifié)
 
-- Les 4 workflows pertinents (`ci.yml`, `integration.yml`, `e2e.yml`, `security.yml`) se déclenchent tous sur `pull_request: branches: [main, develop]`. **PR 1/2/3 les déclenchent normalement. PR 4, si ouverte contre `fix/db-test-reset-production-guard` (base recommandée pour un diff propre), ne déclenche AUCUN des 4** — compromis réel à trancher (diff propre sans CI, ou diff bruité avec CI contre `main`).
-- **Conflit de fusion probable sur `docs/audit/PROGRESS_TRACKER.md`** entre PR 1, PR 3 et PR 4 (PR 2 ne le touche pas) — modifié indépendamment par les trois depuis le même point de départ. Ordre de fusion recommandé : **PR 1 → PR 4 → PR 2 (à tout moment) → PR 3**, avec réconciliation manuelle du tracker après PR 4 et après PR 3.
-- `package.json` : PR 3 (devDependency `fast-check`) et PR 4 (script `db:test:status`) le modifient toutes deux, sections différentes — probablement fusionnable automatiquement.
-- PR 4 dépend de PR 1 (contient ses commits) — à fusionner après elle, pas un vrai conflit.
-- Détail complet par PR : voir les 4 brouillons de PR préparés cette session (titres, corps, tests, contrôles CI attendus, conflits).
+**Bases ré-vérifiées par `git merge-base`** (pas supposées) : PR 1/2/3 partent toutes de `c9992ef` (tip réel d'`origin/main`). **PR 4 contient PR 1 comme ancêtre direct** (`git merge-base fix/db-test-reset-production-guard fix/prisma-adhoc-connection-guard` = tip exact de PR 1) — confirme la dépendance, pas juste un point de départ commun.
+
+**Contrôles CI** (relu directement dans les 4 fichiers `.github/workflows/*.yml`, pas de mémoire) : `ci.yml`/`integration.yml`/`e2e.yml`/`security.yml` se déclenchent tous sur `pull_request: branches: [main, develop]`, rien d'autre. **PR 1/2/3 les déclenchent. PR 4, ouverte contre `fix/db-test-reset-production-guard`, n'en déclenche AUCUN** — compromis réel (diff propre sans CI, ou diff bruité avec CI contre `main`).
+
+**Conflits — simulés réellement avec `git merge-tree --write-tree` (3 étapes chaînées via `git commit-tree`, aucun commit réel, aucune branche touchée, objets orphelins harmless laissés dans `.git/objects`)** :
+1. `origin/main` + PR 1 → **propre**.
+2. (résultat) + PR 4 → **propre** (confirme : PR 4 après PR 1 ne crée aucun nouveau conflit).
+3. (résultat) + PR 3 → **`CONFLICT (add/add)` RÉEL et confirmé sur `kessia-app/docs/audit/PROGRESS_TRACKER.md`** ; `kessia-app/package.json` s'auto-fusionne proprement (confirmé, pas supposé) malgré que PR 3 et PR 4 le modifient toutes deux (sections différentes : devDependency `fast-check` vs script `db:test:status`).
+4. (résultat de l'étape 1) + PR 2, indépendamment → **propre** (PR 2 ne touche ni le tracker ni `package.json`, fusionnable à tout moment sans égard à l'ordre des 3 autres).
+
+**Ordre de fusion recommandé, maintenant vérifié et non plus seulement déduit : PR 1 → PR 4 → PR 2 (à tout moment) → PR 3**, avec réconciliation MANUELLE du contenu de `PROGRESS_TRACKER.md` au moment de fusionner PR 3 (seul conflit réel de tout le lot).
+
+Détail complet par PR : voir les 4 brouillons de PR préparés cette session (titres, corps, tests, contrôles CI attendus, conflits).
+
+## Migrations et schéma — vérifiés statiquement ce tour (`git show`, aucune commande Prisma, aucune connexion)
+
+- **Seule `feat/seller-verification-and-miaride-tracking` touche `prisma/schema.prisma`/`prisma/migrations/`** — confirmé par diff de noms de fichiers sur les 4 branches contre `origin/main` : aucun conflit de schéma possible entre les 4 PR.
+- Migration `20261012163104_add_seller_verification_and_delivery_tracking` relue intégralement : **purement additive** (2 `CREATE TYPE`, 1 `ALTER TABLE ADD COLUMN` ×4, 2 `CREATE TABLE`, 3 `CREATE INDEX`, 2 `ADD FOREIGN KEY`) — aucun `DROP`, aucune modification de type de colonne existante, aucune perte de données possible.
+- Schéma ↔ migration cohérents (vérifié champ par champ) : l'index redondant sur `kessiaTrackingCode` corrigé plus tôt cette session reste bien absent (un seul `@unique`, pas de `@@index` séparé).
+- `SellerVerificationDocument` n'indexe pas sa propre clé étrangère `verificationId` — **vérifié que c'est cohérent avec la convention existante** (`KycDocument.kycCaseId` non plus), pas un oubli introduit ce tour.
+- 5 migrations au total sur cette branche, dans le bon ordre chronologique, `migration_lock.toml` inchangé (provider toujours `postgresql`).
 
 ## Tâches restantes
 
