@@ -101,6 +101,13 @@ export async function submitSellerVerification(
 
 export type ReviewDecision = 'APPROVED' | 'REJECTED';
 
+// Renouvellement annuel implicite (décision propriétaire, 2026-10-12) :
+// si l'admin n'indique pas de date d'expiration à l'approbation, le
+// badge expire automatiquement 1 an après. L'admin peut toujours fixer
+// une autre date explicitement — seule l'ABSENCE de date déclenche ce
+// défaut (`opts?.expiresAt` nul/absent ≠ une date explicite).
+const DEFAULT_APPROVAL_VALIDITY_MS = 365 * 24 * 60 * 60 * 1000;
+
 export type ReviewResult =
   | { ok: true; status: SellerVerificationStatus }
   | { ok: false; error: string; code?: 'NOT_FOUND' | 'CONFLICT' };
@@ -134,7 +141,7 @@ export async function reviewSellerVerification(
       reviewedById: adminUserId,
       reviewedAt: new Date(),
       rejectionReason: decision === 'REJECTED' ? opts?.rejectionReason ?? null : null,
-      expiresAt: decision === 'APPROVED' ? opts?.expiresAt ?? null : null,
+      expiresAt: decision === 'APPROVED' ? opts?.expiresAt ?? new Date(Date.now() + DEFAULT_APPROVAL_VALIDITY_MS) : null,
     },
   });
   if (result.count === 0) {

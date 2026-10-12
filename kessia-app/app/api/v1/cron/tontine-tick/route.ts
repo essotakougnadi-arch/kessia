@@ -16,6 +16,7 @@ import { runCustomerReminders } from '@/lib/reminders/customer-reminders';
 import { runDeliveryTick } from '@/lib/delivery';
 import { runMarketplaceEscrowTick } from '@/lib/marketplace/escrow';
 import { runRetentionPurge } from '@/lib/privacy/retention';
+import { expireOverdueSellerVerifications } from '@/lib/marketplace/seller-verification';
 import { recordAudit } from '@/lib/audit/audit.service';
 import { ok, unauthorized, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
@@ -42,7 +43,7 @@ async function handle(request: NextRequest) {
     // second appel en no-op tracé plutôt que de traiter les mêmes
     // tontines/livraisons/relances deux fois en parallèle.
     const lock = await withAdvisoryLock('kessia:cron:tontine-tick', async () => {
-      const [tontine, reminders, deliveries, escrow, retention] = await Promise.all([
+      const [tontine, reminders, deliveries, escrow, retention, sellerVerifications] = await Promise.all([
         runTontineTick(),
         runCustomerReminders().catch((e) => {
           logApiError('/v1/cron/tontine-tick:reminders', e);
@@ -60,8 +61,16 @@ async function handle(request: NextRequest) {
           logApiError('/v1/cron/tontine-tick:retention', e);
           return { otps: 0, sessions: 0, notifications: 0, auditLogs: 0 };
         }),
+        // Badge « Fournisseur vérifié » : renouvellement annuel implicite
+        // (décision propriétaire, 2026-10-12) — bascule APPROVED→EXPIRED
+        // une fois l'échéance dépassée, réutilise ce tick plutôt qu'une
+        // nouvelle entrée de cron Vercel dédiée.
+        expireOverdueSellerVerifications().catch((e) => {
+          logApiError('/v1/cron/tontine-tick:seller-verifications', e);
+          return { expired: 0 };
+        }),
       ]);
-      return { tontine, reminders, deliveries, escrow, retention };
+      return { tontine, reminders, deliveries, escrow, retention, sellerVerifications };
     });
 
     if (lock.skipped) {
@@ -75,7 +84,7 @@ async function handle(request: NextRequest) {
       request,
     });
 
-    return ok(lock.result, 'Tick exécuté (tontines + relances + livraisons + séquestre marketplace + purge rétention).');
+    return ok(lock.result, 'Tick exécuté (tontines + relances + livraisons + séquestre marketplace + purge rétention + expiration badges fournisseur).');
   } catch (e) {
     logApiError('/v1/cron/tontine-tick', e);
     return serverError();

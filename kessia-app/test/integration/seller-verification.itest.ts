@@ -164,6 +164,43 @@ describe('reviewSellerVerification — décision admin, badge, audit', () => {
     expect(audit).toBeTruthy();
   });
 
+  it('approbation sans date explicite : expiresAt par défaut ~1 an plus tard (renouvellement annuel implicite, décision propriétaire)', async () => {
+    const owner = await makeUser({ balance: 0 });
+    const admin = await makeUser({ balance: 0 });
+    userIds.push(owner.id, admin.id);
+    const business = await makeBusiness(owner.id);
+    const sub = await submitSellerVerification(business.id, owner.id, [{ type: 'OTHER', fileUrl: FAKE_IMAGE }]);
+    if (!sub.ok) throw new Error('setup');
+
+    const before = Date.now();
+    const r = await reviewSellerVerification(sub.verificationId, admin.id, 'APPROVED');
+    expect(r.ok).toBe(true);
+
+    const v = await prisma.sellerVerification.findUniqueOrThrow({ where: { id: sub.verificationId } });
+    expect(v.expiresAt).not.toBeNull();
+    const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+    const delta = v.expiresAt!.getTime() - before;
+    expect(delta).toBeGreaterThan(oneYearMs - 5_000); // tolérance d'exécution
+    expect(delta).toBeLessThan(oneYearMs + 5_000);
+    expect(isSellerVerifiedBadgeActive(v)).toBe(true);
+  });
+
+  it('approbation avec date explicite : le défaut d\'1 an ne s\'applique pas, la date fournie est respectée', async () => {
+    const owner = await makeUser({ balance: 0 });
+    const admin = await makeUser({ balance: 0 });
+    userIds.push(owner.id, admin.id);
+    const business = await makeBusiness(owner.id);
+    const sub = await submitSellerVerification(business.id, owner.id, [{ type: 'OTHER', fileUrl: FAKE_IMAGE }]);
+    if (!sub.ok) throw new Error('setup');
+
+    const explicit = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 jours
+    const r = await reviewSellerVerification(sub.verificationId, admin.id, 'APPROVED', { expiresAt: explicit });
+    expect(r.ok).toBe(true);
+
+    const v = await prisma.sellerVerification.findUniqueOrThrow({ where: { id: sub.verificationId } });
+    expect(v.expiresAt?.getTime()).toBe(explicit.getTime());
+  });
+
   it('refus : exige un motif, statut REJECTED, badge jamais actif', async () => {
     const owner = await makeUser({ balance: 0 });
     const admin = await makeUser({ balance: 0 });
