@@ -183,11 +183,25 @@ Vérifié avant publication (pas supposé) : `git status`/`git remote -v` (1 seu
 
 **Ordre de fusion — recomputé pour l'état réel (PR #6 prête, les 3 autres pas encore ouvertes), par nouvelle simulation `git merge-tree`** : fusionner PR #6 maintenant contre `main` actuel est **propre, confirmé**. Mais si elle fusionne AVANT que PR 1 soit ouverte/fusionnée, c'est alors **PR 1 (puis PR 4, qui en dépend)** qui hérite du conflit `PROGRESS_TRACKER.md` déjà identifié — **vérifié à nouveau dans ce sens précis, pas supposé symétrique**. Le conflit ne disparaît pas selon l'ordre, il change simplement de PR. Choix réel, pas un blocage : fusionner #6 maintenant (elle est prête, verte, déployée) et réconcilier le tracker à la fusion de PR 1/PR 4 ensuite ; ou attendre d'ouvrir PR 1/PR 4 et les fusionner avant #6 pour que le conflit tombe sur #6 à la place. PR 2 reste sans conflit dans tous les cas, à tout moment.
 
+## Tentative de correction de PR #6 et d'ouverture des 3 PR manquantes — confirmé IMPOSSIBLE depuis cette session
+
+Demandé explicitement ce tour. Vérifié avant de conclure (pas supposé par habitude) : aucune variable d'environnement `GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_PAT` présente, `gh` toujours introuvable. L'API publique GitHub permet la LECTURE sans authentification (utilisée pour vérifier PR #6) mais pas l'ÉCRITURE (créer une PR, modifier une description) sans token valide — absent. **Aucune tentative d'écriture n'a été faite** (pas de requête `POST`/`PATCH` envoyée) : la vérification s'est arrêtée à la détection de l'absence de token, par construction, pas par échec d'exécution.
+
+**Texte de remplacement exact pour la description de PR #6** (à coller manuellement) :
+> Implémente KESSIA Verification (badge « Fournisseur vérifié » : soumission de documents, revue admin COMPLIANCE_ROLES, expiration) et le suivi de livraison KESSIA–MiaRide (`kessiaTrackingCode` généré par KESSIA, distinct de `providerRef` ; preuve photo d'étiquette). Auto-audit inclus : index Prisma redondant supprimé, course de concurrence sur l'approbation corrigée (doublon notification/audit), 3 décisions produit tranchées explicitement par le propriétaire (garde KYC préservée, expiration badge 1 an par défaut, cron d'expiration branché). Migration additive pure, appliquée au cluster de test local uniquement. 348/348 unitaires, 134/134 intégration.
+
+**Diffs réels re-confirmés ce tour (`git diff --shortstat`, read-only) pour les 3 PR à ouvrir :**
+
+| PR à ouvrir | Base | Diff réel |
+|---|---|---|
+| 1 — `fix/db-test-reset-production-guard` | `main` | 3 fichiers, +365/-45 |
+| 2 — `test/authz-and-invariants` | `main` | 7 fichiers, +746/-28 |
+| 4 — `fix/prisma-adhoc-connection-guard` | `fix/db-test-reset-production-guard` (demandé explicitement, confirme la recommandation déjà vérifiée) | 7 fichiers, +696/-9 |
+
 ## Tâches restantes
 
-- **Corriger la description de la PR #6** (texte correct fourni) avant toute fusion.
-- **Ouvrir les 3 PR manquantes** (PR 1, PR 2, PR 4) — liens et textes exacts fournis.
-- Décider de l'ordre réel de fusion maintenant que PR #6 est seule prête (voir ci-dessus) — **aucune fusion effectuée, sur instruction explicite**.
+- **Vous** : corriger manuellement la description de PR #6 (texte ci-dessus), ouvrir les 3 PR manquantes (liens/titres/corps dans le rapport de ce tour).
+- Décider de l'ordre réel de fusion maintenant que PR #6 est seule prête — **aucune fusion effectuée, sur instruction explicite**.
 - **Autoriser la première exécution réelle de `db:test:status`** (même contre le cluster local).
 - Appliquer la migration Phase 4/6 en production — non effectuée, décision du propriétaire.
 - Décision sur le commit des fichiers KESSIA Shop.
