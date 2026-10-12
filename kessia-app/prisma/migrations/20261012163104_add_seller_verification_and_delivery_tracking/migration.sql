@@ -49,10 +49,11 @@ CREATE UNIQUE INDEX "seller_verifications_businessId_key" ON "seller_verificatio
 CREATE INDEX "seller_verifications_status_idx" ON "seller_verifications"("status");
 
 -- CreateIndex
+-- Index unique uniquement : PostgreSQL l'utilise déjà pour toute
+-- recherche par égalité sur cette colonne — un @@index séparé sur la
+-- même colonne serait un doublon pur (aucun bénéfice de lecture,
+-- coût d'écriture en double à chaque INSERT/UPDATE).
 CREATE UNIQUE INDEX "marketplace_deliveries_kessiaTrackingCode_key" ON "marketplace_deliveries"("kessiaTrackingCode");
-
--- CreateIndex
-CREATE INDEX "marketplace_deliveries_kessiaTrackingCode_idx" ON "marketplace_deliveries"("kessiaTrackingCode");
 
 -- AddForeignKey
 ALTER TABLE "seller_verifications" ADD CONSTRAINT "seller_verifications_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;

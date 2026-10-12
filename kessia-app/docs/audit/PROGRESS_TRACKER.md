@@ -66,8 +66,25 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 | Logique | `lib/marketplace/seller-verification.ts` : `submitSellerVerification` (contrôle automatique = complétude profil `phone`+`city`, seul contrôle auto implémenté — pas de vérif externe inventée), `reviewSellerVerification` (motif obligatoire si refus), `isSellerVerifiedBadgeActive`, `expireOverdueSellerVerifications` |
 | Routes | `GET/POST /api/v1/business/[id]/verification` (propriétaire), `GET /api/v1/admin/seller-verifications` + `GET/PATCH /api/v1/admin/seller-verifications/[id]` (COMPLIANCE_ROLES) |
 | Badge affiché | `sellerVerified` dans `serializeItem()` (catalogue + détail Marketplace), jamais vrai sans `APPROVED` + non expiré |
-| Tests | `test/integration/seller-verification.itest.ts`, **11/11 verts** contre le cluster réel (soumission, permissions, cycle approbation/refus, badge, renouvellement après refus, audit, routes HTTP bout en bout) |
+| Tests | `test/integration/seller-verification.itest.ts`, **14/14 verts** contre le cluster réel (soumission, permissions, cycle approbation/refus, badge, renouvellement après refus, audit, routes HTTP bout en bout, **+3 ce tour** : soumissions concurrentes, revue concurrente, route liste admin) |
 | Audit | `recordAudit({action:'seller_verification.submitted'\|'.approved'\|'.rejected', ...})` — fire-and-forget, comme le reste du code existant |
+
+## Auto-audit du commit `941e970` (ce tour, sur demande explicite)
+
+Relecture critique du code, des migrations, des permissions, des tests et
+des fichiers non commités du commit livrant les Phases 4 et 6. **2
+problèmes démontrés et corrigés, 1 problème démontré et volontairement
+non corrigé (décision produit), 1 lacune de couverture comblée :**
+
+| # | Constat | Preuve | Action |
+|---|---|---|---|
+| 1 | `MarketplaceDelivery.kessiaTrackingCode` portait à la fois `@unique` (crée déjà un index) et un `@@index` séparé sur la même colonne — doublon pur, surcoût d'écriture sans bénéfice de lecture | Lecture de schéma | **Corrigé** : `@@index` retiré de `prisma/schema.prisma` et de la migration ; index redondant supprimé sur le cluster de test local, checksum de la migration resynchronisé (`prisma migrate status` → à jour) |
+| 2 | `reviewSellerVerification` ne gardait le statut `PENDING_REVIEW` qu'à la LECTURE, pas dans le WHERE de l'écriture — deux décisions concurrentes (double-clic admin) pouvaient toutes deux réussir | **Prouvé par test avant correctif** : 20 appels concurrents sur le même dossier → 20/20 réussissaient, 20 notifications + 20 entrées d'audit dupliquées | **Corrigé** : transition rendue atomique (`updateMany({where:{id,status:'PENDING_REVIEW'}})`, `count===0` → CONFLICT). **Revalidé après correctif** : 1/20 réussit, 19 CONFLICT propres, 1 seule notification, 1 seul audit. `test/integration/seller-verification.itest.ts` |
+| 3 | Même classe de course potentielle sur `submitSellerVerification` (deux soumissions concurrentes avant tout dossier existant) | **Testé, prouvé SÛR sans modification** : 10 appels concurrents → tous réussissent proprement, un seul dossier créé (l'upsert Prisma/Postgres absorbe la course) | Aucun correctif nécessaire — comportement sûr confirmé par preuve, pas par supposition |
+| 4 | Route `GET /api/v1/admin/seller-verifications` (liste) : **aucun test** ne couvrait la garde admin ni le filtre `?status=` | Lecture de code + absence de fichier de test | **Comblé** : nouveau test (garde 403 pour USER, filtre par défaut PENDING_REVIEW, filtre explicite APPROVED) |
+| 5 | **Constat cross-module, PAS corrigé ici** : la route existante `PATCH /api/v1/admin/kyc/[id]` n'a **aucune** garde de statut (ni à la lecture, ni sous concurrence) — un dossier déjà décidé peut être re-décidé à tout moment, y compris en doublon sous double-clic | **Prouvé par test dédié** (`test/integration/kyc-review-concurrency.itest.ts`) : 20 appels concurrents → 20/20 réussissent, 20 notifications + 20 audits dupliqués | **Volontairement non corrigé** : contrairement à seller-verification, l'absence TOTALE de garde (même hors concurrence) suggère un comportement intentionnel — permettre à la conformité de corriger une décision KYC antérieure (ex. VERIFIED→REJECTED après découverte d'une fraude plus tard). Changer ce comportement serait une décision produit, pas un bug — à trancher par le propriétaire, pas supposé par cette session |
+
+Suite complète après ce tour : **343/343 tests unitaires**, **130/130 tests d'intégration (22 fichiers)**, `tsc --noEmit` et `eslint` propres sur les fichiers touchés.
 
 ## Phase 5 — Marketplace et parcours de commande
 
@@ -89,16 +106,20 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 | Preuve photographique du colis étiqueté | Aucun champ de stockage photo | **Résolu** : `labelPhotoUrl`/`labelPhotoUploadedAt`/`labelPhotoUploadedById` sur `MarketplaceDelivery` + `uploadLabelPhoto()` (réservé au vendeur, idempotent — un nouveau dépôt remplace le précédent), action `label_photo` ajoutée à `POST /api/v1/marketplace/deliveries/[id]` (réutilise le validateur `imageDataUri` existant, exporté depuis `lib/validations/marketplace.ts`) ; notifie l'acheteur à réception |
 | Suivi consultable par les parties autorisées | — | `kessiaTrackingCode`/`labelPhotoUrl`/`labelPhotoUploadedAt` ajoutés à `serialize()` de la route de livraison, déjà protégée par propriété (acheteur de la commande) — aucune nouvelle garde requise |
 
-**Dépendance externe documentée (explicitement demandé)** : il n'existe **aucune intégration API MiaRide réelle** dans ce code. `lib/delivery/miaride.ts` est **entièrement simulé** (mode SIMULATED : statuts avancent seuls, coursier fictif ; mode HANDOFF : un lien `wa.me`/web est construit et l'acheteur commande lui-même sur Miaride, qui n'est pas appelé programmatiquement). Aucun identifiant d'API, webhook entrant MiaRide authentifié, ni contrat d'intégration n'a été trouvé dans le dépôt ou les variables d'environnement documentées (`MIARIDE_ENABLED`/`MIARIDE_DISPATCH_URL`/`MIARIDE_TRACKING_BASE` ne sont que des URLs de confort, pas des identifiants d'authentification). **Ceci reste vrai après ce tour** — le numéro de suivi KESSIA et la photo d'étiquette sont un dispositif interne à KESSIA ; leur transmission à un véritable système MiaRide nécessiterait un contrat d'API qui n'existe pas aujourd'hui.
+**Dépendance externe — corrigé et documenté précisément ce tour** (le constat précédent ci-dessous était INEXACT sur un point, corrigé par relecture complète du dossier `webhooks/` avant publication du contrat d'intégration) :
+
+**Correction** : l'affirmation initiale « aucun webhook entrant MiaRide authentifié n'a été trouvé » était fausse — un récepteur `POST /api/v1/marketplace/deliveries/webhooks/miaride` **existe**, signé HMAC (`t=…,v1=…`, `lib/webhooks/verify.ts`), fail-closed en production sans secret, idempotent (`WebhookEvent.eventKey`), et **testé**. Ce qui reste vrai : **aucun vrai MiaRide ne l'appelle jamais** (aucun partenariat réel, `MIARIDE_WEBHOOK_SECRET` vide partout), et **aucun appel SORTANT** de KESSIA vers une API MiaRide n'existe (`MiarideProvider.createSimulated()`/`buildHandoffLink()` ne font aucune requête réseau). Le format de signature/schéma d'événement de ce récepteur a été conçu par anticipation côté KESSIA (ADR 0042), jamais confirmé contre une documentation MiaRide réelle — il n'y en a pas eu.
+
+**Contrat d'intégration documenté en détail** : `docs/integrations/miaride-integration-contract.md` (nouveau, ce tour) — distingue précisément ce qui existe (récepteur webhook, machine à états, génération locale de `kessiaTrackingCode`) de ce qu'il faudrait obtenir de MiaRide (API réelle, authentification sortante, devis réel, événements réels, preuve de livraison réelle, SLA) — présenté comme une liste de questions à faire confirmer par MiaRide, jamais comme une API inventée.
 
 | Élément | État |
 |---|---|
 | Tests | `test/integration/delivery-miaride.itest.ts`, **8/8 verts** contre le cluster réel (code unique par livraison, distinct de `providerRef`, généré en SIMULATED et HANDOFF ; `uploadLabelPhoto` réservé au vendeur, idempotent, refuse sur livraison terminée, NOT_FOUND propre) |
-| Migration | Même migration additive que Phase 4 (même session), appliquée **au cluster de test local uniquement** |
+| Migration | Même migration additive que Phase 4 (même session), appliquée **au cluster de test local uniquement**, index redondant corrigé ce tour (voir « Auto-audit du commit 941e970 ») |
 
 ## Phase 7 — Sécurité, finance, qualité
 
-Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUDITÉS** : invariants comptables (`test/integration/invariants.itest.ts`, jamais écrit), fuzzing Zod (`fast-check`, jamais fait), DAST, pentest externe.
+Largement recoupée par P2.20 (volets 1 et 2) déjà traités. **Mise à jour** : les invariants comptables SONT écrits et verts (`test/integration/invariants.itest.ts`, **branche `test/authz-and-invariants`, non fusionnée** — l'affirmation précédente « jamais écrit » datait d'avant cette branche et n'a pas été corrigée au bon moment ; corrigé ici par vérification directe de l'état réel des 3 branches). Restent **NON AUDITÉS, nécessitant un outillage/accès hors de portée de cette session agent** : fuzzing Zod (`fast-check`, jamais fait — réalisable par un agent, pas encore fait par manque de priorité face aux audits Phase 4/5/6), **DAST et pentest externe (hors de portée d'un agent de code — nécessitent un outillage de sécurité dédié et/ou une autorisation d'intrusion explicite sur un environnement cible, à organiser par le propriétaire)**.
 
 ---
 
@@ -110,16 +131,20 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 4. **Finding mineur non bloquant** : course sur `Device` (fingerprint) en cas de transferts concurrents — voir tableau P2.20 volet 2.
 5. Le cluster PostgreSQL 16 de test local tourne actuellement en arrière-plan (PID via `pg_ctl`, port 5433) — à arrêter proprement en fin de session.
 6. **Migration `20261012163104_add_seller_verification_and_delivery_tracking` appliquée au cluster de test local uniquement** — jamais exécutée en production, conformément à la consigne (« aucune migration en production sans autorisation explicite »). `prisma migrate deploy` en production reste une action du propriétaire.
-7. **3 branches poussées, aucune fusionnée** : `fix/db-test-reset-production-guard`, `test/authz-and-invariants`, `feat/seller-verification-and-miaride-tracking` (cette dernière contient Phase 4 + Phase 6 de ce tour). Aucune PR n'a été considérée comme fusionnée sans vérification — toutes restent à ouvrir/fusionner par le propriétaire.
-8. `docs/audit/PROGRESS_TRACKER.md` existe en parallèle sur 2 branches non fusionnées (`fix/db-test-reset-production-guard` et, depuis ce tour, `feat/seller-verification-and-miaride-tracking`) — contenu base identique, sections Phase 4/6 ajoutées uniquement sur cette dernière. Fusion triviale attendue (ajouts en fin de section, pas de conflit de fond) mais à vérifier à la fusion des PR.
+7. **3 branches poussées, aucune fusionnée** : `fix/db-test-reset-production-guard`, `test/authz-and-invariants`, `feat/seller-verification-and-miaride-tracking` (cette dernière contient Phase 4 + Phase 6 + l'auto-audit de ce tour). Aucune PR n'a été considérée comme fusionnée sans vérification — toutes restent à ouvrir/fusionner par le propriétaire. **Titres/descriptions de PR rédigés** (brouillons prêts à coller, pas publiés : aucun accès `gh`/API d'écriture GitHub dans cette session — confirmé à nouveau ce tour, `gh: command not found`).
+8. `docs/audit/PROGRESS_TRACKER.md` existe en parallèle sur 2 branches non fusionnées (`fix/db-test-reset-production-guard` et, depuis ce tour, `feat/seller-verification-and-miaride-tracking`) — contenu de base identique, sections Phase 4/6/Auto-audit ajoutées uniquement sur cette dernière. Fusion triviale attendue (ajouts en fin de section, pas de conflit de fond) mais à vérifier à la fusion des PR.
+9. **Correction d'un constat précédemment inexact** (ce tour) : ce fichier affirmait à tort qu'aucun webhook entrant MiaRide n'existait — un récepteur sécurisé et testé existe réellement (jamais appelé par un vrai MiaRide, faute de partenariat). Corrigé en Phase 6. Rappel pour la suite : vérifier l'état réel du code avant d'écrire un constat négatif, ne pas se fier à un balayage partiel.
 
 ## Validations humaines requises, en attente
 
-- Vérification Supabase (backups/logs) — §P1.2/P1.3.
-- Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture.
-- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3) — idem.
-- **Ouverture de PR pour `feat/seller-verification-and-miaride-tracking`** (Phase 4 + Phase 6, ce tour) — idem, pas d'accès API en écriture.
+- Vérification Supabase (backups/logs) — §P1.2/P1.3. **Reste le blocage prioritaire distinct, non résolu par ce tour ni par aucune validation sur la base de test locale.**
+- Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture. Brouillon de titre/description prêt (voir note de session).
+- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3) — idem. Brouillon prêt.
+- **Ouverture de PR pour `feat/seller-verification-and-miaride-tracking`** (Phase 4 + Phase 6 + auto-audit, ce tour) — idem. Brouillon prêt, inclut le détail des 2 correctifs de concurrence/index appliqués après le commit initial.
 - **Application de la migration en production** (`prisma migrate deploy` avec les variables d'environnement production) pour Phase 4/6 — non effectuée, décision du propriétaire.
 - Décision sur le commit des fichiers KESSIA Shop (hors périmètre de cet incident, rappelé pour mémoire).
 - Décision sur le finding `lib/fraud/devices.ts` (corriger maintenant ou plus tard — non urgent, non exploité par un attaquant, juste un log d'erreur bruyant).
 - Décision sur la planification cron de `expireOverdueSellerVerifications()` (Phase 4) — fonction prête, non branchée.
+- **Décision produit sur l'absence de garde de statut dans `PATCH /admin/kyc/[id]`** (constat #5 de l'auto-audit) — comportement actuel (re-décision toujours permise) semble intentionnel, à confirmer avant toute correction.
+- **Partenariat MiaRide réel** — aucune action technique possible sans réponses du propriétaire/de MiaRide aux 10 questions listées dans `docs/integrations/miaride-integration-contract.md`.
+- DAST / pentest externe (Phase 7) — nécessite un outillage de sécurité dédié et une autorisation d'intrusion explicite, hors de portée de cette session agent.

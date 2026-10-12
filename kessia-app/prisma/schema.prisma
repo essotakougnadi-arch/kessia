@@ -997,7 +997,6 @@ model MarketplaceDelivery {
 
   @@index([buyerId])
   @@index([status])
-  @@index([kessiaTrackingCode])
   @@map("marketplace_deliveries")
 }
 

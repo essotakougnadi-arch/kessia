@@ -19,6 +19,7 @@ import {
 } from '@/lib/marketplace/seller-verification';
 import { POST as submitRoute, GET as statusRoute } from '@/app/api/v1/business/[id]/verification/route';
 import { PATCH as reviewRoute } from '@/app/api/v1/admin/seller-verifications/[id]/route';
+import { GET as listRoute } from '@/app/api/v1/admin/seller-verifications/route';
 import { prisma, makeUser, cleanup, settle, tag } from './helpers';
 
 const userIds: string[] = [];
@@ -119,6 +120,26 @@ describe('submitSellerVerification — contrôle automatique + permissions', () 
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.code).toBe('CONFLICT');
   });
+
+  it('dix premières soumissions VRAIMENT concurrentes (aucun dossier préexistant) : toutes réussissent proprement, un seul dossier créé', async () => {
+    const owner = await makeUser({ balance: 0 });
+    userIds.push(owner.id);
+    const business = await makeBusiness(owner.id);
+
+    // Double-clic / double-tab : aucune requête ne doit planter (ex. P2002
+    // sur la contrainte unique businessId si deux upserts concurrents
+    // tentent chacun un INSERT faute de ligne existante).
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        submitSellerVerification(business.id, owner.id, [{ type: 'OTHER', label: `tentative ${i}`, fileUrl: FAKE_IMAGE }])
+      )
+    );
+    expect(results.every((r) => r.ok)).toBe(true);
+
+    const all = await prisma.sellerVerification.findMany({ where: { businessId: business.id } });
+    expect(all).toHaveLength(1);
+    expect(all[0]!.status).toBe('PENDING_REVIEW');
+  });
 });
 
 describe('reviewSellerVerification — décision admin, badge, audit', () => {
@@ -198,6 +219,32 @@ describe('reviewSellerVerification — décision admin, badge, audit', () => {
     const v = await prisma.sellerVerification.findUniqueOrThrow({ where: { id: sub.verificationId } });
     expect(v.status).toBe('EXPIRED');
   });
+
+  it('double-clic admin : vingt appels VRAIMENT concurrents à reviewSellerVerification (même dossier) → une seule décision retenue, une seule notification', async () => {
+    const owner = await makeUser({ balance: 0 });
+    const admin = await makeUser({ balance: 0 });
+    userIds.push(owner.id, admin.id);
+    const business = await makeBusiness(owner.id);
+    const sub = await submitSellerVerification(business.id, owner.id, [{ type: 'OTHER', fileUrl: FAKE_IMAGE }]);
+    if (!sub.ok) throw new Error('setup');
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => reviewSellerVerification(sub.verificationId, admin.id, 'APPROVED'))
+    );
+    // Un seul appel doit réellement effectuer la transition ; les 19 autres
+    // doivent échouer proprement (CONFLICT), jamais planter ni écraser
+    // silencieusement une décision déjà prise par une autre.
+    const okCount = results.filter((r) => r.ok).length;
+    expect(okCount).toBe(1);
+    expect(results.filter((r) => !r.ok).every((r) => !r.ok && r.code === 'CONFLICT')).toBe(true);
+
+    const v = await prisma.sellerVerification.findUniqueOrThrow({ where: { id: sub.verificationId } });
+    expect(v.status).toBe('APPROVED');
+
+    await settle();
+    expect(await prisma.notification.count({ where: { userId: owner.id, category: 'BUSINESS' } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { action: 'seller_verification.approved', entityId: sub.verificationId } })).toBe(1);
+  });
 });
 
 describe('Routes HTTP — permissions bout en bout', () => {
@@ -260,5 +307,49 @@ describe('Routes HTTP — permissions bout en bout', () => {
       { params: Promise.resolve({ id: ownerBody.data.verificationId }) }
     );
     expect(adminReview.status).toBe(200);
+  });
+
+  it('GET /admin/seller-verifications : garde admin + filtre par statut (défaut PENDING_REVIEW)', async () => {
+    const owner = await makeUser({ balance: 0 });
+    const attacker = await makeUser({ balance: 0 });
+    const admin = await makeUser({ balance: 0 });
+    userIds.push(owner.id, attacker.id, admin.id);
+    const businessPending = await makeBusiness(owner.id);
+    const businessApproved = await makeBusiness(owner.id);
+    const subPending = await submitSellerVerification(businessPending.id, owner.id, [{ type: 'OTHER', fileUrl: FAKE_IMAGE }]);
+    const subApproved = await submitSellerVerification(businessApproved.id, owner.id, [{ type: 'OTHER', fileUrl: FAKE_IMAGE }]);
+    if (!subPending.ok || !subApproved.ok) throw new Error('setup');
+    await reviewSellerVerification(subApproved.verificationId, admin.id, 'APPROVED');
+
+    // Garde admin : un USER standard reçoit 403.
+    const attackerRes = await listRoute(
+      new NextRequest('http://localhost/api/v1/admin/seller-verifications', {
+        headers: { authorization: `Bearer ${tokenFor(attacker)}` },
+      })
+    );
+    expect(attackerRes.status).toBe(403);
+
+    // Défaut : seuls les dossiers PENDING_REVIEW apparaissent.
+    const defaultRes = await listRoute(
+      new NextRequest('http://localhost/api/v1/admin/seller-verifications', {
+        headers: { authorization: `Bearer ${tokenFor({ ...admin, role: 'COMPLIANCE' })}` },
+      })
+    );
+    expect(defaultRes.status).toBe(200);
+    const defaultBody = (await defaultRes.json()) as { data: Array<{ id: string; status: string }> };
+    const defaultIds = defaultBody.data.map((v) => v.id);
+    expect(defaultIds).toContain(subPending.verificationId);
+    expect(defaultIds).not.toContain(subApproved.verificationId);
+
+    // ?status=APPROVED ne renvoie que les dossiers approuvés.
+    const approvedRes = await listRoute(
+      new NextRequest('http://localhost/api/v1/admin/seller-verifications?status=APPROVED', {
+        headers: { authorization: `Bearer ${tokenFor({ ...admin, role: 'COMPLIANCE' })}` },
+      })
+    );
+    const approvedBody = (await approvedRes.json()) as { data: Array<{ id: string; status: string }> };
+    const approvedIds = approvedBody.data.map((v) => v.id);
+    expect(approvedIds).toContain(subApproved.verificationId);
+    expect(approvedIds).not.toContain(subPending.verificationId);
   });
 });

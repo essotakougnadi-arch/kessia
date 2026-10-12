@@ -121,8 +121,14 @@ export async function reviewSellerVerification(
     return { ok: false, error: 'Un motif de refus est requis.', code: 'CONFLICT' };
   }
 
-  const updated = await prisma.sellerVerification.update({
-    where: { id: verificationId },
+  // Transition atomique : la garde `status: 'PENDING_REVIEW'` est portée
+  // par le WHERE de l'UPDATE lui-même (pas seulement par la lecture
+  // ci-dessus, qui laisse une fenêtre de course à deux appels
+  // concurrents — double-clic admin ou deux décisions rivales). Un seul
+  // appel peut gagner la ligne ; les autres échouent proprement en
+  // CONFLICT au lieu de ré-émettre notification/audit en double.
+  const result = await prisma.sellerVerification.updateMany({
+    where: { id: verificationId, status: 'PENDING_REVIEW' },
     data: {
       status: decision,
       reviewedById: adminUserId,
@@ -131,6 +137,10 @@ export async function reviewSellerVerification(
       expiresAt: decision === 'APPROVED' ? opts?.expiresAt ?? null : null,
     },
   });
+  if (result.count === 0) {
+    return { ok: false, error: 'Ce dossier n\'est plus en attente d\'examen (décision déjà prise).', code: 'CONFLICT' };
+  }
+  const updated = await prisma.sellerVerification.findUniqueOrThrow({ where: { id: verificationId } });
 
   void recordAudit({
     userId: adminUserId, action: `seller_verification.${decision.toLowerCase()}`, entity: 'SellerVerification', entityId: verificationId,
