@@ -202,18 +202,21 @@ Demandé explicitement ce tour. Vérifié avant de conclure (pas supposé par ha
 
 **Workflows CI re-confirmés une 3ᵉ fois (lecture directe des 4 fichiers `.yml`)** : `ci.yml`/`integration.yml`/`e2e.yml`/`security.yml` déclenchent uniquement sur `pull_request: branches: [main, develop]`. PR 1/2 (base `main`) les déclenchent. **PR 4 (base `fix/db-test-reset-production-guard`) n'en déclenche aucun** — confirmé, pas un oubli.
 
-## Tâches restantes
+## Vérification finale consolidée (ce tour) — aucune régression, rien de nouveau à corriger
 
-- **Vous** : corriger manuellement la description de PR #6 (texte ci-dessus), ouvrir les 3 PR manquantes (liens/titres/corps dans le rapport de ce tour).
-- Décider de l'ordre réel de fusion maintenant que PR #6 est seule prête — **aucune fusion effectuée, sur instruction explicite**.
-- **Autoriser la première exécution réelle de `db:test:status`** (même contre le cluster local).
-- Appliquer la migration Phase 4/6 en production — non effectuée, décision du propriétaire.
-- Décision sur le commit des fichiers KESSIA Shop.
+- **GitHub re-vérifié (API, lecture)** : toujours exactement 6 PR dans l'historique du dépôt, **une seule ouverte (#6)**, inchangée (`state=open`, `mergeable_state=clean`, 23 fichiers). Aucune des 3 autres n'a été ouverte depuis le dernier rapport.
+- **Jeton d'écriture GitHub re-vérifié, absent** : pas de `GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_PAT`, pas de `gh`. Un credential Git (`credential.helper=manager`) existe et sert les `git push` de cette session, mais son périmètre réel (git uniquement, ou aussi l'API REST) n'est pas connu — **décision délibérée de ne pas le détourner vers des appels API d'écriture sans confirmation explicite que c'est voulu**, plutôt qu'une tentative aveugle.
+- **Suites unitaires ré-exécutées réellement sur les 4 branches ce tour** (pas citées de mémoire) : `fix/prisma-adhoc-connection-guard` 368/368 (44 fichiers) · `fix/db-test-reset-production-guard` 351/351 (42) · `test/authz-and-invariants` 343/343 (41) · `feat/seller-verification-and-miaride-tracking` 348/348 (42) + `tsc` propre. **Aucune régression.**
+- **Intégration** : non ré-exécutée ce tour (déjà vérifiée réellement contre le cluster local plus tôt dans cette même session — 126/126 sur `test/authz-and-invariants`, 134/134 sur `feat/...` — aucun code de test n'a changé depuis, re-citée sans ré-exécution inutile, conformément à la demande d'arrêter les vérifications répétitives).
+- **Rien de documentaire ou technique « sans risque » restait à corriger** — tout ce qui avait été trouvé (index redondant, course de concurrence, sur-affirmation du correctif, course `recordDevice`) est déjà corrigé et commité sur la branche concernée.
 
-## Validations humaines requises, en attente
+## Blocages réels (pas des tâches, des faits qui ne dépendent pas de moi)
 
-- Corriger la description de PR #6, ouvrir les 3 PR manquantes.
-- Décider quand/dans quel ordre fusionner (choix réel présenté ci-dessus, pas un blocage technique).
-- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma réelle, tout test de connexion, ou toute connexion à une base distante.** Rien ce tour (vérification via API publique GitHub, en lecture) n'a constitué une commande Prisma ni une connexion à une base.
-- **Récupération Supabase : incident distinct, toujours non résolu.** Ni récupérées, ni perdues définitivement — action directe du propriétaire requise (dashboard/SQL editor Supabase).
-- Décision sur le commit des fichiers KESSIA Shop.
+1. **Aucun accès en écriture à GitHub** — je ne peux pas corriger PR #6 ni ouvrir les 3 autres. Liens/textes exacts fournis au propriétaire.
+2. **Récupération Supabase : incident distinct, toujours non résolu, ni confirmé récupéré ni confirmé perdu définitivement.** Action directe du propriétaire requise.
+3. Décision du propriétaire sur l'ordre de fusion réel (PR #6 prête maintenant ; conflit `PROGRESS_TRACKER.md` confirmé entre {PR1+PR4} et PR3, quel que soit l'ordre).
+4. Décision sur le commit des fichiers KESSIA Shop (hors périmètre).
+
+## Prochaine action la plus efficace
+
+**Corriger la description de PR #6 et ouvrir les 3 PR manquantes (textes/liens déjà prêts)** — c'est la seule étape qui débloque tout le reste (fusion, CI réel sur les 3 nouvelles PR, réconciliation du tracker) et qui ne peut être faite que par le propriétaire.
