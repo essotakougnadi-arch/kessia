@@ -6,6 +6,16 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 
 ---
 
+## ⚠️ Incident du 2026-10-12 (session agent) — commande Prisma ad hoc, hôte distant non vérifié
+
+**BLOQUANT jusqu'à autorisation explicite du propriétaire.** Une commande `prisma migrate status` tapée directement (hors de tout script protégé) avec `DATABASE_URL` remplacée mais `DIRECT_URL` non remplacée s'est connectée à `aws-1-eu-west-1.pooler.supabase.com:5432` au lieu du cluster de test local — repli silencieux exactement de la même nature que la cause racine de l'incident de production original. Lecture seule par conception de la commande (pas de preuve de modification, mais pas de preuve absolue de son absence non plus — voir le rapport). Correctif proposé (ALLOWLIST, `scripts/require-local-db.mjs`), **pas câblé, pas exécuté contre aucune base**. Toute nouvelle commande Prisma ou vérification de base de données est suspendue jusqu'à autorisation explicite.
+
+**Détail complet, preuves, et correctif proposé** : `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.
+
+**Constat aggravant découvert pendant l'investigation (lecture seule, `git show`)** : le correctif de l'incident de production ORIGINAL (`DIRECT_URL` toujours résolue explicitement dans `db-test-reset.mjs`) n'existe que sur la branche `fix/db-test-reset-production-guard` — **absent de `main`**. `npm run db:test:reset` reproduirait aujourd'hui l'incident original sur `main` tel quel. Rappel direct de l'urgence de fusionner cette PR, indépendamment du présent incident.
+
+---
+
 ## Phase 1 — Incident base de données (PRIORITÉ ABSOLUE)
 
 | ID | Tâche | Statut | Dépendances | Preuves | Prochaine action |
@@ -94,14 +104,16 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 
 ## Risques immédiats (mis à jour après exécution réelle)
 
+0. **Incident du 2026-10-12 (ce tour) : voir section dédiée en tête de ce fichier.** Bloquant jusqu'à autorisation explicite.
 1. **État réel de la production toujours indéterminé** (P1.3, bloqué — classificateur automatique, pas une limite de ma part).
-2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel (avec un vrai `prisma migrate reset`) n'a pas pu être testé de bout en bout, l'action a été bloquée par un classificateur distinct (« Cloud Storage Mass Delete »), malgré une cible confirmée locale et sûre.
+2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel (avec un vrai `prisma migrate reset`) n'a pas pu être testé de bout en bout, l'action a été bloquée par un classificateur distinct (« Cloud Storage Mass Delete »), malgré une cible confirmée locale et sûre. **Confirmé ce tour (lecture seule, `git show`) : ce correctif n'existe que sur cette branche — absent de `main`.**
 3. Fichiers KESSIA Shop toujours non commités (par conception, en attente d'autorisation dédiée) — confirmés intacts à chaque vérification de cette session.
-4. **Finding mineur non bloquant** : course sur `Device` (fingerprint) en cas de transferts concurrents — voir tableau P2.20 volet 2.
-5. Le cluster PostgreSQL 16 de test local tourne actuellement en arrière-plan (PID via `pg_ctl`, port 5433) — à arrêter proprement en fin de session.
+4. **Finding course sur `Device` (fingerprint) — CORRIGÉ ce tour, sur une autre branche non fusionnée** (`test/authz-and-invariants`, commit `0d4bc6f`) : `recordDevice` remplace find-then-create par un upsert atomique, 3 nouveaux tests d'intégration prouvent 0 échec sous 20 enregistrements concurrents du même appareil (avant : certains retournaient `null`).
+5. Le cluster PostgreSQL 16 de test local tournait en arrière-plan avant l'incident du 2026-10-12 — son état n'a plus été vérifié depuis (aucune commande de vérification autorisée pour l'instant, voir section incident).
 
 ## Validations humaines requises, en attente
 
+- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma ou vérification de base de données — voir section dédiée en tête de fichier et `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.**
 - Vérification Supabase (backups/logs) — §P1.2/P1.3.
 - Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture.
 - Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3) — idem.
