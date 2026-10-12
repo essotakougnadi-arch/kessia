@@ -210,13 +210,28 @@ Demandé explicitement ce tour. Vérifié avant de conclure (pas supposé par ha
 - **Intégration** : non ré-exécutée ce tour (déjà vérifiée réellement contre le cluster local plus tôt dans cette même session — 126/126 sur `test/authz-and-invariants`, 134/134 sur `feat/...` — aucun code de test n'a changé depuis, re-citée sans ré-exécution inutile, conformément à la demande d'arrêter les vérifications répétitives).
 - **Rien de documentaire ou technique « sans risque » restait à corriger** — tout ce qui avait été trouvé (index redondant, course de concurrence, sur-affirmation du correctif, course `recordDevice`) est déjà corrigé et commité sur la branche concernée.
 
-## Blocages réels (pas des tâches, des faits qui ne dépendent pas de moi)
+## Accès GitHub en écriture rétabli — `gh` authentifié, 4 PR désormais réelles
 
-1. **Aucun accès en écriture à GitHub** — je ne peux pas corriger PR #6 ni ouvrir les 3 autres. Liens/textes exacts fournis au propriétaire.
-2. **Récupération Supabase : incident distinct, toujours non résolu, ni confirmé récupéré ni confirmé perdu définitivement.** Action directe du propriétaire requise.
-3. Décision du propriétaire sur l'ordre de fusion réel (PR #6 prête maintenant ; conflit `PROGRESS_TRACKER.md` confirmé entre {PR1+PR4} et PR3, quel que soit l'ordre).
+Le propriétaire a authentifié `gh` (`gh auth login`, compte `essotakougnadi-arch`). **Non trouvé dans le PATH des shells de cet outil** (`gh: command not found` en Bash et PowerShell) — localisé sur disque (`C:\Program Files\GitHub CLI\gh.exe`) et invoqué avec son chemin complet / PATH ajusté pour la session. `gh auth status` confirme : scopes `repo`+`workflow`. Vérification non destructive des permissions (`gh repo view --json viewerPermission`) : **`ADMIN`** sur `essotakougnadi-arch/kessia`. Jamais de secret affiché — le jeton lui-même reste toujours masqué par `gh` (`gho_***`).
+
+**Exécuté (non destructif — édition de description + création de PR, aucune fusion, aucune commande Prisma, aucune connexion Supabase) :**
+
+| PR | Lien | Base | `mergeable` | Checks au moment de la vérification |
+|---|---|---|---|---|
+| **#6** | `github.com/essotakougnadi-arch/kessia/pull/6` | `main` | `MERGEABLE`, `CLEAN` | description corrigée et confirmée relue ; CI déjà verte (10/10, vérifié précédemment) |
+| **#7** (= PR 1) | `github.com/essotakougnadi-arch/kessia/pull/7` | `main` ✅ | `MERGEABLE`, `UNSTABLE` (checks en cours) | `secrets-scan`/`dependency-audit`/Vercel ×3 : pass ; `codeql`/`verify`/`integration`/`playwright` : pending (viennent de démarrer) — **aucun échec observé** |
+| **#8** (= PR 2) | `github.com/essotakougnadi-arch/kessia/pull/8` | `main` ✅ | `MERGEABLE`, `UNSTABLE` (checks en cours) | même état que #7 — **aucun échec observé** |
+| **#9** (= PR 4) | `github.com/essotakougnadi-arch/kessia/pull/9` | **`fix/db-test-reset-production-guard`** ✅ (vérifié par `git merge-base` juste avant création, pas supposé) | `MERGEABLE`, `CLEAN` | seulement les 3 checks Vercel (pass) — **confirme en conditions réelles, pas seulement en théorie, qu'aucun des 4 workflows GitHub Actions ne se déclenche sur cette base** |
+
+**Aucun conflit détecté par GitHub sur aucune des 4 PR à ce jour** (`mergeable: MERGEABLE` partout) — cohérent avec l'analyse par simulation : le conflit sur `PROGRESS_TRACKER.md` entre {#7+#9} et #6 n'existe qu'au moment où l'un des deux côtés fusionne après l'autre, pas avant.
+
+## Blocages réels restants
+
+1. **Récupération Supabase : incident distinct, toujours non résolu, ni confirmé récupéré ni confirmé perdu définitivement.** Action directe du propriétaire requise.
+2. Décision du propriétaire sur l'ordre de fusion (#7 → #9 → #8 à tout moment → #6 en dernier, réconciliation manuelle du tracker à cette dernière étape) — **aucune fusion effectuée**.
+3. Checks encore `pending` sur #7/#8 au moment de la vérification — à recontrôler avant fusion (aucun échec vu jusqu'ici).
 4. Décision sur le commit des fichiers KESSIA Shop (hors périmètre).
 
-## Prochaine action la plus efficace
+## Prochaine action unique
 
-**Corriger la description de PR #6 et ouvrir les 3 PR manquantes (textes/liens déjà prêts)** — c'est la seule étape qui débloque tout le reste (fusion, CI réel sur les 3 nouvelles PR, réconciliation du tracker) et qui ne peut être faite que par le propriétaire.
+**Attendre la fin des checks `pending` sur #7/#8 (aucun échec à ce jour), puis fusionner dans l'ordre #7 → #9 → #8 → #6**, avec votre autorisation explicite à chaque fusion.
