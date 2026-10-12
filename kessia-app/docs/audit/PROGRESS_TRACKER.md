@@ -164,20 +164,38 @@ Les 2 branches locales sont désormais poussées, confirmé par `git branch -vv`
 
 Vérifié avant publication (pas supposé) : `git status`/`git remote -v` (1 seul remote, `origin`, le bon dépôt), commits locaux listés précisément et comparés au rapport précédent (exacts), aucun fichier préexistant touché. Push normal (jamais `--force`) — aucun historique réécrit, aucune branche réinitialisée.
 
-**4 branches sur GitHub, aucune PR ouverte, aucune fusion.**
+**4 branches sur GitHub, aucune fusion.**
+
+## État réel des PR sur GitHub — vérifié via l'API publique GitHub (lecture seule, pas `gh`, pas d'écriture)
+
+**Une seule PR existe : PR #6.** Les 3 autres (correctif `DIRECT_URL`, tests authz/invariants, garde incident Prisma) **n'ont pas encore été ouvertes** — à ouvrir manuellement (pas d'accès API en écriture cette session).
+
+| Champ | Valeur confirmée (API GitHub) |
+|---|---|
+| PR | #6, « Feat/seller verification and miaride tracking » |
+| `base.ref` | `main` (correct) |
+| `head.ref` / `head.sha` | `feat/seller-verification-and-miaride-tracking` / `dba47cf5…` (correspond exactement) |
+| `mergeable_state` | **`clean`** — aucun conflit avec `main` **en ce moment précis**, confirmé indépendamment par ma propre simulation `git merge-tree` (PR seule contre `origin/main` actuel : propre) |
+| Checks | **10/10, tous `success`** — 8 check-runs (CodeQL ×2, secrets-scan, dependency-audit, playwright, integration, verify, Vercel Preview Comments) + 2 statuts classiques (Vercel – kessia, Vercel – kessia-staging), tous confirmés via l'API `check-runs`/`status`. **Correspond exactement aux « 10 contrôles réussis » rapportés.** |
+| Déploiement Vercel | Confirmé « Deployment has completed » sur les 2 contextes. |
+
+**Problème réel trouvé, à corriger avant fusion** : la description de la PR #6 ne correspond pas à son contenu — elle décrit le correctif `DIRECT_URL`/`db-test-reset.mjs` (sujet de la future PR 1), pas la vérification fournisseur/MiaRide que cette PR contient réellement. Texte correct fourni au propriétaire pour remplacement manuel (pas d'accès d'écriture API pour le faire moi-même).
+
+**Ordre de fusion — recomputé pour l'état réel (PR #6 prête, les 3 autres pas encore ouvertes), par nouvelle simulation `git merge-tree`** : fusionner PR #6 maintenant contre `main` actuel est **propre, confirmé**. Mais si elle fusionne AVANT que PR 1 soit ouverte/fusionnée, c'est alors **PR 1 (puis PR 4, qui en dépend)** qui hérite du conflit `PROGRESS_TRACKER.md` déjà identifié — **vérifié à nouveau dans ce sens précis, pas supposé symétrique**. Le conflit ne disparaît pas selon l'ordre, il change simplement de PR. Choix réel, pas un blocage : fusionner #6 maintenant (elle est prête, verte, déployée) et réconcilier le tracker à la fusion de PR 1/PR 4 ensuite ; ou attendre d'ouvrir PR 1/PR 4 et les fusionner avant #6 pour que le conflit tombe sur #6 à la place. PR 2 reste sans conflit dans tous les cas, à tout moment.
 
 ## Tâches restantes
 
-- **Ouvrir les 4 PR manuellement** (pas d'accès `gh`/API d'écriture GitHub cette session) — liens et textes exacts fournis au propriétaire dans le rapport de ce tour.
-- **Autoriser la première exécution réelle de `db:test:status`** (même contre le cluster local) — c'est la seule façon de prouver le câblage au-delà des tests simulés.
-- Fusionner dans l'ordre vérifié : PR 1 → PR 4 → PR 2 (à tout moment) → PR 3, avec réconciliation manuelle du tracker à la dernière étape.
+- **Corriger la description de la PR #6** (texte correct fourni) avant toute fusion.
+- **Ouvrir les 3 PR manquantes** (PR 1, PR 2, PR 4) — liens et textes exacts fournis.
+- Décider de l'ordre réel de fusion maintenant que PR #6 est seule prête (voir ci-dessus) — **aucune fusion effectuée, sur instruction explicite**.
+- **Autoriser la première exécution réelle de `db:test:status`** (même contre le cluster local).
 - Appliquer la migration Phase 4/6 en production — non effectuée, décision du propriétaire.
-- Décision sur le commit des fichiers KESSIA Shop (hors périmètre, rappelé pour mémoire).
+- Décision sur le commit des fichiers KESSIA Shop.
 
 ## Validations humaines requises, en attente
 
-- **Ouverture des 4 PR** — brouillons précis prêts (titres, corps, tests, base exacte par PR), pas d'accès API en écriture, étapes manuelles exactes fournies.
-- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma réelle (y compris `db:test:status` désormais câblé ET publié), tout test de connexion, ou toute connexion à une base distante.** La publication des branches ne constitue PAS cette autorisation — aucune commande Prisma n'a été invoquée pour publier du code.
-- **Récupération Supabase : incident distinct, toujours non résolu.** Aucune action de cette session ne constitue une restauration, une migration, une écriture ou une connexion distante autorisée — ni confirmation que les données sont récupérées, ni qu'elles sont définitivement perdues. Reste une action directe du propriétaire (dashboard/SQL editor Supabase).
-- Décision sur l'ordre de fusion et la réconciliation du tracker (conflit identifié, maintenant que les branches existent réellement sur GitHub pour l'exécuter).
+- Corriger la description de PR #6, ouvrir les 3 PR manquantes.
+- Décider quand/dans quel ordre fusionner (choix réel présenté ci-dessus, pas un blocage technique).
+- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma réelle, tout test de connexion, ou toute connexion à une base distante.** Rien ce tour (vérification via API publique GitHub, en lecture) n'a constitué une commande Prisma ni une connexion à une base.
+- **Récupération Supabase : incident distinct, toujours non résolu.** Ni récupérées, ni perdues définitivement — action directe du propriétaire requise (dashboard/SQL editor Supabase).
 - Décision sur le commit des fichiers KESSIA Shop.
