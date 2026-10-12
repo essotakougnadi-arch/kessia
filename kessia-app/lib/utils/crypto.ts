@@ -55,6 +55,21 @@ export function generateInviteCode(): string {
   return code;
 }
 
+/**
+ * Numéro de suivi KESSIA pour une livraison Marketplace — généré PAR
+ * KESSIA (jamais par MiaRide, qui a sa propre référence `providerRef`).
+ * Même alphabet que `generateInviteCode` (sans caractères ambigus :
+ * pas de 0/O/1/I), préfixe distinct pour ne jamais confondre les deux.
+ */
+export function generateTrackingCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'KSA-';
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 // ---- Idempotency ----
 
 /**

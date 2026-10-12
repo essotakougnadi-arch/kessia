@@ -2,12 +2,19 @@
 // KESSIA — Marketplace : sérialisation des articles pour l'API
 // ============================================================
 
-import type { MarketplaceItem } from '@prisma/client';
+import type { MarketplaceItem, SellerVerificationStatus } from '@prisma/client';
 import { findZone } from '@/lib/delivery/zones';
+import { isSellerVerifiedBadgeActive } from '@/lib/marketplace/seller-verification';
 
 type ItemWithSeller = MarketplaceItem & {
   seller: { id: string; firstName: string; lastName: string } | null;
-  business?: { id: string; name: string } | null;
+  business?: {
+    id: string;
+    name: string;
+    // Optionnel : seuls les appelants qui en ont besoin (catalogue,
+    // détail) le sélectionnent — absent ailleurs, traité comme non vérifié.
+    verification?: { status: SellerVerificationStatus; expiresAt: Date | null } | null;
+  } | null;
 };
 
 export function serializeItem(it: ItemWithSeller, opts?: { includeImage?: boolean }) {
@@ -32,5 +39,9 @@ export function serializeItem(it: ItemWithSeller, opts?: { includeImage?: boolea
     sellerId: it.sellerId,
     sellerName: it.seller ? `${it.seller.firstName} ${it.seller.lastName}` : null,
     businessName: it.business?.name ?? null,
+    // Badge « Fournisseur vérifié » (KESSIA Verification) — jamais vrai
+    // sans approbation explicite, jamais affiché pour une entreprise
+    // absente/non sélectionnée.
+    sellerVerified: isSellerVerifiedBadgeActive(it.business?.verification ?? null),
   };
 }

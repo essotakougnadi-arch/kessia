@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/db/prisma';
 import { withAuth } from '@/lib/auth/middleware';
-import { trackingCodeSchema } from '@/lib/validations/marketplace';
+import { trackingCodeSchema, imageDataUri } from '@/lib/validations/marketplace';
 import {
   activateScheduledDelivery,
   advanceSimulatedDelivery,
@@ -16,6 +16,7 @@ import {
   cancelDelivery,
   confirmDelivered,
   markSellerReady,
+  uploadLabelPhoto,
 } from '@/lib/delivery';
 import { ok, badRequest, conflict, forbidden, notFound, validationError, serverError } from '@/lib/utils/response';
 import { logApiError } from '@/lib/logger';
@@ -29,6 +30,7 @@ const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('confirm') }),
   z.object({ action: z.literal('cancel') }),
   z.object({ action: z.literal('tracking'), code: trackingCodeSchema.shape.code }),
+  z.object({ action: z.literal('label_photo'), photoUrl: imageDataUri }),
 ]);
 
 function serialize(d: Awaited<ReturnType<typeof loadFull>>) {
@@ -51,6 +53,9 @@ function serialize(d: Awaited<ReturnType<typeof loadFull>>) {
     providerRef: d.providerRef,
     trackingUrl: d.trackingUrl,
     courierName: d.courierName,
+    kessiaTrackingCode: d.kessiaTrackingCode,
+    labelPhotoUrl: d.labelPhotoUrl,
+    labelPhotoUploadedAt: d.labelPhotoUploadedAt,
     sellerReadyAt: d.sellerReadyAt,
     deliveredAt: d.deliveredAt,
     cancelledAt: d.cancelledAt,
@@ -102,6 +107,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       : body.action === 'ready' ? await markSellerReady(params.id, context.userId)
       : body.action === 'confirm' ? await confirmDelivered(params.id, context.userId)
       : body.action === 'cancel' ? await cancelDelivery(params.id, context.userId)
+      : body.action === 'label_photo' ? await uploadLabelPhoto(params.id, context.userId, body.photoUrl)
       : await attachTracking(params.id, context.userId, body.code);
 
     if (!result.ok) {

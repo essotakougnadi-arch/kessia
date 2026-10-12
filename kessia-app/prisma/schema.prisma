@@ -821,7 +821,7 @@ model Business {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   products         Product[]
   sales            Sale[]
   expenses         Expense[]
@@ -831,6 +831,7 @@ model Business {
   goals            BusinessGoal[]
   plan             BusinessPlan?
   marketplaceItems MarketplaceItem[]
+  verification     SellerVerification?
 
   @@map("businesses")
 }
@@ -961,11 +962,29 @@ model MarketplaceDelivery {
   feeLedgerRef String? // idempotence du débit wallet des frais
   etaMinutes   Int?
 
-  // Côté partenaire
+  // Côté partenaire — référence/outils PROPRES À MIARIDE. Ne pas
+  // confondre avec `kessiaTrackingCode` ci-dessous : `providerRef` reste
+  // le code interne du partenaire (conservé tel quel, sens inchangé).
   providerRef String? // code de suivi Miaride
   trackingUrl String?
   courierName String?
   simulated   Boolean @default(true)
+
+  // Numéro de suivi KESSIA — généré PAR KESSIA à la demande de livraison
+  // (jamais par MiaRide), format `KSA-XXXXXX` (lib/utils/crypto.ts,
+  // generateTrackingCode). Nullable+unique : les livraisons créées avant
+  // cette fonctionnalité n'en ont pas et le restent (PostgreSQL autorise
+  // plusieurs NULL sous une contrainte unique, même motif que
+  // Wallet.userId/tontineId ailleurs dans ce schéma).
+  kessiaTrackingCode String? @unique
+
+  // Preuve photo du colis étiqueté (déposée par le VENDEUR après le
+  // passage de l'agent MiaRide — cahier des charges MiaRide, étape 5).
+  // Ne constitue PAS à elle seule une preuve de collecte/livraison —
+  // seulement une preuve de l'état photographié à cet instant.
+  labelPhotoUrl          String?
+  labelPhotoUploadedAt   DateTime?
+  labelPhotoUploadedById String?
 
   requestedAt   DateTime  @default(now())
   sellerReadyAt DateTime?
@@ -978,7 +997,79 @@ model MarketplaceDelivery {
 
   @@index([buyerId])
   @@index([status])
+  @@index([kessiaTrackingCode])
   @@map("marketplace_deliveries")
+}
+
+// ============================================================
+// VÉRIFICATION FOURNISSEUR — « KESSIA Verification » (badge
+// « Fournisseur vérifié »). Même schéma que KycCase/KycDocument
+// (réutilisé délibérément, cf. lib/auth/admin.ts::COMPLIANCE_ROLES pour
+// l'approbation) — pas de nouveau rôle, pas de nouveau mécanisme.
+//
+// `SellerVerificationDocumentType` reste volontairement générique :
+// aucune obligation légale propre à une juridiction n'est codée ici
+// (ni RCCM, ni numéro fiscal spécifique togolais/UEMOA) — seulement des
+// catégories larges, `OTHER` + `label` libre couvrant tout le reste.
+// La validation métier de ce qui est RÉELLEMENT exigible reste externe
+// à ce schéma (cf. docs/compliance/matrix.md).
+// ============================================================
+
+enum SellerVerificationStatus {
+  NOT_SUBMITTED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum SellerVerificationDocumentType {
+  BUSINESS_REGISTRATION
+  TAX_ID
+  OWNER_ID
+  PROOF_OF_ADDRESS
+  OTHER
+}
+
+model SellerVerification {
+  id              String                   @id @default(cuid())
+  businessId      String                   @unique
+  status          SellerVerificationStatus @default(NOT_SUBMITTED)
+  submittedAt     DateTime?
+  reviewedById    String? // id admin (COMPLIANCE_ROLES) — pas de relation FK, même convention que KycCase.reviewedById
+  reviewedAt      DateTime?
+  rejectionReason String?
+  // Renouvellement : optionnel, fixé par l'admin à l'approbation (pas une
+  // durée fixe codée en dur — aucune règle de renouvellement n'est
+  // imposée tant qu'elle n'est pas validée métier).
+  expiresAt       DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  business  Business                     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  documents SellerVerificationDocument[]
+
+  @@index([status])
+  @@map("seller_verifications")
+}
+
+model SellerVerificationDocument {
+  id             String                         @id @default(cuid())
+  verificationId String
+  type           SellerVerificationDocumentType
+  label          String? // précision libre (ex. « Registre de commerce RCCM »)
+  // Même convention que KycDocument : data-URI de repli si le bucket
+  // privé n'est pas configuré, sinon `storageKey` pointe vers lui.
+  fileUrl        String
+  storageKey     String?
+  mimeType       String?
+  status         String                         @default("PENDING") // PENDING, ACCEPTED, REJECTED — même convention que KycDocument.status
+  notes          String?
+  uploadedAt     DateTime                       @default(now())
+
+  verification SellerVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+
+  @@map("seller_verification_documents")
 }
 
 // Carnet d'adresses de livraison de l'acheteur (ADR 0045) — évite de
@@ -1499,7 +1590,7 @@ model AuditLog {
 // dérivée de l'événement, distincte de l'idempotence Ledger existante
 // sur PaymentTransaction/LedgerEntry) et de trace d'audit/dépannage.
 model WebhookEvent {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   provider     String // 'payment:<fournisseur>' ou 'miaride'
   eventType    String
   eventKey     String // dédup : provider+eventType+référence (ou signature si pas de référence)
@@ -1507,7 +1598,7 @@ model WebhookEvent {
   status       String // 'processed' | 'duplicate' | 'rejected' | 'failed'
   rejectReason String?
   ipAddress    String?
-  receivedAt   DateTime @default(now())
+  receivedAt   DateTime  @default(now())
   processedAt  DateTime?
 
   @@unique([eventKey])

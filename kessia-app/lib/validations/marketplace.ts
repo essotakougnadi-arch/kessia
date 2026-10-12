@@ -19,7 +19,10 @@ export const MARKETPLACE_CATEGORIES = [
 ] as const;
 
 // data-URI image compressée côté client (comme le KYC). ~2,7 Mo max.
-const imageDataUri = z
+// Exportée : réutilisée par la preuve photo de colis étiqueté MiaRide
+// (lib/delivery/index.ts::uploadLabelPhoto) — même convention, pas de
+// nouveau format inventé.
+export const imageDataUri = z
   .string()
   .regex(/^data:image\/(jpeg|png|webp);base64,/, 'Image invalide.')
   .max(2_700_000, 'Image trop lourde (compressez-la).');
