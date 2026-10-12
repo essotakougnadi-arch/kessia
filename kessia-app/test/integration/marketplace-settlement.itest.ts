@@ -19,6 +19,18 @@ import { makeUser, cleanup, settle } from './helpers';
 
 const userIds: string[] = [];
 const itemIds: string[] = [];
+// AUDIT 2026-10-12 — `buyOnDelivery()` tague son écriture CREDIT séquestre
+// par `referenceId: buyer.id` (un userId), mais `releaseEscrowToSeller`/
+// `refundEscrowToBuyer` (lib/marketplace/escrow.ts) taguent la leur par
+// `referenceId: order.id` (un orderId) — deux conventions différentes.
+// Le nettoyage ci-dessous ne filtrait QUE sur `userIds`, donc ne supprimait
+// jamais les écritures DEBIT côté libération/remboursement : chaque run
+// laissait un CREDIT supprimé pour un DEBIT conservé sur le wallet séquestre
+// PARTAGÉ (jamais remis à zéro), creusant un écart permanent entre son
+// solde (correct) et la somme de son ledger restant. Confirmé par mesure
+// isolée avant/après ce fichier : écart +650 000 sur une seule exécution.
+// `orderIds` comble ce trou — voir aussi test/integration/invariants.itest.ts.
+const orderIds: string[] = [];
 
 afterEach(async () => {
   await settle();
@@ -27,9 +39,14 @@ afterEach(async () => {
     await prisma.marketplaceOrder.deleteMany({ where: { itemId: id } }).catch(() => {});
     await prisma.marketplaceItem.deleteMany({ where: { id } }).catch(() => {});
   }
-  // Les écritures séquestre restent (ledger immuable) — on les nettoie.
+  // Les écritures séquestre restent (ledger immuable) — on les nettoie,
+  // sur les DEUX conventions de referenceId (userId ET orderId).
   const escrow = await prisma.wallet.findFirst({ where: { kind: 'MARKETPLACE_ESCROW' }, select: { id: true } });
-  if (escrow) await prisma.ledgerEntry.deleteMany({ where: { walletId: escrow.id, referenceId: { in: userIds } } }).catch(() => {});
+  if (escrow) {
+    await prisma.ledgerEntry
+      .deleteMany({ where: { walletId: escrow.id, referenceId: { in: [...userIds, ...orderIds.splice(0)] } } })
+      .catch(() => {});
+  }
   await cleanup({ userIds: userIds.splice(0) });
 });
 
@@ -77,6 +94,7 @@ describe('Séquestre marketplace (intégration)', () => {
 
     const item = await makeItem(seller.id, 200_000);
     const order = await buyOnDelivery(buyer, item);
+    orderIds.push(order.id);
 
     // Les fonds ne sont PAS chez le vendeur.
     let sellerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: seller.id } });
@@ -108,6 +126,7 @@ describe('Séquestre marketplace (intégration)', () => {
 
     const item = await makeItem(seller.id, 150_000);
     const order = await buyOnDelivery(buyer, item);
+    orderIds.push(order.id);
 
     let buyerWallet = await prisma.wallet.findUniqueOrThrow({ where: { userId: buyer.id } });
     expect(Number(buyerWallet.balance)).toBe(150_000); // 300k - 150k au séquestre
@@ -136,6 +155,7 @@ describe('Séquestre marketplace (intégration)', () => {
 
     const item = await makeItem(seller.id, 90_000);
     const order = await buyOnDelivery(buyer, item);
+    orderIds.push(order.id);
 
     const results = await Promise.all(
       Array.from({ length: 20 }, () => refundEscrowToBuyer(order.id, 'delivery_cancelled'))
@@ -182,6 +202,7 @@ describe('Séquestre marketplace (intégration)', () => {
 
     const item = await makeItem(seller.id, 120_000);
     const order = await buyOnDelivery(buyer, item);
+    orderIds.push(order.id);
 
     const results = await Promise.all(
       Array.from({ length: 20 }, () => releaseEscrowToSeller(order.id, 'buyer_confirmed'))
@@ -215,6 +236,7 @@ describe('Séquestre marketplace (intégration)', () => {
 
     const item = await makeItem(seller.id, 90_000);
     const order = await buyOnDelivery(buyer, item);
+    orderIds.push(order.id);
     const delivery = await prisma.marketplaceDelivery.create({
       data: {
         orderId: order.id, buyerId: buyer.id, mode: 'SIMULATED', status: 'IN_TRANSIT',
