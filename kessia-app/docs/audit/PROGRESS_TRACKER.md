@@ -47,12 +47,21 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 |---|---|---|
 | **Wallet/Ledger** | **VALIDÉ EN TEST** | Voir tableau ci-dessus (volet 3) : atomicité confirmée par lecture de code + données réelles, 0 anomalie restante après correctif |
 | **Tontine** (orchestrateur, séquestre, cotisations) | **VALIDÉ EN TEST** (lecture de code + tests réels déjà existants, pas de nouveau test écrit ce tour) | `lib/tontine/orchestrator.ts` : activation verrouillée (`FOR UPDATE` + revérification, P1.7, prouvé par test) ; `checkAndAdvanceRound()` ne verse **jamais** plus que le séquestre détient (`held + 0.01 < pot` → suspension explicite, jamais de versement partiel) ; tous les versements idempotents (`TPAYOUT-<tontineId>-<round>`). `lib/tontine/escrow.ts` expose déjà `reconcileTontineEscrow()`/`escrowExpectedHeld()` — l'invariant séquestre est une fonction de bibliothèque réelle et testée, pas seulement un concept. `lib/tontine/contributions.ts::settleContribution` : idempotence par (membre, tour), double garde (route + ledger) |
-| **Finding (non bloquant, à investiguer séparément)** | **OUVERT, non vérifié** | `checkAndAdvanceRound()` n'a pas de verrou de ligne explicite (contrairement à `activateTontine()`) — analyse de code montre que c'est probablement sans danger (l'idempotence de `postDoubleEntry` absorbe un double paiement ; l'avancement de tour calcule la même valeur cible indépendamment sous course) mais **aucun test de concurrence dédié ne le prouve** pour ce cas précis (contrairement à l'activation, qui est testée concurrente). Question produit non résolue : que se passe-t-il si un membre quitte une tontine rotative active entre deux tours (bénéficiaire introuvable à son tour) ? — comportement du code = erreur explicite, jamais un crash, mais pas de test dédié |
-| Marketplace, Business, KYC, paiements, livraisons, notifications, back-office, feature flags, observabilité | **NON AUDITÉ** | Reste à faire, module par module |
+| **Finding — tranché par la preuve, pas seulement par lecture de code** | **RÉSOLU, aucune correction nécessaire** | 2 nouveaux tests de concurrence réelle (2× puis 10× `Promise.all` sur `checkAndAdvanceRound()`, tour déjà complet) : **un seul versement réel, un seul avancement de tour**, dans les deux cas. L'hypothèse de l'audit (idempotence du ledger + convergence du calcul de tour) est confirmée par preuve, pas supposée. `test/integration/tontine-concurrency.itest.ts`, commit `826e3c7`, branche `test/authz-and-invariants`. 123/123 tests, suite complète |
+| **Question produit non résolue (hors code)** | — | Membre qui quitte une tontine rotative active entre deux tours : comportement actuel = erreur explicite (« Bénéficiaire introuvable »), jamais un crash, mais aucun test dédié et aucune règle produit documentée sur ce cas |
+| **Marketplace** (parcours, panier, paiement, idempotence, rapprochement, permissions, livraison, erreurs) | **VALIDÉ EN TEST** | `POST /marketplace/[id]/order` relu intégralement : idempotence par en-tête (clé stockée, rejeu renvoie la commande existante), verrou de stock sous transaction + remboursement symétrique si survente détectée après paiement, plafond KYC appliqué avant tout débit, mode TONTINE crée son plan solo atomiquement avec la commande (rollback conjoint). `describeBuyability()`/`installmentAmount()` : logique pure, déjà testée. Panier (`store/cartStore.ts`) : confirmé 100% client (localStorage), aucune route/modèle nouveau — enchaîne l'achat direct existant, conforme à sa propre documentation. Livraison (`lib/delivery/index.ts`) : `confirmDelivered`/`cancelDelivery`/`requestDelivery` tous vérifiés par propriété (`buyerId`), idempotents via la même clé ledger stable que le versement sous-jacent — **même schéma de sûreté que Tontine** (pas de verrou explicite au niveau fonction, mais le ledger sous-jacent absorbe la course, déjà prouvé par le test existant « vingt appels concurrents à confirmDelivered », vert) |
 
 ## Phase 4 — KESSIA Verification (badge fournisseur)
 
-**NON AUDITÉ**. Aucune recherche n'a encore été faite dans cette session sur l'état réel de cette fonctionnalité (existe-t-elle déjà, même partiellement ?). Première action nécessaire : audit de l'existant avant toute conception.
+**AUDITÉ — fonctionnalité INEXISTANTE, confirmé par recherche exhaustive.** Aucune occurrence de « KESSIA Verification », aucun modèle Prisma, aucune route, aucune mention dans un ADR ou un document de conformité — la seule chose trouvée est une étiquette i18n générique `badgeKycVerified` (le badge KYC déjà existant pour les comptes individuels, pas un système de vérification fournisseur distinct). **Aucune décision métier préexistante à retrouver — il n'y en a pas.**
+
+**Conformément à l'instruction du master prompt** (« si les critères exacts ne peuvent pas être retrouvés, implémente seulement ce qui est suffisamment défini et prépare une question précise ») — je ne conçois pas de modèle de données tant que ces points ne sont pas tranchés :
+1. Quels documents/informations exacts prouvent qu'un fournisseur est « vérifié » (registre de commerce ? pièce d'identité du gérant ? numéro fiscal ? autre) ?
+2. Qui approuve concrètement (un rôle admin existant — `COMPLIANCE`/`OPERATIONS` — ou un nouveau rôle dédié) ?
+3. Le badge expire-t-il (durée fixe, renouvellement annuel) ou reste-t-il valide indéfiniment une fois accordé ?
+4. Le modèle `Business`/`Supplier` déjà existant doit-il porter ce statut, ou un nouveau modèle dédié est-il préférable ?
+
+Sans ces réponses, toute implémentation serait une invention de règles métier — explicitement proscrit.
 
 ## Phase 5 — Marketplace et parcours de commande
 
@@ -61,11 +70,21 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 | Seed annonçant 8 articles / API renvoyant une liste vide | **DÉJÀ INVESTIGUÉ ET RÉSOLU** (plus tôt dans cette session, avant l'incident) | Cause établie : absence de données réelles en production (pas un bug de code) → script contrôlé `scripts/init-production-kessia-seller.mjs` créé, **toujours non commité**, en attente d'autorisation séparée (préservé intact pendant tout l'incident) |
 | Commit `0764c06…` (correctif enum `UserType.SME`) | **VÉRIFIÉ** — présent sur `origin/main` | SHA réel `0764c06a628a5876fddd9f56de0fddb40a6a1111` (le hash cité dans le master prompt comporte une coquille — un caractère manquant). `git merge-base --is-ancestor` confirme sa présence sur `main` |
 | Idempotence commandes (`Idempotency-Key`, P0.4) | **VALIDÉ EN PRODUCTION** (préexistant) | `marketplace-order-idempotency.itest.ts`, exhaustif |
-| Reste du parcours (panier, adresse ADR 0045, devis livraison, statuts) | **NON RÉAUDITÉ** dans ce tour | — |
+| Reste du parcours (panier, adresse ADR 0045, devis livraison, statuts) | **VALIDÉ EN TEST** (ce tour) | Voir Phase 3 — route de commande relue intégralement, panier confirmé client-only, livraison vérifiée par propriété + idempotente |
 
 ## Phase 6 — Intégration KESSIA–MiaRide (livraison)
 
-**NON AUDITÉ**. L'intégration Miaride EXISTE déjà partiellement dans le code (`lib/delivery/`, webhook `marketplace/deliveries/webhooks/miaride`, mode SIMULATED + HANDOFF, ADR 0042) — confirmé par du code lu cette session (`webhook-security.itest.ts`, `lib/delivery/index.ts`). **Mais** les exigences détaillées du Master Prompt (numéro de suivi généré par KESSIA et non Miaride, étiquette imprimable, preuve photo, étapes d'accord client-fournisseur) n'ont pas été comparées point par point à l'existant. Audit de conformité à faire avant toute implémentation.
+**AUDITÉ point par point contre `prisma.schema::MarketplaceDelivery`/`DeliveryStatus` — 3 écarts confirmés avec preuve, pas supposés :**
+
+| Exigence du master prompt | État réel constaté | Écart |
+|---|---|---|
+| Numéro de suivi **généré par KESSIA**, jamais par MiaRide | Seul champ existant : `providerRef String? // code de suivi Miaride` — explicitement le code **de MiaRide**, l'inverse de l'exigence | **Écart confirmé** — aucun champ de suivi natif KESSIA n'existe |
+| Étiquette imprimable (code-barres/QR) | Aucun champ ni logique de génération trouvés | **Écart confirmé** |
+| Preuve photographique du colis étiqueté | Aucun champ de stockage de photo sur `MarketplaceDelivery` (`pickupLabel` est un texte décrivant le lieu d'enlèvement, pas une photo) | **Écart confirmé** |
+| Étape d'accord client-fournisseur avant expédition | `DeliveryStatus` : `SCHEDULED→REQUESTED→COURIER_ASSIGNED→PICKED_UP→IN_TRANSIT→DELIVERED→CANCELLED` ; `sellerReadyAt` existe (vendeur prêt) mais aucun statut distinct de confirmation **acheteur** avant enlèvement | **À clarifier** — la commande+paiement existants jouent peut-être déjà ce rôle ; pas un écart certain, une question produit |
+| Ce qui EXISTE déjà et fonctionne | `lib/delivery/index.ts` (`requestDelivery`/`confirmDelivered`/`cancelDelivery`), webhook signé+idempotent (`webhook-security.itest.ts`, déjà vert), modes SIMULATED/HANDOFF, séquestre lié à la livraison (ADR 0045) | Base solide, pas à refaire |
+
+**Pas d'implémentation engagée** (nouveaux champs = migration de schéma, hors du périmètre « tâche ordinaire sans validation »). Question précise avant de concevoir le numéro de suivi KESSIA : format souhaité (ex. `KSA-XXXXXXXX`), et faut-il un QR code réellement scannable par un lecteur MiaRide, ou un simple code imprimé suffit pour cette phase ?
 
 ## Phase 7 — Sécurité, finance, qualité
 
