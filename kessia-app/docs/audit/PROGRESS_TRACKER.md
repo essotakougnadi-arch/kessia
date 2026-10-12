@@ -117,7 +117,7 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 1. **État réel de la production toujours indéterminé** (P1.3, bloqué — classificateur automatique, pas une limite de ma part).
 2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel n'a pas pu être testé de bout en bout. **Confirmé : ce correctif n'existe que sur cette branche — absent de `main`.**
 3. Fichiers KESSIA Shop toujours non commités (par conception) — confirmés intacts à chaque vérification de cette session, y compris ce tour.
-4. **Finding course sur `Device` (fingerprint) — CORRIGÉ, re-confirmé ce tour contre le cluster local réel** (`test/authz-and-invariants`, commit `0d4bc6f`, toujours non poussé) : 126/126 tests d'intégration verts, dont les 3 nouveaux de `device-concurrency.itest.ts`.
+4. **Finding course sur `Device` (fingerprint) — CORRIGÉ, re-confirmé ce tour contre le cluster local réel** (`test/authz-and-invariants`, commit `0d4bc6f`, **désormais poussé**) : 126/126 tests d'intégration verts, dont les 3 nouveaux de `device-concurrency.itest.ts`.
 5. Le cluster PostgreSQL 16 de test local a été **utilisé avec succès ce tour** (authz/invariants ré-exécutés, 126/126 verts) — toujours actif, à arrêter proprement en fin de session de travail.
 
 ## Validations locales terminées ce tour (2026-10-12, suite à l'incident — aucune commande Prisma, aucune connexion distante)
@@ -153,18 +153,31 @@ Détail complet par PR : voir les 4 brouillons de PR préparés cette session (t
 - `SellerVerificationDocument` n'indexe pas sa propre clé étrangère `verificationId` — **vérifié que c'est cohérent avec la convention existante** (`KycDocument.kycCaseId` non plus), pas un oubli introduit ce tour.
 - 5 migrations au total sur cette branche, dans le bon ordre chronologique, `migration_lock.toml` inchangé (provider toujours `postgresql`).
 
+## Publication GitHub — FAITE ce tour (autorisation explicite reçue)
+
+Les 2 branches locales sont désormais poussées, confirmé par `git branch -vv` (plus aucun `ahead`, les 4 branches correspondent exactement à leur remote) :
+
+| Branche | Avant | Après |
+|---|---|---|
+| `test/authz-and-invariants` | 1 commit local non poussé (`0d4bc6f`) | **poussée** — `826e3c7..0d4bc6f` (fast-forward, aucune réécriture) |
+| `fix/prisma-adhoc-connection-guard` | jamais poussée (6 commits locaux) | **poussée pour la première fois** — nouvelle branche distante créée, upstream configuré |
+
+Vérifié avant publication (pas supposé) : `git status`/`git remote -v` (1 seul remote, `origin`, le bon dépôt), commits locaux listés précisément et comparés au rapport précédent (exacts), aucun fichier préexistant touché. Push normal (jamais `--force`) — aucun historique réécrit, aucune branche réinitialisée.
+
+**4 branches sur GitHub, aucune PR ouverte, aucune fusion.**
+
 ## Tâches restantes
 
-- Pousser `test/authz-and-invariants` (commit `0d4bc6f`) et `fix/prisma-adhoc-connection-guard` (3 commits) — **toujours pas fait, sur instruction explicite de ne pas les pousser sans autorisation.**
-- Ouvrir les 4 PR dans l'ordre recommandé ci-dessus.
+- **Ouvrir les 4 PR manuellement** (pas d'accès `gh`/API d'écriture GitHub cette session) — liens et textes exacts fournis au propriétaire dans le rapport de ce tour.
 - **Autoriser la première exécution réelle de `db:test:status`** (même contre le cluster local) — c'est la seule façon de prouver le câblage au-delà des tests simulés.
+- Fusionner dans l'ordre vérifié : PR 1 → PR 4 → PR 2 (à tout moment) → PR 3, avec réconciliation manuelle du tracker à la dernière étape.
 - Appliquer la migration Phase 4/6 en production — non effectuée, décision du propriétaire.
 - Décision sur le commit des fichiers KESSIA Shop (hors périmètre, rappelé pour mémoire).
 
 ## Validations humaines requises, en attente
 
-- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma réelle (y compris `db:test:status` désormais câblé), tout test de connexion, ou toute connexion à une base distante.** Les validations locales de ce tour (tests mockés + intégration via vitest contre le cluster local) ne constituent PAS cette autorisation — elles n'ont jamais invoqué le CLI Prisma.
+- **Ouverture des 4 PR** — brouillons précis prêts (titres, corps, tests, base exacte par PR), pas d'accès API en écriture, étapes manuelles exactes fournies.
+- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma réelle (y compris `db:test:status` désormais câblé ET publié), tout test de connexion, ou toute connexion à une base distante.** La publication des branches ne constitue PAS cette autorisation — aucune commande Prisma n'a été invoquée pour publier du code.
 - **Récupération Supabase : incident distinct, toujours non résolu.** Aucune action de cette session ne constitue une restauration, une migration, une écriture ou une connexion distante autorisée — ni confirmation que les données sont récupérées, ni qu'elles sont définitivement perdues. Reste une action directe du propriétaire (dashboard/SQL editor Supabase).
-- Ouverture des 4 PR (brouillons prêts) — pas d'accès API en écriture.
-- Décision sur l'ordre de fusion et la réconciliation du tracker (conflit identifié ci-dessus).
+- Décision sur l'ordre de fusion et la réconciliation du tracker (conflit identifié, maintenant que les branches existent réellement sur GitHub pour l'exécuter).
 - Décision sur le commit des fichiers KESSIA Shop.
