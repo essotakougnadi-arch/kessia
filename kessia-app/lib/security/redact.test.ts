@@ -20,8 +20,8 @@ describe('redact — comportement existant (préservé, sert aussi Winston via l
 
   it('masque la valeur des champs password/secret/token/apiKey', () => {
     expect(redact('password=hunter2')).toBe('password=***');
-    expect(redact('token: "eyJhbGciOiJIUzI1NiJ9.abc.def"')).not.toContain('eyJhbGciOiJIUzI1NiJ9');
-    expect(redact('{"apiKey":"sk-abcdef123"}')).not.toContain('sk-abcdef123');
+    expect(redact('token: "placeholder-token-value"')).not.toContain('placeholder-token-value');
+    expect(redact('{"apiKey":"placeholder-api-key-value"}')).not.toContain('placeholder-api-key-value');
     expect(redact('JWT_SECRET=u6LDW3X7ufUF')).not.toContain('u6LDW3X7ufUF');
   });
 
@@ -93,9 +93,9 @@ describe('redactDeep — objets structurés (P1.13-D, gap confirmé par audit)',
   });
 
   it('objet contenant token', () => {
-    const out = redactDeep({ accessToken: 'eyJhbGciOiJIUzI1NiJ9.abc.def' }) as Record<string, unknown>;
+    const out = redactDeep({ accessToken: 'placeholder-token-value' }) as Record<string, unknown>;
     expect(out.accessToken).toBe('***');
-    expect(JSON.stringify(out)).not.toContain('eyJhbGciOiJIUzI1NiJ9');
+    expect(JSON.stringify(out)).not.toContain('placeholder-token-value');
   });
 
   it('objet contenant authorization', () => {
@@ -112,7 +112,7 @@ describe('redactDeep — objets structurés (P1.13-D, gap confirmé par audit)',
       requestId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
       password: 'hunter2',
       secret: 'top-secret-value',
-      apiKey: 'sk-abcdef123456',
+      apiKey: 'placeholder-api-key-value',
       pin: '4242',
       iban: 'FR7612345987650123456789014',
       cvv: '123',
@@ -141,7 +141,7 @@ describe('redactDeep — objets structurés (P1.13-D, gap confirmé par audit)',
     const serialized = JSON.stringify(out);
     expect(serialized).not.toContain('hunter2');
     expect(serialized).not.toContain('top-secret-value');
-    expect(serialized).not.toContain('sk-abcdef123456');
+    expect(serialized).not.toContain('placeholder-api-key-value');
     expect(serialized).not.toContain('4242');
     expect(serialized).not.toContain('FR7612345987650123456789014');
     expect(serialized).not.toContain('abc123');
