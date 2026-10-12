@@ -111,11 +111,23 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 4. **Finding course sur `Device` (fingerprint) — CORRIGÉ ce tour, sur une autre branche non fusionnée** (`test/authz-and-invariants`, commit `0d4bc6f`) : `recordDevice` remplace find-then-create par un upsert atomique, 3 nouveaux tests d'intégration prouvent 0 échec sous 20 enregistrements concurrents du même appareil (avant : certains retournaient `null`).
 5. Le cluster PostgreSQL 16 de test local tournait en arrière-plan avant l'incident du 2026-10-12 — son état n'a plus été vérifié depuis (aucune commande de vérification autorisée pour l'instant, voir section incident).
 
+## Tâches restantes (mises à jour 2026-10-12, après l'auto-révision du correctif d'incident)
+
+- Pousser `test/authz-and-invariants` (commit `0d4bc6f`, le correctif `recordDevice`) — committé localement, pas encore poussé.
+- Pousser `fix/prisma-adhoc-connection-guard` (commits `fcaf784`, `a5791cd`) — nouvelle branche, jamais poussée.
+- Ouvrir les 4 PR (brouillons précis prêts, titres/corps/tests par branche — voir note de session). PR 4 doit cibler `fix/db-test-reset-production-guard` comme base, pas `main`.
+- Décider du câblage du correctif proposé (`scripts/require-local-db.mjs`) — non câblé, et rester conscient de sa limite structurelle (ne protège pas une commande tapée directement) même une fois câblé.
+- Ré-exécuter la suite complète (unitaire + intégration) sur `fix/db-test-reset-production-guard`/`fix/prisma-adhoc-connection-guard` avant fusion — pas revérifiée cette session (seuls `tsc`/`eslint`/le test simulé ciblé ont tourné).
+- Appliquer la migration Phase 4/6 en production — non effectuée, décision du propriétaire.
+- Décision sur le commit des fichiers KESSIA Shop (hors périmètre, rappelé pour mémoire).
+- Décision sur la garde KYC devenue superflue à documenter une fois la PR 3 fusionnée (déjà tranchée et implémentée côté `feat/...`).
+
 ## Validations humaines requises, en attente
 
-- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma ou vérification de base de données — voir section dédiée en tête de fichier et `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.**
+- **Incident du 2026-10-12 : autorisation explicite avant toute nouvelle commande Prisma, tout test de connexion, ou toute connexion à une base distante — voir section dédiée en tête de fichier et `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.** Reste valable même après l'auto-révision du correctif proposé : celui-ci n'a toujours pas été câblé ni exécuté.
+- **Récupération Supabase : incident distinct, toujours non résolu.** Aucune action cette session (ni avant, ni pendant la gestion de l'incident Prisma ci-dessus) ne constitue une restauration, une migration, une écriture ou une connexion distante autorisée. Reste une action du propriétaire (dashboard/SQL editor Supabase).
 - Vérification Supabase (backups/logs) — §P1.2/P1.3.
 - Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture.
-- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3) — idem.
+- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3 + correctif `recordDevice`) — idem.
+- Ouverture de PR pour `fix/prisma-adhoc-connection-guard` (incident + correctif proposé) — idem, base = `fix/db-test-reset-production-guard`.
 - Décision sur le commit des fichiers KESSIA Shop (hors périmètre de cet incident, rappelé pour mémoire).
-- Décision sur le finding `lib/fraud/devices.ts` (corriger maintenant ou plus tard — non urgent, non exploité par un attaquant, juste un log d'erreur bruyant).
