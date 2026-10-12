@@ -1,0 +1,125 @@
+# ============================================================
+# KESSIA — Pipeline de sécurité CI (P2.20 — étape 1)
+#
+#   - SAST        : CodeQL (github/codeql-action), JS/TS, suite étendue
+#                    (`security-extended`) pour une couverture plus
+#                    large que la suite par défaut.
+#   - Secrets     : Gitleaks — binaire officiel open source téléchargé
+#                    et vérifié par empreinte SHA-256 (pas l'action
+#                    Marketplace officielle, qui demande une licence
+#                    sur dépôt privé pour le même moteur de détection).
+#   - Dépendances : `npm audit`, en distinguant explicitement
+#                    production (bloquant) et développement (rapporté,
+#                    non bloquant — cf. commentaire du job ci-dessous).
+#
+# Ne duplique aucun contrôle déjà couvert ailleurs : lint/typecheck/
+# tests unitaires → ci.yml ; tests d'intégration (base réelle
+# éphémère) → integration.yml ; E2E → e2e.yml ; gardes anti-production
+# sur les URL de base de données → integration.yml/e2e.yml/staging.yml.
+#
+# Aucun résultat manquant n'est présenté comme une réussite : les
+# contrôles eux-mêmes (CodeQL, Gitleaks, audit des dépendances de
+# PRODUCTION) échouent explicitement s'ils détectent un problème —
+# aucun `|| true` ne masque une détection réelle. La seule exception
+# volontaire à cette règle est documentée dans le job `dependency-audit`
+# (rapport des vulnérabilités de DÉVELOPPEMENT déjà connues et
+# acceptées, jamais exécutées en Production).
+# ============================================================
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Moindre privilège par défaut : lecture seule. Le job `codeql` élève
+# ponctuellement `security-events: write`, uniquement pour publier ses
+# résultats dans l'onglet "Security" du dépôt (upload SARIF) — aucun
+# droit d'écriture sur le code, les PR ou les issues n'est accordé par
+# ce workflow.
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - uses: github/codeql-action/analyze@v3
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      # Empreinte officielle de gitleaks_8.30.1_linux_x64.tar.gz,
+      # publiée par le projet (gitleaks_8.30.1_checksums.txt) —
+      # vérifiée avant toute exécution du binaire téléchargé.
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Historique complet (pas un clone superficiel) : un secret
+          # retiré depuis reste un secret compromis s'il est resté dans
+          # un commit passé.
+          fetch-depth: 0
+
+      - name: Installer Gitleaks (binaire officiel, intégrité vérifiée)
+        run: |
+          set -e
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          chmod +x gitleaks
+
+      - name: Scanner l'historique git (Gitleaks, mode --redact — aucune valeur secrète affichée)
+        run: ./gitleaks detect --source . --redact --verbose
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: kessia-app/package-lock.json
+
+      - name: Install
+        working-directory: kessia-app
+        run: npm ci
+
+      - name: Audit — dépendances de PRODUCTION (bloquant)
+        working-directory: kessia-app
+        # Toute vulnérabilité ici fait échouer le job : ce sont les
+        # dépendances réellement exécutées en Production.
+        run: npm audit --omit=dev
+
+      - name: Audit — dépendances de DÉVELOPPEMENT (rapporté, non bloquant)
+        working-directory: kessia-app
+        # Non bloquant par décision déjà prise cette session : au
+        # 2026-10-12, 11 vulnérabilités connues (chaîne vitest/vite/
+        # esbuild), dont le correctif exige un upgrade majeur de vitest
+        # (breaking change) explicitement différé — jamais exécutées en
+        # Production (outils de test uniquement). `continue-on-error`
+        # garde ce run visible avec son statut réel (GitHub affiche
+        # l'échec de l'étape) sans bloquer la pipeline sur un risque
+        # déjà identifié et accepté : ce n'est pas un résultat manquant
+        # masqué, c'est une vulnérabilité connue et délibérément non
+        # bloquante.
+        continue-on-error: true
+        run: npm audit
