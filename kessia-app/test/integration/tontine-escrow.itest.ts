@@ -107,7 +107,15 @@ describe('Séquestre de tontine — invariant sur un cycle complet (intégration
     for (const m of members) {
       expect(await getWalletBalance(m.walletId)).toBe(amount * 2);
     }
-    // un événement de rapprochement a été journalisé
+    // un événement de rapprochement a été journalisé — `shortfall()`
+    // (lib/tontine/orchestrator.ts) écrit cet événement en tâche de fond
+    // (`void recordTontineEvent(...)`, jamais attendu) avant de renvoyer
+    // son résultat ; sans ce délai, la requête ci-dessous course contre
+    // cette écriture asynchrone (observé en CI : conteneur Postgres
+    // éphémère neuf, latence plus variable que le cluster local
+    // persistant — jamais observé en local, mais une course réelle,
+    // pas un flake aléatoire).
+    await settle();
     const shortfall = await prisma.tontineEvent.count({
       where: { tontineId: tontine.id, type: 'ESCROW_SHORTFALL' },
     });
