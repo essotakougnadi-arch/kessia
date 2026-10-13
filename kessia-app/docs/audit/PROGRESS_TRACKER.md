@@ -186,6 +186,25 @@ Restent **NON AUDITÉS, hors de portée d'un agent de code** : DAST et pentest e
 
 **Résolution préparée** : ce document constitue la réconciliation des 3 versions divergentes de `PROGRESS_TRACKER.md` (base commune 109 lignes + apports de PR #6 + apports de PR #9, fusionnés par `git merge-file`, un seul conflit réel résolu manuellement, aucune information perdue). Déposé directement sur la branche de PR #6 (`feat/seller-verification-and-miaride-tracking`) — **la fusion de PR #6 ne devrait donc plus produire de conflit sur ce fichier une fois PR #7/#9 fusionnées**, à revérifier au moment venu.
 
+**Diffs réels par PR, mesurés avant ouverture (`git diff --name-status`, lecture seule)** :
+
+| PR | Base | Fichiers (statut) |
+|---|---|---|
+| #7 (`fix/db-test-reset-production-guard`) | `main` | `docs/audit/PROGRESS_TRACKER.md` (A), `scripts/db-test-reset.mjs` (M), `scripts/db-test-reset.test.ts` (A) — 3 fichiers, +365/-45 |
+| #8 (`test/authz-and-invariants`) | `main` | `lib/fraud/devices.ts` (M), `lib/observability/no-sensitive-console-log.test.ts` (M), `test/integration/{authz,device-concurrency,invariants}.itest.ts` (A×3), `test/integration/{marketplace-settlement,tontine-concurrency}.itest.ts` (M×2) — 7 fichiers, +746/-28 |
+| #9 (`fix/prisma-adhoc-connection-guard`) | `fix/db-test-reset-production-guard` | `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md` (A), `docs/audit/PROGRESS_TRACKER.md` (M), `package.json` (M), `scripts/require-local-db.mjs` (A), `scripts/require-local-db.test.ts` (A), `scripts/run-local-only.mjs` (A), `scripts/run-local-only.test.ts` (A) — 7 fichiers, +696/-9 |
+
+## Publication GitHub des branches locales (fait avant l'ouverture des PR)
+
+Les 2 branches locales ont été poussées, confirmé par `git branch -vv` (plus aucun `ahead`, correspondance exacte avec leur remote) :
+
+| Branche | Avant | Après |
+|---|---|---|
+| `test/authz-and-invariants` | 1 commit local non poussé (`0d4bc6f`) | **poussée** — `826e3c7..0d4bc6f` (fast-forward, aucune réécriture) |
+| `fix/prisma-adhoc-connection-guard` | jamais poussée (6 commits locaux) | **poussée pour la première fois** — nouvelle branche distante créée, upstream configuré |
+
+Vérifié avant publication (pas supposé) : `git status`/`git remote -v` (1 seul remote, `origin`), commits locaux comparés au rapport précédent (exacts), aucun fichier préexistant touché. Push normal (jamais `--force`) — aucun historique réécrit, aucune branche réinitialisée.
+
 ## Accès GitHub — rétabli ce tour, 4 PR réelles ouvertes
 
 Le propriétaire a authentifié `gh` (compte `essotakougnadi-arch`, scopes `repo`+`workflow`). **Non trouvé dans le PATH des shells de cet outil** — localisé sur disque (`C:\Program Files\GitHub CLI\gh.exe`) et invoqué via son chemin complet. Permission vérifiée non destructivement (`gh repo view --json viewerPermission`) : **`ADMIN`**. Jamais de secret affiché (jeton toujours masqué par `gh`).
@@ -201,15 +220,26 @@ Le propriétaire a authentifié `gh` (compte `essotakougnadi-arch`, scopes `repo
 
 **Aucun conflit détecté par GitHub sur aucune des 4 PR** (`mergeable: MERGEABLE` partout).
 
+## Mise à jour finale — fusions réelles confirmées, résolution du tracker pour PR #6 (2026-10-13)
+
+**Confirmé par `git log --merges origin/main`, pas supposé** : les 4 PR ci-dessus ont depuis été fusionnées, dans l'ordre recommandé :
+
+| PR | Fusion | Commit sur `main` |
+|---|---|---|
+| #7 | `fix/db-test-reset-production-guard` → `main` | `9363edb` |
+| #9 | `fix/prisma-adhoc-connection-guard` → `fix/db-test-reset-production-guard` | `60f627d` (fusionné dans la branche de #7, pas directement dans `main` — voir #10) |
+| #8 | `test/authz-and-invariants` → `main` | `8c272f9` |
+| #10 | `fix/db-test-reset-production-guard` → `main` — PR distincte ouverte spécifiquement pour porter le contenu de #9 jusqu'à `main` (la base de #9 avait déjà été fusionnée via #7 avant même l'existence de #9, donc #9 seule ne touchait jamais `main` directement — écart détecté et corrigé ce tour) | `22333c8` |
+
+**Seule PR #6 reste ouverte.** Son conflit sur ce fichier — prédit plus haut entre {#7+#9} et #6, confirmé réel par `git merge-tree` en lecture seule (`CONFLICT (add/add)`, pré-existant avant tout autre changement sur cette branche) — est résolu par le commit qui dépose cette version réconciliée. Mergeabilité et CI de PR #6 à revérifier après ce push ; non constatées au moment de l'écriture de cette section.
+
 ## Blocages réels restants
 
 1. **Récupération Supabase : incident distinct, toujours non résolu, ni confirmé récupéré ni confirmé perdu définitivement.** Action directe du propriétaire requise.
-2. Décision du propriétaire sur le moment de fusionner (ordre recommandé ci-dessous) — **aucune fusion effectuée**.
-3. Application de la migration en production (Phase 4/6) — décision du propriétaire, non technique.
-4. Partenariat MiaRide réel — réponses du propriétaire/MiaRide requises.
-5. Décision sur le commit des fichiers KESSIA Shop (hors périmètre).
-6. Vérifier que le check `Vercel – kessia` de PR #9 a bien fini de se déployer (`pending` au moment de ce rapport, sans rapport avec le code).
+2. Application de la migration en production (Phase 4/6) — décision du propriétaire, non technique.
+3. Partenariat MiaRide réel — réponses du propriétaire/MiaRide requises.
+4. Décision sur le commit des fichiers KESSIA Shop (hors périmètre).
 
 ## Prochaine action unique
 
-**Avec votre autorisation explicite, fusionner dans l'ordre #7 → #9 → #8 → #6.** #7/#8 sont entièrement vertes. #9 n'a aucun workflow GitHub Actions bloquant. La réconciliation du tracker pour la fusion de #6 est déjà déposée sur sa branche dans ce document.
+**Revérifier l'état réel de PR #6 (mergeabilité + contrôles CI) après ce commit, puis la présenter pour une décision de fusion séparée.** Les 4 autres PR sont déjà fusionnées sur `main`.
