@@ -6,6 +6,25 @@ Ce fichier est mis à jour à chaque point de contrôle. Il ne transforme jamais
 
 ---
 
+## ⚠️ Incident du 2026-10-12 (session agent) — commande Prisma ad hoc, hôte distant non vérifié
+
+**Toujours non résolu au sens strict — aucune commande Prisma réelle n'a été exécutée depuis, et aucune n'a été autorisée.** Une commande `prisma migrate status` tapée directement (hors de tout script protégé) avec `DATABASE_URL` remplacée mais `DIRECT_URL` non remplacée s'est connectée à `aws-1-eu-west-1.pooler.supabase.com:5432` au lieu du cluster de test local — repli silencieux exactement de la même nature que la cause racine de l'incident de production original. Lecture seule par conception de la commande (pas de preuve de modification, mais pas de preuve absolue de son absence non plus — voir le rapport).
+
+**Détail complet, preuves** : `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md`.
+
+**Correctif désormais câblé, mais toujours jamais exécuté contre aucune base** :
+- `scripts/require-local-db.mjs` : garde ALLOWLIST (DATABASE_URL/DIRECT_URL identiques entre eux, identiques à `.env.test`, hôte loopback). **Auto-révisée** : sa description initiale sur-affirmait sa portée (« protège toute invocation ») — corrigée pour préciser qu'elle ne protège que ce qui l'appelle explicitement.
+- `scripts/run-local-only.mjs` (nouveau ce tour) : relais concret, nouveau script npm `db:test:status` => `prisma migrate status` via ce relais. Comble le vide réel qui a motivé la commande ad hoc incriminée.
+- **17 tests entièrement simulés** au total (`require-local-db.test.ts` 10 + `run-local-only.test.ts` 7) — `node:fs`/`execFileSync` moqués, **aucune commande réelle, aucune connexion, dans aucun de ces tests**.
+- **Limite structurelle non résolue, et qui ne peut PAS être résolue par ce seul correctif** : même câblé, rien n'empêche une commande Prisma tapée directement dans un terminal de contourner `db:test:status` — exactement le mécanisme de l'incident lui-même. Documenté explicitement dans le rapport et l'en-tête des deux scripts.
+- **La première exécution réelle de `db:test:status` (même contre le cluster local) n'a pas eu lieu et reste soumise à autorisation explicite du propriétaire.**
+
+**Constat aggravant (lecture seule, `git show`)** : le correctif de l'incident de production ORIGINAL (`DIRECT_URL` toujours résolue explicitement dans `db-test-reset.mjs`) n'existe que sur la branche `fix/db-test-reset-production-guard` — **absent de `main`**. `npm run db:test:reset` reproduirait aujourd'hui l'incident original sur `main` tel quel.
+
+**Délibérément NON fait** : `db-test-reset.mjs` lui-même n'a pas été modifié pour déléguer à `assertLocalTestPair()` — risquerait de casser son repli `E2E_DATABASE_URL` existant (8 tests déjà verts) sans bénéfice de sûreté démontré. Reporté comme nettoyage non urgent, pas un correctif de sûreté manquant.
+
+---
+
 ## Phase 1 — Incident base de données (PRIORITÉ ABSOLUE)
 
 | ID | Tâche | Statut | Dépendances | Preuves | Prochaine action |
@@ -94,16 +113,125 @@ Largement recoupée par P2.20 (volets 1 et 2) déjà traités. Restent **NON AUD
 
 ## Risques immédiats (mis à jour après exécution réelle)
 
+0. **Incident du 2026-10-12 : voir section dédiée en tête de ce fichier.** Le correctif est désormais câblé (`db:test:status`) et prouvé par 17 tests simulés, mais **jamais exécuté réellement, même contre le cluster local** — reste soumis à autorisation explicite.
 1. **État réel de la production toujours indéterminé** (P1.3, bloqué — classificateur automatique, pas une limite de ma part).
-2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel (avec un vrai `prisma migrate reset`) n'a pas pu être testé de bout en bout, l'action a été bloquée par un classificateur distinct (« Cloud Storage Mass Delete »), malgré une cible confirmée locale et sûre.
-3. Fichiers KESSIA Shop toujours non commités (par conception, en attente d'autorisation dédiée) — confirmés intacts à chaque vérification de cette session.
-4. **Finding mineur non bloquant** : course sur `Device` (fingerprint) en cas de transferts concurrents — voir tableau P2.20 volet 2.
-5. Le cluster PostgreSQL 16 de test local tourne actuellement en arrière-plan (PID via `pg_ctl`, port 5433) — à arrêter proprement en fin de session.
+2. **Correctif `db-test-reset.mjs` validé en mock uniquement** — le script réel n'a pas pu être testé de bout en bout. **Confirmé : ce correctif n'existe que sur cette branche — absent de `main`.**
+3. Fichiers KESSIA Shop toujours non commités (par conception) — confirmés intacts à chaque vérification de cette session, y compris ce tour.
+4. **Finding course sur `Device` (fingerprint) — CORRIGÉ, re-confirmé ce tour contre le cluster local réel** (`test/authz-and-invariants`, commit `0d4bc6f`, **désormais poussé**) : 126/126 tests d'intégration verts, dont les 3 nouveaux de `device-concurrency.itest.ts`.
+5. Le cluster PostgreSQL 16 de test local a été **utilisé avec succès ce tour** (authz/invariants ré-exécutés, 126/126 verts) — toujours actif, à arrêter proprement en fin de session de travail.
 
-## Validations humaines requises, en attente
+## Validations locales terminées ce tour (2026-10-12, suite à l'incident — aucune commande Prisma, aucune connexion distante)
 
-- Vérification Supabase (backups/logs) — §P1.2/P1.3.
-- Ouverture de PR pour `fix/db-test-reset-production-guard` (P1.4/P1.5) — pas d'accès API en écriture.
-- Ouverture de PR pour `test/authz-and-invariants` (P2.20 volets 2+3) — idem.
-- Décision sur le commit des fichiers KESSIA Shop (hors périmètre de cet incident, rappelé pour mémoire).
-- Décision sur le finding `lib/fraud/devices.ts` (corriger maintenant ou plus tard — non urgent, non exploité par un attaquant, juste un log d'erreur bruyant).
+| Branche | Unitaires (tous mockés) | Intégration (cluster local réel) | `tsc`/`eslint` |
+|---|---|---|---|
+| `fix/db-test-reset-production-guard` | **351/351** (42 fichiers, re-confirmé ce tour) | non ré-exécutée ce tour (dernier statut connu : vert) | ✅ |
+| `test/authz-and-invariants` | 343/343 (déjà confirmé) | **126/126** (22 fichiers, **re-exécuté réellement ce tour contre le cluster local**, autorisé explicitement) | ✅ |
+| `feat/seller-verification-and-miaride-tracking` | 348/348 (déjà confirmé, inchangé ce tour) | 134/134 (déjà confirmé, inchangé ce tour) | ✅ |
+| `fix/prisma-adhoc-connection-guard` | **368/368** (44 fichiers, re-confirmé ce tour avec les 17 nouveaux tests simulés) | sans objet (rien de nouveau ne touche une route/un service) | ✅ |
+
+## Contrôles CI et conflits — vérifiés rigoureusement ce tour (`git merge-tree`, plumbing read-only, zéro branche/historique modifié)
+
+**Bases ré-vérifiées par `git merge-base`** (pas supposées) : PR 1/2/3 partent toutes de `c9992ef` (tip réel d'`origin/main`). **PR 4 contient PR 1 comme ancêtre direct** (`git merge-base fix/db-test-reset-production-guard fix/prisma-adhoc-connection-guard` = tip exact de PR 1) — confirme la dépendance, pas juste un point de départ commun.
+
+**Contrôles CI** (relu directement dans les 4 fichiers `.github/workflows/*.yml`, pas de mémoire) : `ci.yml`/`integration.yml`/`e2e.yml`/`security.yml` se déclenchent tous sur `pull_request: branches: [main, develop]`, rien d'autre. **PR 1/2/3 les déclenchent. PR 4, ouverte contre `fix/db-test-reset-production-guard`, n'en déclenche AUCUN** — compromis réel (diff propre sans CI, ou diff bruité avec CI contre `main`).
+
+**Conflits — simulés réellement avec `git merge-tree --write-tree` (3 étapes chaînées via `git commit-tree`, aucun commit réel, aucune branche touchée, objets orphelins harmless laissés dans `.git/objects`)** :
+1. `origin/main` + PR 1 → **propre**.
+2. (résultat) + PR 4 → **propre** (confirme : PR 4 après PR 1 ne crée aucun nouveau conflit).
+3. (résultat) + PR 3 → **`CONFLICT (add/add)` RÉEL et confirmé sur `kessia-app/docs/audit/PROGRESS_TRACKER.md`** ; `kessia-app/package.json` s'auto-fusionne proprement (confirmé, pas supposé) malgré que PR 3 et PR 4 le modifient toutes deux (sections différentes : devDependency `fast-check` vs script `db:test:status`).
+4. (résultat de l'étape 1) + PR 2, indépendamment → **propre** (PR 2 ne touche ni le tracker ni `package.json`, fusionnable à tout moment sans égard à l'ordre des 3 autres).
+
+**Ordre de fusion recommandé, maintenant vérifié et non plus seulement déduit : PR 1 → PR 4 → PR 2 (à tout moment) → PR 3**, avec réconciliation MANUELLE du contenu de `PROGRESS_TRACKER.md` au moment de fusionner PR 3 (seul conflit réel de tout le lot).
+
+Détail complet par PR : voir les 4 brouillons de PR préparés cette session (titres, corps, tests, contrôles CI attendus, conflits).
+
+## Migrations et schéma — vérifiés statiquement ce tour (`git show`, aucune commande Prisma, aucune connexion)
+
+- **Seule `feat/seller-verification-and-miaride-tracking` touche `prisma/schema.prisma`/`prisma/migrations/`** — confirmé par diff de noms de fichiers sur les 4 branches contre `origin/main` : aucun conflit de schéma possible entre les 4 PR.
+- Migration `20261012163104_add_seller_verification_and_delivery_tracking` relue intégralement : **purement additive** (2 `CREATE TYPE`, 1 `ALTER TABLE ADD COLUMN` ×4, 2 `CREATE TABLE`, 3 `CREATE INDEX`, 2 `ADD FOREIGN KEY`) — aucun `DROP`, aucune modification de type de colonne existante, aucune perte de données possible.
+- Schéma ↔ migration cohérents (vérifié champ par champ) : l'index redondant sur `kessiaTrackingCode` corrigé plus tôt cette session reste bien absent (un seul `@unique`, pas de `@@index` séparé).
+- `SellerVerificationDocument` n'indexe pas sa propre clé étrangère `verificationId` — **vérifié que c'est cohérent avec la convention existante** (`KycDocument.kycCaseId` non plus), pas un oubli introduit ce tour.
+- 5 migrations au total sur cette branche, dans le bon ordre chronologique, `migration_lock.toml` inchangé (provider toujours `postgresql`).
+
+## Publication GitHub — FAITE ce tour (autorisation explicite reçue)
+
+Les 2 branches locales sont désormais poussées, confirmé par `git branch -vv` (plus aucun `ahead`, les 4 branches correspondent exactement à leur remote) :
+
+| Branche | Avant | Après |
+|---|---|---|
+| `test/authz-and-invariants` | 1 commit local non poussé (`0d4bc6f`) | **poussée** — `826e3c7..0d4bc6f` (fast-forward, aucune réécriture) |
+| `fix/prisma-adhoc-connection-guard` | jamais poussée (6 commits locaux) | **poussée pour la première fois** — nouvelle branche distante créée, upstream configuré |
+
+Vérifié avant publication (pas supposé) : `git status`/`git remote -v` (1 seul remote, `origin`, le bon dépôt), commits locaux listés précisément et comparés au rapport précédent (exacts), aucun fichier préexistant touché. Push normal (jamais `--force`) — aucun historique réécrit, aucune branche réinitialisée.
+
+**4 branches sur GitHub, aucune fusion.**
+
+## État réel des PR sur GitHub — vérifié via l'API publique GitHub (lecture seule, pas `gh`, pas d'écriture)
+
+**Une seule PR existe : PR #6.** Les 3 autres (correctif `DIRECT_URL`, tests authz/invariants, garde incident Prisma) **n'ont pas encore été ouvertes** — à ouvrir manuellement (pas d'accès API en écriture cette session).
+
+| Champ | Valeur confirmée (API GitHub) |
+|---|---|
+| PR | #6, « Feat/seller verification and miaride tracking » |
+| `base.ref` | `main` (correct) |
+| `head.ref` / `head.sha` | `feat/seller-verification-and-miaride-tracking` / `dba47cf5…` (correspond exactement) |
+| `mergeable_state` | **`clean`** — aucun conflit avec `main` **en ce moment précis**, confirmé indépendamment par ma propre simulation `git merge-tree` (PR seule contre `origin/main` actuel : propre) |
+| Checks | **10/10, tous `success`** — 8 check-runs (CodeQL ×2, secrets-scan, dependency-audit, playwright, integration, verify, Vercel Preview Comments) + 2 statuts classiques (Vercel – kessia, Vercel – kessia-staging), tous confirmés via l'API `check-runs`/`status`. **Correspond exactement aux « 10 contrôles réussis » rapportés.** |
+| Déploiement Vercel | Confirmé « Deployment has completed » sur les 2 contextes. |
+
+**Problème réel trouvé, à corriger avant fusion** : la description de la PR #6 ne correspond pas à son contenu — elle décrit le correctif `DIRECT_URL`/`db-test-reset.mjs` (sujet de la future PR 1), pas la vérification fournisseur/MiaRide que cette PR contient réellement. Texte correct fourni au propriétaire pour remplacement manuel (pas d'accès d'écriture API pour le faire moi-même).
+
+**Ordre de fusion — recomputé pour l'état réel (PR #6 prête, les 3 autres pas encore ouvertes), par nouvelle simulation `git merge-tree`** : fusionner PR #6 maintenant contre `main` actuel est **propre, confirmé**. Mais si elle fusionne AVANT que PR 1 soit ouverte/fusionnée, c'est alors **PR 1 (puis PR 4, qui en dépend)** qui hérite du conflit `PROGRESS_TRACKER.md` déjà identifié — **vérifié à nouveau dans ce sens précis, pas supposé symétrique**. Le conflit ne disparaît pas selon l'ordre, il change simplement de PR. Choix réel, pas un blocage : fusionner #6 maintenant (elle est prête, verte, déployée) et réconcilier le tracker à la fusion de PR 1/PR 4 ensuite ; ou attendre d'ouvrir PR 1/PR 4 et les fusionner avant #6 pour que le conflit tombe sur #6 à la place. PR 2 reste sans conflit dans tous les cas, à tout moment.
+
+## Tentative de correction de PR #6 et d'ouverture des 3 PR manquantes — confirmé IMPOSSIBLE depuis cette session
+
+Demandé explicitement ce tour. Vérifié avant de conclure (pas supposé par habitude) : aucune variable d'environnement `GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_PAT` présente, `gh` toujours introuvable. L'API publique GitHub permet la LECTURE sans authentification (utilisée pour vérifier PR #6) mais pas l'ÉCRITURE (créer une PR, modifier une description) sans token valide — absent. **Aucune tentative d'écriture n'a été faite** (pas de requête `POST`/`PATCH` envoyée) : la vérification s'est arrêtée à la détection de l'absence de token, par construction, pas par échec d'exécution.
+
+**Texte de remplacement exact pour la description de PR #6** (à coller manuellement) :
+> Implémente KESSIA Verification (badge « Fournisseur vérifié » : soumission de documents, revue admin COMPLIANCE_ROLES, expiration) et le suivi de livraison KESSIA–MiaRide (`kessiaTrackingCode` généré par KESSIA, distinct de `providerRef` ; preuve photo d'étiquette). Auto-audit inclus : index Prisma redondant supprimé, course de concurrence sur l'approbation corrigée (doublon notification/audit), 3 décisions produit tranchées explicitement par le propriétaire (garde KYC préservée, expiration badge 1 an par défaut, cron d'expiration branché). Migration additive pure, appliquée au cluster de test local uniquement. 348/348 unitaires, 134/134 intégration.
+
+**Diffs réels re-confirmés ce tour (`git diff --name-status`, read-only) pour les 3 PR à ouvrir :**
+
+| PR | Base | Fichiers (statut) |
+|---|---|---|
+| 1 — `fix/db-test-reset-production-guard` | `main` | `docs/audit/PROGRESS_TRACKER.md` (A), `scripts/db-test-reset.mjs` (M), `scripts/db-test-reset.test.ts` (A) — 3 fichiers, +365/-45 |
+| 2 — `test/authz-and-invariants` | `main` | `lib/fraud/devices.ts` (M), `lib/observability/no-sensitive-console-log.test.ts` (M), `test/integration/{authz,device-concurrency,invariants}.itest.ts` (A×3), `test/integration/{marketplace-settlement,tontine-concurrency}.itest.ts` (M×2) — 7 fichiers, +746/-28 |
+| 4 — `fix/prisma-adhoc-connection-guard` | **`fix/db-test-reset-production-guard` — base ré-vérifiée impérativement par `git merge-base` ce tour : son tip (`9b9cdaa`) EST l'ancêtre direct confirmé** | `docs/audit/INCIDENT_2026-10-12_PRISMA_ADHOC_CONNECTION.md` (A), `docs/audit/PROGRESS_TRACKER.md` (M), `package.json` (M), `scripts/require-local-db.mjs` (A), `scripts/require-local-db.test.ts` (A), `scripts/run-local-only.mjs` (A), `scripts/run-local-only.test.ts` (A) — 7 fichiers, +696/-9. **Ne contient plus `db-test-reset.mjs`/`.test.ts`** (déjà dans cette base) — confirme le bénéfice du bon choix de base. |
+
+**PR #6 re-vérifiée au moment de ce rapport (API GitHub)** : `state=open`, `mergeable_state=clean`, `head.sha=dba47cf5…`, `commits=3`, `changed_files=23` — inchangée depuis la vérification précédente.
+
+**Workflows CI re-confirmés une 3ᵉ fois (lecture directe des 4 fichiers `.yml`)** : `ci.yml`/`integration.yml`/`e2e.yml`/`security.yml` déclenchent uniquement sur `pull_request: branches: [main, develop]`. PR 1/2 (base `main`) les déclenchent. **PR 4 (base `fix/db-test-reset-production-guard`) n'en déclenche aucun** — confirmé, pas un oubli.
+
+## Vérification finale consolidée (ce tour) — aucune régression, rien de nouveau à corriger
+
+- **GitHub re-vérifié (API, lecture)** : toujours exactement 6 PR dans l'historique du dépôt, **une seule ouverte (#6)**, inchangée (`state=open`, `mergeable_state=clean`, 23 fichiers). Aucune des 3 autres n'a été ouverte depuis le dernier rapport.
+- **Jeton d'écriture GitHub re-vérifié, absent** : pas de `GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_PAT`, pas de `gh`. Un credential Git (`credential.helper=manager`) existe et sert les `git push` de cette session, mais son périmètre réel (git uniquement, ou aussi l'API REST) n'est pas connu — **décision délibérée de ne pas le détourner vers des appels API d'écriture sans confirmation explicite que c'est voulu**, plutôt qu'une tentative aveugle.
+- **Suites unitaires ré-exécutées réellement sur les 4 branches ce tour** (pas citées de mémoire) : `fix/prisma-adhoc-connection-guard` 368/368 (44 fichiers) · `fix/db-test-reset-production-guard` 351/351 (42) · `test/authz-and-invariants` 343/343 (41) · `feat/seller-verification-and-miaride-tracking` 348/348 (42) + `tsc` propre. **Aucune régression.**
+- **Intégration** : non ré-exécutée ce tour (déjà vérifiée réellement contre le cluster local plus tôt dans cette même session — 126/126 sur `test/authz-and-invariants`, 134/134 sur `feat/...` — aucun code de test n'a changé depuis, re-citée sans ré-exécution inutile, conformément à la demande d'arrêter les vérifications répétitives).
+- **Rien de documentaire ou technique « sans risque » restait à corriger** — tout ce qui avait été trouvé (index redondant, course de concurrence, sur-affirmation du correctif, course `recordDevice`) est déjà corrigé et commité sur la branche concernée.
+
+## Accès GitHub en écriture rétabli — `gh` authentifié, 4 PR désormais réelles
+
+Le propriétaire a authentifié `gh` (`gh auth login`, compte `essotakougnadi-arch`). **Non trouvé dans le PATH des shells de cet outil** (`gh: command not found` en Bash et PowerShell) — localisé sur disque (`C:\Program Files\GitHub CLI\gh.exe`) et invoqué avec son chemin complet / PATH ajusté pour la session. `gh auth status` confirme : scopes `repo`+`workflow`. Vérification non destructive des permissions (`gh repo view --json viewerPermission`) : **`ADMIN`** sur `essotakougnadi-arch/kessia`. Jamais de secret affiché — le jeton lui-même reste toujours masqué par `gh` (`gho_***`).
+
+**Exécuté (non destructif — édition de description + création de PR, aucune fusion, aucune commande Prisma, aucune connexion Supabase) :**
+
+| PR | Lien | Base | `mergeable` | Checks au moment de la vérification |
+|---|---|---|---|---|
+| **#6** | `github.com/essotakougnadi-arch/kessia/pull/6` | `main` | `MERGEABLE`, `CLEAN` | description corrigée et confirmée relue ; CI déjà verte (10/10, vérifié précédemment) |
+| **#7** (= PR 1) | `github.com/essotakougnadi-arch/kessia/pull/7` | `main` ✅ | `MERGEABLE`, `UNSTABLE` (checks en cours) | `secrets-scan`/`dependency-audit`/Vercel ×3 : pass ; `codeql`/`verify`/`integration`/`playwright` : pending (viennent de démarrer) — **aucun échec observé** |
+| **#8** (= PR 2) | `github.com/essotakougnadi-arch/kessia/pull/8` | `main` ✅ | `MERGEABLE`, `UNSTABLE` (checks en cours) | même état que #7 — **aucun échec observé** |
+| **#9** (= PR 4) | `github.com/essotakougnadi-arch/kessia/pull/9` | **`fix/db-test-reset-production-guard`** ✅ (vérifié par `git merge-base` juste avant création, pas supposé) | `MERGEABLE`, `CLEAN` | seulement les 3 checks Vercel (pass) — **confirme en conditions réelles, pas seulement en théorie, qu'aucun des 4 workflows GitHub Actions ne se déclenche sur cette base** |
+
+**Aucun conflit détecté par GitHub sur aucune des 4 PR à ce jour** (`mergeable: MERGEABLE` partout) — cohérent avec l'analyse par simulation : le conflit sur `PROGRESS_TRACKER.md` entre {#7+#9} et #6 n'existe qu'au moment où l'un des deux côtés fusionne après l'autre, pas avant.
+
+## Blocages réels restants
+
+1. **Récupération Supabase : incident distinct, toujours non résolu, ni confirmé récupéré ni confirmé perdu définitivement.** Action directe du propriétaire requise.
+2. Décision du propriétaire sur l'ordre de fusion (#7 → #9 → #8 à tout moment → #6 en dernier, réconciliation manuelle du tracker à cette dernière étape) — **aucune fusion effectuée**.
+3. Checks encore `pending` sur #7/#8 au moment de la vérification — à recontrôler avant fusion (aucun échec vu jusqu'ici).
+4. Décision sur le commit des fichiers KESSIA Shop (hors périmètre).
+
+## Prochaine action unique
+
+**Attendre la fin des checks `pending` sur #7/#8 (aucun échec à ce jour), puis fusionner dans l'ordre #7 → #9 → #8 → #6**, avec votre autorisation explicite à chaque fusion.
