@@ -15,6 +15,7 @@ import prisma from '@/lib/db/prisma';
 import { createLedgerEntry } from '@/lib/ledger/ledger.service';
 import { releaseEscrowToSeller, refundEscrowToBuyer } from '@/lib/marketplace/escrow';
 import { notify } from '@/lib/notifications/notify';
+import { generateTrackingCode } from '@/lib/utils/crypto';
 import type { DeliveryMode, DeliveryStatus, MarketplaceDelivery } from '@prisma/client';
 import { MiarideProvider } from './miaride';
 import type { DeliveryBrief, DeliveryProvider } from './types';
@@ -127,6 +128,20 @@ export async function requestDelivery(input: RequestDeliveryInput): Promise<Deli
   }
 
   const brief = briefFrom(order, input, dropoff.label);
+
+  // Numéro de suivi KESSIA — généré PAR KESSIA, jamais par MiaRide (qui
+  // garde sa propre référence dans `providerRef`). Collision quasi
+  // impossible (8 caractères sur un alphabet de 32), boucle de retrait
+  // par prudence, même motif que le code d'invitation des tontines.
+  let kessiaTrackingCode = generateTrackingCode();
+  for (let i = 0; i < 5; i++) {
+    const clash = await prisma.marketplaceDelivery.findUnique({
+      where: { kessiaTrackingCode }, select: { id: true },
+    });
+    if (!clash) break;
+    kessiaTrackingCode = generateTrackingCode();
+  }
+
   const baseData = {
     orderId: order.id,
     buyerId: input.userId,
@@ -139,6 +154,7 @@ export async function requestDelivery(input: RequestDeliveryInput): Promise<Deli
     feeAmount: fee.amount,
     feeCurrency: 'XOF',
     etaMinutes: fee.etaMinutes,
+    kessiaTrackingCode,
   };
 
   // ── Achat par tontine : on enregistre, statut SCHEDULED ─────────
@@ -346,6 +362,44 @@ export async function markSellerReady(deliveryId: string, userId: string): Promi
     priority: 'NORMAL',
     title: 'Colis prêt',
     body: `Le vendeur a préparé « ${d.order.item.title} ». Le coursier va l'enlever.`,
+    actionUrl: '/marketplace/mine',
+  });
+  return { ok: true, delivery: updated };
+}
+
+/**
+ * Dépôt de la preuve photo du colis étiqueté (cahier des charges
+ * MiaRide, étape 5) — réservé au VENDEUR, après que l'agent MiaRide a
+ * posé l'étiquette portant le numéro de suivi KESSIA. Idempotent :
+ * un nouveau dépôt remplace simplement le précédent (pas d'historique
+ * de versions prévu pour cette version minimale). Ne constitue à elle
+ * seule ni une preuve de collecte ni une preuve de livraison — voir
+ * `confirmDelivered`/`settleOnDelivery` pour ces étapes-là.
+ */
+export async function uploadLabelPhoto(
+  deliveryId: string,
+  userId: string,
+  photoUrl: string
+): Promise<DeliveryResult> {
+  const d = await prisma.marketplaceDelivery.findUnique({
+    where: { id: deliveryId },
+    include: { order: { include: { item: { select: { sellerId: true, title: true } } } } },
+  });
+  if (!d) return { ok: false, error: 'Livraison introuvable.', code: 'NOT_FOUND' };
+  if (d.order.item.sellerId !== userId) return { ok: false, error: 'Action réservée au vendeur.', code: 'FORBIDDEN' };
+  if (d.status === 'DELIVERED' || d.status === 'CANCELLED') {
+    return { ok: false, error: 'Cette livraison est terminée.', code: 'CONFLICT' };
+  }
+  const updated = await prisma.marketplaceDelivery.update({
+    where: { id: d.id },
+    data: { labelPhotoUrl: photoUrl, labelPhotoUploadedAt: new Date(), labelPhotoUploadedById: userId },
+  });
+  void notify({
+    userId: d.buyerId,
+    category: 'BUSINESS',
+    priority: 'NORMAL',
+    title: 'Photo du colis reçue',
+    body: `Le vendeur a transmis une photo de « ${d.order.item.title} » étiqueté pour l'enlèvement.`,
     actionUrl: '/marketplace/mine',
   });
   return { ok: true, delivery: updated };

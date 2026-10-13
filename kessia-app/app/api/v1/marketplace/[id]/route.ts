@@ -23,7 +23,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
       where: { id: params.id },
       include: {
         seller: { select: { id: true, firstName: true, lastName: true } },
-        business: { select: { id: true, name: true } },
+        business: { select: { id: true, name: true, verification: { select: { status: true, expiresAt: true } } } },
       },
     });
     if (!item || item.status === 'ARCHIVED') return notFound('Article introuvable.');
@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       },
       include: {
         seller: { select: { id: true, firstName: true, lastName: true } },
-        business: { select: { id: true, name: true } },
+        business: { select: { id: true, name: true, verification: { select: { status: true, expiresAt: true } } } },
       },
     });
 

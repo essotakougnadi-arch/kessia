@@ -49,7 +49,9 @@ export async function GET(request: NextRequest) {
           ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
           include: {
             seller: { select: { id: true, firstName: true, lastName: true } },
-            business: { select: { id: true, name: true } },
+            business: {
+              select: { id: true, name: true, verification: { select: { status: true, expiresAt: true } } },
+            },
           },
         })
         .then((items) => {

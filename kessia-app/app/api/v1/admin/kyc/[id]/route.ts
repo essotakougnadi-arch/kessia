@@ -72,9 +72,17 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
 
     const nextLevel = decision === 'VERIFIED' ? (level ?? kycCase.level) : kycCase.level;
 
-    await prisma.$transaction([
-      prisma.kycCase.update({
-        where: { id: params.id },
+    // Garde anti-doublon de concurrence (double-clic admin) : la
+    // transition n'est appliquée QUE si elle change réellement le
+    // statut. Une re-décision délibérée reste toujours possible à tout
+    // moment (ex. VERIFIED → REJECTED après découverte d'une fraude :
+    // comportement volontairement préservé, décision produit) — seul un
+    // rejeu exact de la MÊME décision pendant qu'elle est déjà en cours
+    // d'application devient un no-op au lieu de dupliquer
+    // notification/audit (prouvé par `kyc-review-concurrency.itest.ts`).
+    const applied = await prisma.$transaction(async (tx) => {
+      const result = await tx.kycCase.updateMany({
+        where: { id: params.id, status: { not: decision } },
         data: {
           status: decision,
           rejectionReason: decision === 'VERIFIED' ? null : reason,
@@ -83,15 +91,17 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
           completedAt: decision === 'VERIFIED' ? new Date() : null,
           level: nextLevel,
         },
-      }),
-      prisma.user.update({
+      });
+      if (result.count === 0) return false;
+
+      await tx.user.update({
         where: { id: kycCase.userId },
         data: {
           kycStatus: decision,
           ...(decision === 'VERIFIED' ? { kycLevel: nextLevel } : {}),
         },
-      }),
-      prisma.notification.create({
+      });
+      await tx.notification.create({
         data: {
           userId: kycCase.userId,
           category: 'SECURITY',
@@ -106,8 +116,13 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
               : reason!,
           actionUrl: '/profile/kyc',
         },
-      }),
-    ]);
+      });
+      return true;
+    });
+
+    if (!applied) {
+      return ok({ status: decision, alreadyApplied: true }, 'Cette décision était déjà appliquée.');
+    }
 
     void recordAudit({
       userId: context.userId,
