@@ -100,10 +100,8 @@ vi.mock('@/lib/db/prisma', () => ({
     // mockRejectedValueOnce/mockResolvedValueOnce.
     auditLog: { create: vi.fn().mockResolvedValue({ id: 'audit-1' }) },
     device: {
-      findUnique: vi.fn().mockResolvedValue(null),
       count: vi.fn().mockResolvedValue(0),
-      update: vi.fn().mockResolvedValue({ id: 'device-1', trusted: false, seenCount: 1 }),
-      create: vi.fn().mockResolvedValue({ id: 'device-1', trusted: true }),
+      upsert: vi.fn().mockResolvedValue({ id: 'device-1', trusted: true, seenCount: 1 }),
     },
     wallet: { findFirst: vi.fn().mockResolvedValue(null) },
     guaranteeClaim: {
@@ -240,12 +238,12 @@ describe('4b. lib/auth/roles.ts — elevateRole', () => {
 });
 
 describe('4c. lib/fraud/devices.ts — recordDevice', () => {
-  it("échec prisma.device.findUnique : logger.error('fraud_record_device_failed'), jamais console.error", async () => {
+  it("échec prisma.device.upsert : logger.error('fraud_record_device_failed'), jamais console.error", async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { default: prisma } = await import('../db/prisma');
     const { logger } = await import('../logger');
     const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => logger);
-    vi.mocked(prisma.device.findUnique).mockRejectedValueOnce(new Error('db down'));
+    vi.mocked(prisma.device.upsert).mockRejectedValueOnce(new Error('db down'));
 
     try {
       const { recordDevice } = await import('../fraud/devices');
@@ -272,7 +270,7 @@ describe('4d. lib/fraud/engine.ts — assessEvent', () => {
     const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => logger);
     // recordDevice (appelé en premier par assessEvent) échoue proprement
     // et se logge lui-même (4c) — sans rapport avec l'assertion ici.
-    vi.mocked(prisma.device.findUnique).mockRejectedValueOnce(new Error('device down'));
+    vi.mocked(prisma.device.upsert).mockRejectedValueOnce(new Error('device down'));
     vi.mocked(prisma.user.findUnique).mockRejectedValueOnce(new Error('db down'));
 
     try {

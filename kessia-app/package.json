@@ -22,6 +22,7 @@
     "db:studio": "node scripts/guard-db-command.mjs prisma studio",
     "db:seed": "node scripts/guard-db-command.mjs tsx prisma/seed.ts",
     "db:test:reset": "node scripts/db-test-reset.mjs",
+    "db:test:status": "node scripts/run-local-only.mjs prisma migrate status",
     "db:backup": "node scripts/db-backup.mjs",
     "privacy:purge": "tsx scripts/privacy-purge.ts",
     "smoke": "node scripts/smoke.mjs"

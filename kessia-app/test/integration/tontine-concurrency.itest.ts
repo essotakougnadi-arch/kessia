@@ -21,11 +21,11 @@ import { NextRequest } from 'next/server';
 import { PATCH as tontinePatch } from '@/app/api/v1/tontine/[id]/route';
 import { POST as membersPost } from '@/app/api/v1/tontine/[id]/members/route';
 import { POST as cronPost } from '@/app/api/v1/cron/tontine-tick/route';
-import { activateTontine } from '@/lib/tontine/orchestrator';
+import { activateTontine, checkAndAdvanceRound } from '@/lib/tontine/orchestrator';
 import { settleContribution } from '@/lib/tontine/contributions';
 import { getWalletBalance } from '@/lib/ledger/ledger.service';
 import { signAccessToken } from '@/lib/auth/session';
-import { prisma, makeUser, cleanup, tag, settle, type ITestUser } from './helpers';
+import { prisma, makeUser, cleanup, tag, settle, contributeRound, type ITestUser } from './helpers';
 
 const userIds: string[] = [];
 const tontineIds: string[] = [];
@@ -208,5 +208,66 @@ describe('Concurrence Tontines — cotisation (preuve de protection existante, P
         where: { tontineId, memberId: member.id, round: 1, status: 'PAID' },
       })
     ).toBe(1);
+  });
+});
+
+describe('Concurrence Tontines — avancement de tour (audit P2.20, finding tranché)', () => {
+  // `checkAndAdvanceRound()` n'a pas de verrou de ligne explicite
+  // (contrairement à `activateTontine()`, qui en a un). Lecture de code :
+  // probablement sans danger car (a) le versement passe par
+  // `postDoubleEntry`, déjà idempotent sous verrou, et (b) l'avancement
+  // de tour écrit `currentRound = round + 1` à partir de la MÊME valeur
+  // lue indépendamment par chaque appel — convergent, pas un compteur
+  // incrémental. Ce test tranche la question par la preuve plutôt que
+  // par la lecture seule.
+  it('deux appels VRAIMENT concurrents sur un tour déjà complet : un seul versement réel, le tour n\'avance jamais deux fois', async () => {
+    const organizer = await makeUser({ balance: 10_000 });
+    const member = await makeUser({ balance: 10_000 });
+    userIds.push(organizer.id, member.id);
+    const { id: tontineId } = await makeTontine({ createdBy: organizer, maxMembers: 2, members: [member] });
+    tontineIds.push(tontineId);
+    expect((await activateTontine(tontineId)).ok).toBe(true);
+
+    // Règle le tour 1 pour les deux membres actifs via le chemin réel.
+    await contributeRound(tontineId, 1);
+
+    const [r1, r2] = await Promise.all([
+      checkAndAdvanceRound(tontineId),
+      checkAndAdvanceRound(tontineId),
+    ]);
+    expect(r1.ok).toBe(true);
+    expect(r2.ok).toBe(true);
+
+    // Un seul versement réel (clé ledger stable par tour) — jamais deux
+    // versements de la cagnotte même si les deux appels l'ont tenté.
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `TPAYOUT-${tontineId}-1:out` } })).toBe(1);
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `TPAYOUT-${tontineId}-1:in` } })).toBe(1);
+
+    // Le tour n'a avancé qu'une fois : currentRound == 2, jamais 3.
+    const after = await prisma.tontine.findUniqueOrThrow({ where: { id: tontineId } });
+    expect(after.currentRound).toBe(2);
+
+    // Les cotisations du tour 2 n'existent qu'une fois par membre actif.
+    expect(await prisma.tontineContribution.count({ where: { tontineId, round: 2 } })).toBe(2);
+  });
+
+  it('dix appels VRAIMENT concurrents (stress) sur un tour déjà complet : toujours un seul versement, un seul avancement', async () => {
+    const organizer = await makeUser({ balance: 10_000 });
+    const member = await makeUser({ balance: 10_000 });
+    userIds.push(organizer.id, member.id);
+    const { id: tontineId } = await makeTontine({ createdBy: organizer, maxMembers: 2, members: [member] });
+    tontineIds.push(tontineId);
+    expect((await activateTontine(tontineId)).ok).toBe(true);
+    await contributeRound(tontineId, 1);
+
+    const results = await Promise.all(Array.from({ length: 10 }, () => checkAndAdvanceRound(tontineId)));
+    expect(results.every((r) => r.ok)).toBe(true);
+
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `TPAYOUT-${tontineId}-1:out` } })).toBe(1);
+    expect(await prisma.ledgerEntry.count({ where: { idempotencyKey: `TPAYOUT-${tontineId}-1:in` } })).toBe(1);
+
+    const after = await prisma.tontine.findUniqueOrThrow({ where: { id: tontineId } });
+    expect(after.currentRound).toBe(2);
+    expect(await prisma.tontineContribution.count({ where: { tontineId, round: 2 } })).toBe(2);
   });
 });
